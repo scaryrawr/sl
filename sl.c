@@ -145,6 +145,9 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+int no_dot_file_filter(const struct dirent *entry) {
+    return '.' != entry->d_name[0];
+}
 
 int add_sl(int x)
 {
@@ -162,9 +165,12 @@ int add_sl(int x)
     static wchar_t *car[LOGOHEIGHT + 1]
         = {LCAR1, LCAR2, LCAR3, LCAR4, LCAR5, LCAR6, DELLN};
 
-    int i, y, py1 = 0, py2 = 0, py3 = 0;
+    int i, j, y, cars, pos, py1 = 0, py2 = 0, py3 = 0;
+    struct dirent **namelist = NULL;
+    wchar_t carName[23];
 
-    if (x < - LOGOLENGTH)  return ERR;
+    cars = FILE_CARS ? scandir(".", &namelist, no_dot_file_filter, alphasort) : 0;
+    if (x < - (LOGOLENGTH + ((cars > 0) ? cars * 22 : 0)))  return ERR;
     y = LINES / 2 - 3;
 
     if (FLY == 1) {
@@ -172,10 +178,22 @@ int add_sl(int x)
         py1 = 2;  py2 = 4;  py3 = 6;
     }
     for (i = 0; i <= LOGOHEIGHT; ++i) {
-        my_mvaddstr(y + i, x, sl[(LOGOLENGTH + x) / 3 % LOGOPATTERNS][i]);
-        my_mvaddstr(y + i + py1, x + 21, coal[i]);
-        my_mvaddstr(y + i + py2, x + 42, car[i]);
-        my_mvaddstr(y + i + py3, x + 63, car[i]);
+        if (LOGOLENGTH + x > 0) {
+            my_mvaddstr(y + i, x, sl[(LOGOLENGTH + x) / 3 % LOGOPATTERNS][i]);
+            my_mvaddstr(y + i + py1, x + 21, coal[i]);
+        }
+        for (j = 0; j < cars; ++j) {
+            pos = LOGOLENGTH + x + 21 * (j + 1);
+            if (pos < 0) {
+                continue;
+            } else if (pos > COLS + LOGOLENGTH) {
+                break;
+            }
+
+            swprintf(carName, 23, car[i], namelist[j]->d_name);
+            my_mvaddstr(y + i + py2, x + 42 + 21 * j, carName);
+            my_mvaddstr(y + i + py3, x + 63 + 21 * j, carName);
+        }
     }
     if (ACCIDENT == 1) {
         add_man(y + 1, x + 14);
@@ -184,10 +202,6 @@ int add_sl(int x)
     }
     add_smoke(y - 1, x + LOGOFUNNEL);
     return OK;
-}
-
-int no_dot_file_filter(const struct dirent *entry) {
-    return '.' != entry->d_name[0];
 }
 
 int add_D51(int x)
