@@ -108,7 +108,7 @@
 #define LCAR1  L"____________________ "
 #define LCAR2  L"|  ___ ___ ___ ___ | "
 #define LCAR3  L"|  |_| |_| |_| |_| | "
-#define LCAR4  L"|__________________| "
+#define LCAR4  L"|  %-15.15s |  "
 #define LCAR5  L"|__________________| "
 #define LCAR6  L"   (O)        (O)    "
 
