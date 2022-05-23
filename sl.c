@@ -175,6 +175,9 @@ int add_sl(int x)
 
     if (FLY == 1) {
         y = (x / 6) + LINES - (COLS / 6) - LOGOHEIGHT;
+        if (y < (0 - (LOGOHEIGHT + 14))) {
+            return ERR;
+        }
         py1 = 2;  py2 = 4;  py3 = 6;
     }
     for (i = 0; i <= LOGOHEIGHT; ++i) {
@@ -191,14 +194,21 @@ int add_sl(int x)
             }
 
             swprintf(carName, 23, car[i], namelist[j]->d_name);
-            my_mvaddstr(y + i + py2, x + 42 + 21 * j, carName);
-            my_mvaddstr(y + i + py3, x + 63 + 21 * j, carName);
+            my_mvaddstr(y + i + ((FLY == 1) ? j : 0) + py2, x + 42 + 21 * j, carName);
         }
     }
     if (ACCIDENT == 1) {
-        add_man(y + 1, x + 14);
-        add_man(y + 1 + py2, x + 45);  add_man(y + 1 + py2, x + 53);
-        add_man(y + 1 + py3, x + 66);  add_man(y + 1 + py3, x + 74);
+        for (j = 0; j < cars; ++j) {
+            pos = LOGOLENGTH + x + 21 * (j + 1);
+            if (pos < 0) {
+                continue;
+            } else if (pos > COLS + LOGOLENGTH) {
+                break;
+            }
+
+            add_man(y + 1, x + 14);
+            add_man(y + 1 + py2 + j, x + 45 + 21 * j);  add_man(y + 1 + py2 + j, x + 53 + 21 * j);
+        }
     }
     add_smoke(y - 1, x + LOGOFUNNEL);
     return OK;
@@ -238,6 +248,9 @@ int add_D51(int x)
 
     if (FLY == 1) {
         y = (x / 7) + LINES - (COLS / 7) - D51HEIGHT;
+        if (y < (0 - (D51HEIGHT + 8))) {
+            return ERR;
+        }
         dy = 1;
     }
 
@@ -255,7 +268,7 @@ int add_D51(int x)
             }
 
             swprintf(carName, 32, car[i], namelist[j]->d_name);
-            my_mvaddstr(y + i + dy, x + 53 + 29 * (j + 1), carName);
+            my_mvaddstr(y + i + ((FLY == 1) ? j + 1 : 0) + dy, x + 53 + 29 * (j + 1), carName);
         }
     }
 
