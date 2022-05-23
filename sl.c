@@ -194,7 +194,7 @@ int add_sl(int x)
             }
 
             swprintf(carName, 23, car[i], namelist[j]->d_name);
-            my_mvaddstr(y + i + ((FLY == 1) ? j : 0) + py2, x + 42 + 21 * j, carName);
+            my_mvaddstr(y + i + (FLY * j) + py2, x + 42 + 21 * j, carName);
         }
     }
     if (ACCIDENT == 1) {
@@ -207,7 +207,7 @@ int add_sl(int x)
             }
 
             add_man(y + 1, x + 14);
-            add_man(y + 1 + py2 + j, x + 45 + 21 * j);  add_man(y + 1 + py2 + j, x + 53 + 21 * j);
+            add_man(y + 1 + py2 + (FLY * j), x + 45 + 21 * j);  add_man(y + 1 + py2 + (FLY * j), x + 53 + 21 * j);
         }
     }
     add_smoke(y - 1, x + LOGOFUNNEL);
@@ -268,7 +268,7 @@ int add_D51(int x)
             }
 
             swprintf(carName, 32, car[i], namelist[j]->d_name);
-            my_mvaddstr(y + i + ((FLY == 1) ? j + 1 : 0) + dy, x + 53 + 29 * (j + 1), carName);
+            my_mvaddstr(y + i + (FLY * (j + 1)) + dy, x + 53 + 29 * (j + 1), carName);
         }
     }
 
