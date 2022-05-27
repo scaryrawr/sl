@@ -70,12 +70,16 @@ int add_D51(int x);
 int add_sl(int x);
 void option(char *str);
 int my_mvaddstr(int y, int x, wchar_t *str);
+int no_dot_file_filter(const struct dirent *entry);
 
 int ACCIDENT  = 0;
 int LOGO      = 0;
 int FLY       = 0;
 int C51       = 0;
 int FILE_CARS = 1;
+
+int cars                 = 0;
+struct dirent **namelist = NULL;
 
 int my_mvaddstr(int y, int x, wchar_t *str)
 {
@@ -110,7 +114,7 @@ void option(char *str)
 
 int main(int argc, char *argv[])
 {
-    int x, i;
+    int x, i, j;
 
     for (i = 1; i < argc; ++i) {
         if (*argv[i] == '-') {
@@ -124,6 +128,8 @@ int main(int argc, char *argv[])
     nodelay(stdscr, TRUE);
     leaveok(stdscr, TRUE);
     scrollok(stdscr, FALSE);
+    
+    cars = FILE_CARS ? scandir(".", &namelist, no_dot_file_filter, alphasort) : 0;
 
     for (x = COLS - 1; ; --x) {
         if (LOGO == 1) {
@@ -139,6 +145,15 @@ int main(int argc, char *argv[])
         refresh();
         usleep(40000);
     }
+
+    for (j = 0; j < cars; ++j) {
+        free(namelist[j]);
+        namelist[j] = NULL;
+    }
+
+    free(namelist);
+    namelist = NULL;
+
     mvcur(0, COLS - 1, LINES - 1, 0);
     endwin();
 
@@ -165,14 +180,10 @@ int add_sl(int x)
     static wchar_t *car[LOGOHEIGHT + 1]
         = {LCAR1, LCAR2, LCAR3, LCAR4, LCAR5, LCAR6, DELLN};
 
-    int i, j, y, cars, pos, py1 = 0, py2 = 0, py3 = 0, status = OK;
-    struct dirent **namelist = NULL;
+    int i, j, y, pos, py1 = 0, py2 = 0, py3 = 0;
     wchar_t carName[LCARLENGTH];
-
-    cars = FILE_CARS ? scandir(".", &namelist, no_dot_file_filter, alphasort) : 0;
     if (x < - (LOGOLENGTH + ((cars > 0) ? cars * (LCARLENGTH - 1) : 0))) {
-        status = ERR;
-        goto end;
+        return ERR;
     }
 
     y = LINES / 2 - 3;
@@ -180,8 +191,7 @@ int add_sl(int x)
     if (FLY == 1) {
         y = (x / 6) + LINES - (COLS / 6) - LOGOHEIGHT;
         if (y < (0 - (LOGOHEIGHT + 14))) {
-            status = ERR;
-            goto end;
+            return ERR;
         }
 
         py1 = 2;  py2 = 4;  py3 = 6;
@@ -220,13 +230,8 @@ int add_sl(int x)
         }
     }
     add_smoke(y - 1, x + LOGOFUNNEL);
-end:
-    for (j = 0; j < cars; ++j) {
-        free(namelist[j]);
-    }
 
-    free(namelist);
-    return status;
+    return OK;
 }
 
 int add_D51(int x)
@@ -253,14 +258,11 @@ int add_D51(int x)
         = {CAR01, CAR02, CAR03, CAR04, CAR05,
            CAR06, CAR07, CAR08, CAR09, CAR10, COALDEL};
 
-    int y, i, j, cars, pos, dy = 0, status = OK;
-    struct dirent **namelist = NULL;
+    int y, i, j, pos, dy = 0;
     wchar_t carName[CARLENGTH];
 
-    cars = FILE_CARS ? scandir(".", &namelist, no_dot_file_filter, alphasort) : 0;
     if (x < - (D51LENGTH + ((cars > 0) ? cars * (CARLENGTH - 1) : 0))) {
-        status = ERR;
-        goto end;
+        return ERR;
     }
 
     y = LINES / 2 - 5;
@@ -268,8 +270,7 @@ int add_D51(int x)
     if (FLY == 1) {
         y = (x / 7) + LINES - (COLS / 7) - D51HEIGHT;
         if (y < (0 - (D51HEIGHT + 8))) {
-            status = ERR;
-            goto end;
+            return ERR;
         }
         dy = 1;
     }
@@ -311,14 +312,8 @@ int add_D51(int x)
         }
     }
     add_smoke(y - 1, x + D51FUNNEL);
-end:
-    for (j = 0; j < cars; ++j) {
-        free(namelist[j]);
-    }
 
-    free(namelist);
-
-    return status;
+    return OK;
 }
 
 int add_C51(int x)
@@ -344,14 +339,12 @@ int add_C51(int x)
         = {COALDEL, CAR01, CAR02, CAR03, CAR04, CAR05,
            CAR06, CAR07, CAR08, CAR09, CAR10, COALDEL};
 
-    int y, i, j, cars, pos, dy = 0, status = OK;
-    struct dirent **namelist = NULL;
+    int y, i, j, pos, dy = 0;
     wchar_t carName[CARLENGTH];
 
     cars = FILE_CARS ? scandir(".", &namelist, no_dot_file_filter, alphasort) : 0;
     if (x < - (C51LENGTH + ((cars > 0) ? cars * (CARLENGTH - 1) : 0))) {
-        status = ERR;
-        goto end;
+        return ERR;
     }
 
     y = LINES / 2 - 5;
@@ -359,8 +352,7 @@ int add_C51(int x)
     if (FLY == 1) {
         y = (x / 7) + LINES - (COLS / 7) - C51HEIGHT;
         if (y < (0 - (C51HEIGHT + 8))) {
-            status = ERR;
-            goto end;
+            return ERR;
         }
         dy = 1;
     }
@@ -398,14 +390,8 @@ int add_C51(int x)
         }
     }
     add_smoke(y - 1, x + C51FUNNEL);
-end:
-    for (j = 0; j < cars; ++j) {
-        free(namelist[j]);
-    }
 
-    free(namelist);
-
-    return status;
+    return OK;
 }
 
 
