@@ -165,41 +165,49 @@ int add_sl(int x)
     static wchar_t *car[LOGOHEIGHT + 1]
         = {LCAR1, LCAR2, LCAR3, LCAR4, LCAR5, LCAR6, DELLN};
 
-    int i, j, y, cars, pos, py1 = 0, py2 = 0, py3 = 0;
+    int i, j, y, cars, pos, py1 = 0, py2 = 0, py3 = 0, status = OK;
     struct dirent **namelist = NULL;
-    wchar_t carName[23];
+    wchar_t carName[LCARLENGTH];
 
     cars = FILE_CARS ? scandir(".", &namelist, no_dot_file_filter, alphasort) : 0;
-    if (x < - (LOGOLENGTH + ((cars > 0) ? cars * 22 : 0)))  return ERR;
+    if (x < - (LOGOLENGTH + ((cars > 0) ? cars * (LCARLENGTH - 1) : 0))) {
+        status = ERR;
+        goto end;
+    }
+
     y = LINES / 2 - 3;
 
     if (FLY == 1) {
         y = (x / 6) + LINES - (COLS / 6) - LOGOHEIGHT;
         if (y < (0 - (LOGOHEIGHT + 14))) {
-            return ERR;
+            status = ERR;
+            goto end;
         }
+
         py1 = 2;  py2 = 4;  py3 = 6;
     }
+
     for (i = 0; i <= LOGOHEIGHT; ++i) {
         if (LOGOLENGTH + x > 0) {
             my_mvaddstr(y + i, x, sl[(LOGOLENGTH + x) / 3 % LOGOPATTERNS][i]);
-            my_mvaddstr(y + i + py1, x + 21, coal[i]);
+            my_mvaddstr(y + i + py1, x + LCARLENGTH - 1, coal[i]);
         }
         for (j = 0; j < cars; ++j) {
-            pos = LOGOLENGTH + x + 21 * (j + 1);
+            pos = LOGOLENGTH + x + (LCARLENGTH - 1) * (j + 1);
             if (pos < 0) {
                 continue;
             } else if (pos > COLS + LOGOLENGTH) {
                 break;
             }
 
-            swprintf(carName, 23, car[i], namelist[j]->d_name);
-            my_mvaddstr(y + i + (FLY * j) + py2, x + 42 + 21 * j, carName);
+            swprintf(carName, LCARLENGTH, car[i], namelist[j]->d_name);
+            my_mvaddstr(y + i + (FLY * j) + py2, x + 42 + (LCARLENGTH - 1) * j, carName);
         }
     }
+
     if (ACCIDENT == 1) {
         for (j = 0; j < cars; ++j) {
-            pos = LOGOLENGTH + x + 21 * (j + 1);
+            pos = LOGOLENGTH + x + (LCARLENGTH - 1) * (j + 1);
             if (pos < 0) {
                 continue;
             } else if (pos > COLS + LOGOLENGTH) {
@@ -207,11 +215,18 @@ int add_sl(int x)
             }
 
             add_man(y + 1, x + 14);
-            add_man(y + 1 + py2 + (FLY * j), x + 45 + 21 * j);  add_man(y + 1 + py2 + (FLY * j), x + 53 + 21 * j);
+            add_man(y + 1 + py2 + (FLY * j), x + 45 + (LCARLENGTH - 1) * j);
+            add_man(y + 1 + py2 + (FLY * j), x + 53 + (LCARLENGTH - 1) * j);
         }
     }
     add_smoke(y - 1, x + LOGOFUNNEL);
-    return OK;
+end:
+    for (j = 0; j < cars; ++j) {
+        free(namelist[j]);
+    }
+
+    free(namelist);
+    return status;
 }
 
 int add_D51(int x)
@@ -238,18 +253,23 @@ int add_D51(int x)
         = {CAR01, CAR02, CAR03, CAR04, CAR05,
            CAR06, CAR07, CAR08, CAR09, CAR10, COALDEL};
 
-    int y, i, j, cars, pos, dy = 0;
+    int y, i, j, cars, pos, dy = 0, status = OK;
     struct dirent **namelist = NULL;
-    wchar_t carName[32];
+    wchar_t carName[CARLENGTH];
 
     cars = FILE_CARS ? scandir(".", &namelist, no_dot_file_filter, alphasort) : 0;
-    if (x < - (D51LENGTH + ((cars > 0) ? cars * 31 : 0)))  return ERR;
+    if (x < - (D51LENGTH + ((cars > 0) ? cars * (CARLENGTH - 1) : 0))) {
+        status = ERR;
+        goto end;
+    }
+
     y = LINES / 2 - 5;
 
     if (FLY == 1) {
         y = (x / 7) + LINES - (COLS / 7) - D51HEIGHT;
         if (y < (0 - (D51HEIGHT + 8))) {
-            return ERR;
+            status = ERR;
+            goto end;
         }
         dy = 1;
     }
@@ -260,30 +280,45 @@ int add_D51(int x)
             my_mvaddstr(y + i + dy, x + 53, coal[i]);
         }
         for (j = 0; j < cars; ++j) {
-            pos = D51LENGTH + x + 29 * (j + 1);
+            pos = D51LENGTH + x + (CARLENGTH - 3) * (j + 1);
             if (pos < 0) {
                 continue;
             } else if (pos > COLS + D51LENGTH) {
                 break;
             }
 
-            swprintf(carName, 32, car[i], namelist[j]->d_name);
-            my_mvaddstr(y + i + (FLY * (j + 1)) + dy, x + 53 + 29 * (j + 1), carName);
+            swprintf(carName, CARLENGTH, car[i], namelist[j]->d_name);
+            my_mvaddstr(y + i + (FLY * (j + 1)) + dy, x + 53 + (CARLENGTH - 3) * (j + 1), carName);
         }
     }
 
+    if (ACCIDENT == 1) {
+        if (x + 47 > 0) {
+            add_man(y + 2, x + 43);
+            add_man(y + 2, x + 47);
+        }
+
+        for (j = 0; j < cars; ++j) {
+            pos = D51LENGTH + x + (CARLENGTH - 3) * (j + 1);
+            if (pos < 0) {
+                continue;
+            } else if (pos > COLS + D51LENGTH) {
+                break;
+            }
+
+            add_man(y + 1 + (FLY * (j + 2)), x + D51LENGTH + 5 + ((CARLENGTH - 3) * j));
+            add_man(y + 1 + (FLY * (j + 2)), x + D51LENGTH + 15 + ((CARLENGTH - 3) * j));
+        }
+    }
+    add_smoke(y - 1, x + D51FUNNEL);
+end:
     for (j = 0; j < cars; ++j) {
         free(namelist[j]);
     }
 
     free(namelist);
 
-    if (ACCIDENT == 1) {
-        add_man(y + 2, x + 43);
-        add_man(y + 2, x + 47);
-    }
-    add_smoke(y - 1, x + D51FUNNEL);
-    return OK;
+    return status;
 }
 
 int add_C51(int x)
@@ -305,25 +340,72 @@ int add_C51(int x)
         = {COALDEL, COAL01, COAL02, COAL03, COAL04, COAL05,
            COAL06, COAL07, COAL08, COAL09, COAL10, COALDEL};
 
-    int y, i, dy = 0;
+    static wchar_t *car[C51HEIGHT + 1]
+        = {COALDEL, CAR01, CAR02, CAR03, CAR04, CAR05,
+           CAR06, CAR07, CAR08, CAR09, CAR10, COALDEL};
 
-    if (x < - C51LENGTH)  return ERR;
+    int y, i, j, cars, pos, dy = 0, status = OK;
+    struct dirent **namelist = NULL;
+    wchar_t carName[CARLENGTH];
+
+    cars = FILE_CARS ? scandir(".", &namelist, no_dot_file_filter, alphasort) : 0;
+    if (x < - (C51LENGTH + ((cars > 0) ? cars * (CARLENGTH - 1) : 0))) {
+        status = ERR;
+        goto end;
+    }
+
     y = LINES / 2 - 5;
 
     if (FLY == 1) {
         y = (x / 7) + LINES - (COLS / 7) - C51HEIGHT;
+        if (y < (0 - (C51HEIGHT + 8))) {
+            status = ERR;
+            goto end;
+        }
         dy = 1;
     }
     for (i = 0; i <= C51HEIGHT; ++i) {
         my_mvaddstr(y + i, x, c51[(C51LENGTH + x) % C51PATTERNS][i]);
         my_mvaddstr(y + i + dy, x + 55, coal[i]);
+        for (j = 0; j < cars; ++j) {
+            pos = C51LENGTH + x + (CARLENGTH - 3) * (j + 1);
+            if (pos < 0) {
+                continue;
+            } else if (pos > COLS + C51LENGTH) {
+                break;
+            }
+
+            swprintf(carName, CARLENGTH, car[i], namelist[j]->d_name);
+            my_mvaddstr(y + i + (FLY * (j + 1)) + dy, x + 55 + (CARLENGTH - 3) * (j + 1), carName);
+        }
     }
     if (ACCIDENT == 1) {
-        add_man(y + 3, x + 45);
-        add_man(y + 3, x + 49);
+        if (x + 49 > 0) {
+            add_man(y + 2, x + 45);
+            add_man(y + 2, x + 49);
+        }
+
+        for (j = 0; j < cars; ++j) {
+            pos = C51LENGTH + x + (CARLENGTH - 3) * (j + 1);
+            if (pos < 0) {
+                continue;
+            } else if (pos > COLS + C51LENGTH) {
+                break;
+            }
+
+            add_man(y + 2 + (FLY * (j + 2)), x + C51LENGTH + 3 + ((CARLENGTH - 3) * j));
+            add_man(y + 2 + (FLY * (j + 2)), x + C51LENGTH + 13 + ((CARLENGTH - 3) * j));
+        }
     }
     add_smoke(y - 1, x + C51FUNNEL);
-    return OK;
+end:
+    for (j = 0; j < cars; ++j) {
+        free(namelist[j]);
+    }
+
+    free(namelist);
+
+    return status;
 }
 
 

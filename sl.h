@@ -11,6 +11,8 @@
 #define D51FUNNEL	 7
 #define D51LENGTH	83
 #define D51PATTERNS	 6
+#define COALLENGTH  32
+#define CARLENGTH   32
 
 #define D51STR1  L"      ====        ________                ___________ "
 #define D51STR2  L"  _D _|  |_______/        \\__I_I_____===__|_________| "
@@ -59,12 +61,12 @@
 
 #define COALDEL L"                              "
 
-#define CAR01 L"       ____        ____       "
-#define CAR02 L"   ___|    |______|    |___   "
-#define CAR03 L"  |                        |  "
-#define CAR04 L"  |                        |  "
-#define CAR05 L"  | %-22.22s |  "
-#define CAR06 L"  |                        |  "
+#define CAR01 L"  __________________________  "
+#define CAR02 L"  |   ___  ___  ___  ___   |   "
+#define CAR03 L"  |   | |  | |  | |  | |   |  "
+#define CAR04 L"  |   |_|  |_|  |_|  |_|   |  "
+#define CAR05 L"  |                        |  "
+#define CAR06 L"  | %-22.22s |  "
 #define CAR07 L"__|________________________|_ "
 #define CAR08 L"|__________________________|_ "
 #define CAR09 L"   |_D__D__D_|  |_D__D__D_|   "
@@ -74,6 +76,8 @@
 #define LOGOFUNNEL  	 4
 #define LOGOLENGTH      84
 #define LOGOPATTERNS	 6
+#define LCOALLENTH      23
+#define LCARLENGTH      23
 
 #define LOGO1  L"     ++      +------ "
 #define LOGO2  L"     ||      |+-+ |  "
