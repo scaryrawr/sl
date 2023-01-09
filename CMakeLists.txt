@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.24)
 project("Steam Locamotive"
         VERSION 5.05
         DESCRIPTION "CHOO CHOO"
@@ -8,17 +8,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_executable(sl sl.c scandir.c sl.h scandir.h)
 
-if (WIN32)
-        add_subdirectory(submodules)
-        target_link_libraries(sl pdcurses)
-        target_compile_definitions(sl PRIVATE UNICODE _UNICODE)
-else()
-        find_package(PkgConfig REQUIRED)
-        pkg_check_modules(NCURSES REQUIRED ncursesw)
-        target_link_libraries(sl ${NCURSES_LIBRARIES})
-        target_include_directories(sl PUBLIC ${NCURSES_INCLUDE_DIRS})
-        target_compile_options(sl PUBLIC ${NCURSES_CFLAGS_OTHER})
-endif()
+find_path(PDC_INCLUDES NAMES curses.h REQUIRED)
+find_library(PDC_LIBS NAMES pdcurses REQUIRED)
+target_link_libraries(sl ${PDC_LIBS})
+target_include_directories(sl PUBLIC ${PDC_INCLUDES})
 
 install(TARGETS sl
         RUNTIME DESTINATION bin

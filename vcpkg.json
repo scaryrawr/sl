@@ -1,0 +1,5 @@
+{
+  "name": "sl",
+  "version": "5.5.1",
+  "dependencies": ["pdcurses"]
+}
