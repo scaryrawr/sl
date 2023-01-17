@@ -15,6 +15,10 @@ else()
         pkg_check_modules(CURSES REQUIRED ncursesw)
 endif()
 
+if(APPLE)
+        add_compile_definitions(_XOPEN_SOURCE_EXTENDED)
+endif()
+
 target_link_libraries(sl ${CURSES_LIBRARIES})
 target_include_directories(sl PUBLIC ${CURSES_INCLUDE_DIRS})
 target_compile_options(sl PUBLIC ${CURSES_CFLAGS_OTHER})
