@@ -7,11 +7,17 @@ project("Steam Locamotive"
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_executable(sl sl.c scandir.c sl.h scandir.h)
+if(WIN32)
+        find_path(CURSES_INCLUDE_DIRS NAMES curses.h REQUIRED)
+        find_library(CURSES_LIBRARIES NAMES pdcurses REQUIRED)
+else()
+        find_package(PkgConfig REQUIRED)
+        pkg_check_modules(CURSES REQUIRED ncursesw)
+endif()
 
-find_path(PDC_INCLUDES NAMES curses.h REQUIRED)
-find_library(PDC_LIBS NAMES pdcurses REQUIRED)
-target_link_libraries(sl ${PDC_LIBS})
-target_include_directories(sl PUBLIC ${PDC_INCLUDES})
+target_link_libraries(sl ${CURSES_LIBRARIES})
+target_include_directories(sl PUBLIC ${CURSES_INCLUDE_DIRS})
+target_compile_options(sl PUBLIC ${CURSES_CFLAGS_OTHER})
 
 install(TARGETS sl
         RUNTIME DESTINATION bin
