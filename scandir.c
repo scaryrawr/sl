@@ -21,8 +21,8 @@ int scandir(const char *dirp, struct dirent ***namelist, filter_t filter, compar
 {
     int count = 0;
     HANDLE find = INVALID_HANDLE_VALUE;
-    WIN32_FIND_DATA data;
-    char *dirstr = NULL;
+    WIN32_FIND_DATAW data;
+    wchar_t *dirstr = NULL;
     int dirlen = 0;
     size_t converted = 0;
 
@@ -40,8 +40,8 @@ int scandir(const char *dirp, struct dirent ***namelist, filter_t filter, compar
     dirstr = calloc(dirlen, sizeof(wchar_t));
     if (mbstowcs_s(&converted, dirstr, dirlen, dirp, strlen(dirp)))
     {
-       count = 0;
-       goto Error;
+        count = 0;
+        goto Error;
     }
 
     wcsncat_s(dirstr, dirlen, L"/*", 2);

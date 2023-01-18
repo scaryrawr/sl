@@ -2,5 +2,8 @@
     "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools",
     "files.associations": {
         "ranges": "c"
+    },
+    "cmake.configureEnvironment": {
+        "CMAKE_TOOLCHAIN_FILE": "${userHome}/.vcpkg/scripts/buildsystems/vcpkg.cmake"
     }
 }
