@@ -3,17 +3,19 @@
 
 #ifdef WIN32
 
-#include <windows.h>
+#ifndef MAX_PATH
+#define MAX_PATH 260
+#endif
 
 struct dirent
 {
 	wchar_t d_name[MAX_PATH];
 };
 
-typedef int(*filter_t)(const struct dirent*);
-typedef int(*compar_t)(const struct dirent**, const struct dirent**);
+typedef int (*filter_t)(const struct dirent *);
+typedef int (*compar_t)(const struct dirent **, const struct dirent **);
 
-int alphasort(const struct dirent**, const struct dirent**);
+int alphasort(const struct dirent **, const struct dirent **);
 
 int scandir(const char *dirp, struct dirent ***namelist, filter_t filter, compar_t compar);
 
@@ -23,4 +25,4 @@ int scandir(const char *dirp, struct dirent ***namelist, filter_t filter, compar
 
 #endif
 
-#endif  // SCANDIR_H_
+#endif // SCANDIR_H_
