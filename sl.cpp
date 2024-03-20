@@ -46,22 +46,19 @@
 #include <curses.h>
 #include <sys/types.h>
 #include <wchar.h>
-#ifdef WIN32
 
-#include "scandir.h"
+#include <filesystem>
+#include <ranges>
+#include <string>
 #include <thread>
+#include <vector>
+
 inline int usleep(int micro)
 {
     std::this_thread::sleep_for(std::chrono::microseconds(micro));
     return 0;
 }
 
-#else
-
-#include <dirent.h>
-#include <unistd.h>
-
-#endif
 #include "sl.h"
 
 void add_smoke(int y, int x);
@@ -79,8 +76,7 @@ int FLY = 0;
 int C51 = 0;
 int FILE_CARS = 1;
 
-int cars = 0;
-struct dirent **namelist = NULL;
+std::vector<std::wstring> namelist;
 
 int my_mvaddstr(int y, int x, const wchar_t *str)
 {
@@ -89,9 +85,7 @@ int my_mvaddstr(int y, int x, const wchar_t *str)
             return ERR;
     for (; *str != L'\0'; ++str, ++x)
     {
-        wchar_t buff[2];
-        buff[0] = *str;
-        buff[1] = L'\0';
+        wchar_t buff[] = {*str, L'\0'};
         if (mvaddwstr(y, x, buff) == ERR)
             return ERR;
     }
@@ -147,7 +141,9 @@ int main(int argc, char *argv[])
     leaveok(stdscr, TRUE);
     scrollok(stdscr, FALSE);
 
-    cars = FILE_CARS ? scandir(".", &namelist, no_dot_file_filter, alphasort) : 0;
+    namelist = std::filesystem::directory_iterator(".") | std::ranges::views::transform([](const std::filesystem::directory_entry &entry)
+                                                                                        { return entry.path().filename().wstring(); }) |
+               std::ranges::to<std::vector<std::wstring>>();
 
     for (x = COLS - 1;; --x)
     {
@@ -171,24 +167,10 @@ int main(int argc, char *argv[])
         usleep(40000);
     }
 
-    for (j = 0; j < cars; ++j)
-    {
-        free(namelist[j]);
-        namelist[j] = NULL;
-    }
-
-    free(namelist);
-    namelist = NULL;
-
     mvcur(0, COLS - 1, LINES - 1, 0);
     endwin();
 
     return 0;
-}
-
-int no_dot_file_filter(const struct dirent *entry)
-{
-    return '.' != entry->d_name[0];
 }
 
 int add_sl(int x)
@@ -206,6 +188,7 @@ int add_sl(int x)
 
     int i, j, y, pos, py1 = 0, py2 = 0, py3 = 0;
     wchar_t carName[LCARLENGTH];
+    int cars = namelist.size();
     if (x < -(LOGOLENGTH + ((cars > 0) ? cars * (LCARLENGTH - 1) : 0)))
     {
         return ERR;
@@ -245,7 +228,7 @@ int add_sl(int x)
                 break;
             }
 
-            swprintf(carName, LCARLENGTH, car[i], namelist[j]->d_name);
+            swprintf(carName, LCARLENGTH, car[i], namelist[j].c_str());
             my_mvaddstr(y + i + (FLY * j) + py2, x + 42 + (LCARLENGTH - 1) * j, carName);
         }
     }
@@ -297,7 +280,7 @@ int add_D51(int x)
 
     int y, i, j, pos, dy = 0;
     wchar_t carName[CARLENGTH];
-
+    int cars = namelist.size();
     if (x < -(D51LENGTH + ((cars > 0) ? cars * (CARLENGTH - 1) : 0)))
     {
         return ERR;
@@ -334,7 +317,7 @@ int add_D51(int x)
                 break;
             }
 
-            swprintf(carName, CARLENGTH, car[i], namelist[j]->d_name);
+            swprintf(carName, CARLENGTH, car[i], namelist[j].c_str());
             my_mvaddstr(y + i + (FLY * (j + 1)) + dy, x + 53 + (CARLENGTH - 3) * (j + 1), carName);
         }
     }
@@ -390,8 +373,7 @@ int add_C51(int x)
 
     int y, i, j, pos, dy = 0;
     wchar_t carName[CARLENGTH];
-
-    cars = FILE_CARS ? scandir(".", &namelist, no_dot_file_filter, alphasort) : 0;
+    int cars = namelist.size();
     if (x < -(C51LENGTH + ((cars > 0) ? cars * (CARLENGTH - 1) : 0)))
     {
         return ERR;
@@ -424,7 +406,7 @@ int add_C51(int x)
                 break;
             }
 
-            swprintf(carName, CARLENGTH, car[i], namelist[j]->d_name);
+            swprintf(carName, CARLENGTH, car[i], namelist[j].c_str());
             my_mvaddstr(y + i + (FLY * (j + 1)) + dy, x + 55 + (CARLENGTH - 3) * (j + 1), carName);
         }
     }

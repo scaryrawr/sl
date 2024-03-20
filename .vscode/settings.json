@@ -78,5 +78,23 @@
   "cmake.configureEnvironment": {
     "CMAKE_TOOLCHAIN_FILE": "${env:VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
   },
-  "cSpell.words": ["pdcurses"]
+  "cSpell.words": [
+    "CARLENGTH",
+    "COALDEL",
+    "COALLENGTH",
+    "DELLN",
+    "LCAR",
+    "LCARLENGTH",
+    "LCOAL",
+    "LCOALLENTH",
+    "LOGOFUNNEL",
+    "LOGOHEIGHT",
+    "LOGOLENGTH",
+    "LOGOPATTERNS",
+    "LWHL",
+    "Masashi",
+    "pdcurses",
+    "ptrn",
+    "SMOKEPTNS"
+  ]
 }

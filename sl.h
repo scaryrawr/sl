@@ -7,20 +7,20 @@
  *========================================
  */
 
-#define D51HEIGHT	10
-#define D51FUNNEL	 7
-#define D51LENGTH	83
-#define D51PATTERNS	 6
-#define COALLENGTH  32
-#define CARLENGTH   32
+#define D51HEIGHT 10
+#define D51FUNNEL 7
+#define D51LENGTH 83
+#define D51PATTERNS 6
+#define COALLENGTH 32
+#define CARLENGTH 32
 
-#define D51STR1  L"      ====        ________                ___________ "
-#define D51STR2  L"  _D _|  |_______/        \\__I_I_____===__|_________| "
-#define D51STR3  L"   |(_)---  |   H\\________/ |   |        =|___ ___|   "
-#define D51STR4  L"   /     |  |   H  |  |     |   |         ||_| |_||   "
-#define D51STR5  L"  |      |  |   H  |__--------------------| [___] |   "
-#define D51STR6  L"  | ________|___H__/__|_____/[][]~\\_______|       |   "
-#define D51STR7  L"  |/ |   |-----------I_____I [][] []  D   |=======|__ "
+#define D51STR1 L"      ====        ________                ___________ "
+#define D51STR2 L"  _D _|  |_______/        \\__I_I_____===__|_________| "
+#define D51STR3 L"   |(_)---  |   H\\________/ |   |        =|___ ___|   "
+#define D51STR4 L"   /     |  |   H  |  |     |   |         ||_| |_||   "
+#define D51STR5 L"  |      |  |   H  |__--------------------| [___] |   "
+#define D51STR6 L"  | ________|___H__/__|_____/[][]~\\_______|       |   "
+#define D51STR7 L"  |/ |   |-----------I_____I [][] []  D   |=======|__ "
 
 #define D51WHL11 L"__/ =| o |=-~~\\  /~~\\  /~~\\  /~~\\ ____Y___________|__ "
 #define D51WHL12 L" |/-=|___|=    ||    ||    ||    |_____/~\\___/        "
@@ -46,7 +46,7 @@
 #define D51WHL62 L" |/-=|___|=    ||    ||    ||    |_____/~\\___/        "
 #define D51WHL63 L"  \\_/      \\_O=====O=====O=====O/      \\_/            "
 
-#define D51DEL   L"                                                      "
+#define D51DEL L"                                                      "
 
 #define COAL01 L"                              "
 #define COAL02 L"                              "
@@ -62,27 +62,27 @@
 #define COALDEL L"                              "
 
 #define CAR01 L"  __________________________  "
-#define CAR02 L"  |   ___  ___  ___  ___   |   "
+#define CAR02 L"  |   ___  ___  ___  ___   |  "
 #define CAR03 L"  |   | |  | |  | |  | |   |  "
 #define CAR04 L"  |   |_|  |_|  |_|  |_|   |  "
 #define CAR05 L"  |                        |  "
-#define CAR06 L"  | %-22.22s |  "
+#define CAR06 L"  | %-22.22S |  "
 #define CAR07 L"__|________________________|_ "
 #define CAR08 L"|__________________________|_ "
 #define CAR09 L"   |_D__D__D_|  |_D__D__D_|   "
-#define CAR10 L"    \\_/   \\_/    \\_/   \\_/  "
+#define CAR10 L"    \\_/   \\_/    \\_/   \\_/    "
 
-#define LOGOHEIGHT    	 6
-#define LOGOFUNNEL  	 4
-#define LOGOLENGTH      84
-#define LOGOPATTERNS	 6
-#define LCOALLENTH      23
-#define LCARLENGTH      23
+#define LOGOHEIGHT 6
+#define LOGOFUNNEL 4
+#define LOGOLENGTH 84
+#define LOGOPATTERNS 6
+#define LCOALLENTH 23
+#define LCARLENGTH 23
 
-#define LOGO1  L"     ++      +------ "
-#define LOGO2  L"     ||      |+-+ |  "
-#define LOGO3  L"   /---------|| | |  "
-#define LOGO4  L"  + ========  +-+ |  "
+#define LOGO1 L"     ++      +------ "
+#define LOGO2 L"     ||      |+-+ |  "
+#define LOGO3 L"   /---------|| | |  "
+#define LOGO4 L"  + ========  +-+ |  "
 
 #define LWHL11 L" _|--O========O~\\-+  "
 #define LWHL12 L"//// \\_/      \\_/    "
@@ -109,14 +109,14 @@
 #define LCOAL5 L"|__________________| "
 #define LCOAL6 L"   (O)       (O)     "
 
-#define LCAR1  L"____________________ "
-#define LCAR2  L"|  ___ ___ ___ ___ | "
-#define LCAR3  L"|  |_| |_| |_| |_| | "
-#define LCAR4  L"|  %-15.15s |  "
-#define LCAR5  L"|__________________| "
-#define LCAR6  L"   (O)        (O)    "
+#define LCAR1 L"____________________ "
+#define LCAR2 L"|  ___ ___ ___ ___ | "
+#define LCAR3 L"|  |_| |_| |_| |_| | "
+#define LCAR4 L"|  %-15.15s |  "
+#define LCAR5 L"|__________________| "
+#define LCAR6 L"   (O)        (O)    "
 
-#define DELLN  L"                     "
+#define DELLN L"                     "
 
 #define C51HEIGHT 11
 #define C51FUNNEL 7

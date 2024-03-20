@@ -10,7 +10,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 list(APPEND SOURCES sl.cpp)
 if(WIN32)
         add_compile_definitions(PDC_WIDE)
-        list(APPEND SOURCES win32/scandir.cpp)
         
         find_path(CURSES_INCLUDE_DIRS NAMES curses.h REQUIRED)
         find_library(CURSES_LIBRARIES NAMES pdcurses REQUIRED)
