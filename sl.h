@@ -66,7 +66,11 @@
 #define CAR03 L"  |   | |  | |  | |  | |   |  "
 #define CAR04 L"  |   |_|  |_|  |_|  |_|   |  "
 #define CAR05 L"  |                        |  "
+#ifdef WIN32
+#define CAR06 L"  | %-22.22s |  "
+#else
 #define CAR06 L"  | %-22.22S |  "
+#endif
 #define CAR07 L"__|________________________|_ "
 #define CAR08 L"|__________________________|_ "
 #define CAR09 L"   |_D__D__D_|  |_D__D__D_|   "
