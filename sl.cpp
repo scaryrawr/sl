@@ -43,6 +43,7 @@
 #include <locale.h>
 #include <curses.h>
 
+#include <algorithm>
 #include <array>
 #include <filesystem>
 #include <format>
@@ -137,9 +138,10 @@ int main(int argc, char *argv[])
     namelist = std::filesystem::directory_iterator(".") | std::ranges::views::transform([](const std::filesystem::directory_entry &entry)
                                                                                         { return entry.path().filename().wstring(); }) |
             std::ranges::views::filter([](const std::wstring &name)
-                                       { return !name.starts_with(L"."); }) |
+                                       { return ACCIDENT ? true : !name.starts_with(L"."); }) |
                std::ranges::to<std::vector<std::wstring>>();
 
+    std::ranges::sort(namelist);
     for (int x = COLS - 1;; --x) {
         if (LOGO == 1) {
             if (add_sl(x) == ERR) break;
