@@ -1,0 +1,16 @@
+{
+  "name": "fedora",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": "true",
+      "username": "vscode",
+      "upgradePackages": "false"
+    }
+  },
+  "containerUser": "vscode",
+  "remoteUser": "vscode",
+  "postCreateCommand": "sudo dnf install -y cmake ninja-build clang ncurses-devel dnf-plugins-core rpmdevtools"
+}
