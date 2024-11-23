@@ -29,7 +29,6 @@ jobs:
         run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: vcpkg build
-        if: runner.os == 'Windows'
         uses: johnwason/vcpkg-action@v6
         with:
           manifest-dir: ${{ github.workspace }}
