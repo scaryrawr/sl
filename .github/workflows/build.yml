@@ -32,13 +32,13 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         working-directory: ${{github.workspace}}/build
-        run: cmake .. -DCMAKE_TOOLCHAIN_FILE="${env:VCPKG_INSTALLATION_ROOT}\scripts\buildsystems\vcpkg.cmake"
+        run: cmake .. -DCMAKE_TOOLCHAIN_FILE="${env:VCPKG_INSTALLATION_ROOT}\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
 
       - name: Configure CMake
         if: runner.os != 'Windows'
         shell: bash
         working-directory: ${{github.workspace}}/build
-        run: cmake ..
+        run: cmake .. -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         working-directory: ${{github.workspace}}/build
