@@ -27,26 +27,18 @@ jobs:
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build
-
-      - name: vcpkg build
-        if: runner.os == 'Windows'
-        uses: johnwason/vcpkg-action@v6
-        with:
-          manifest-dir: ${{ github.workspace }}
-          triplet: x64-windows-release
-          token: ${{ github.token }}
-          github-binarycache: true
       
       - name: Configure CMake
         if: runner.os == 'Windows'
+        shell: pwsh
         working-directory: ${{github.workspace}}/build
-        run: cmake .. -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+        run: cmake .. -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DCMAKE_TOOLCHAIN_FILE=${env:VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake
 
       - name: Configure CMake
         if: runner.os != 'Windows'
         shell: bash
         working-directory: ${{github.workspace}}/build
-        run: cmake .. -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
+        run: cmake .. -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DCMAKE_TOOLCHAIN_FILE=${VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake
 
       - name: Build
         working-directory: ${{github.workspace}}/build
