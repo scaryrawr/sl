@@ -1,0 +1,46 @@
+name: Build SL
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - v*
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+      
+      - name: Configure CMake
+        if: runner.os == 'Windows'
+        shell: pwsh
+        working-directory: ${{github.workspace}}/build
+        run: cmake .. -DCMAKE_TOOLCHAIN_FILE="${env:VCPKG_INSTALLATION_ROOT}\scripts\buildsystems\vcpkg.cmake"
+
+      - name: Configure CMake
+        if: runner.os != 'Windows'
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+        run: cmake ..
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: cmake --build . --config Release

@@ -1,5 +1,6 @@
 {
   "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools",
+  "editor.formatOnSave": false,
   "files.associations": {
     "ranges": "c"
   },
