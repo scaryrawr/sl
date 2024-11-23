@@ -30,9 +30,8 @@ jobs:
       
       - name: Configure CMake
         if: runner.os == 'Windows'
-        shell: pwsh
         working-directory: ${{github.workspace}}/build
-        run: cmake .. -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DCMAKE_TOOLCHAIN_FILE=${env:VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake
+        run: cmake .. -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DCMAKE_TOOLCHAIN_FILE=${env:VCPKG_INSTALLATION_ROOT}\scripts\buildsystems\vcpkg.cmake
 
       - name: Configure CMake
         if: runner.os != 'Windows'
