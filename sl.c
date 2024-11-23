@@ -46,19 +46,30 @@
 #include <curses.h>
 #include <sys/types.h>
 #include <wchar.h>
+#include <string.h>
 #ifdef WIN32
 
 #include "scandir.h"
 #include <windows.h>
+#include <io.h>
+#define isatty _isatty
+#define fileno _fileno
+
 inline int usleep(int micro) {
     Sleep(micro / 1000);
     return 0;
 }
 
+#define dirent_char_t wchar_t
+#define fgetline fgetws
+
 #else
 
 #include <dirent.h>
 #include <unistd.h>
+
+#define dirent_char_t char
+#define fgetline fgets
 
 #endif
 #include "sl.h"
@@ -76,6 +87,7 @@ int ACCIDENT  = 0;
 int LOGO      = 0;
 int FLY       = 0;
 int C51       = 0;
+int NOT_ATTY  = 0;
 int FILE_CARS = 1;
 
 int cars                 = 0;
@@ -115,12 +127,20 @@ void option(char *str)
 int main(int argc, char *argv[])
 {
     int x, i, j;
+    dirent_char_t line[1024];
+    size_t len;
+    struct dirent **realloc_ptr;
 
     for (i = 1; i < argc; ++i) {
         if (*argv[i] == '-') {
             option(argv[i] + 1);
         }
     }
+
+    if (!isatty(fileno(stdin))) {
+        NOT_ATTY = 1;
+    }
+
     setlocale(LC_ALL, "");
     initscr();
     noecho();
@@ -129,7 +149,34 @@ int main(int argc, char *argv[])
     leaveok(stdscr, TRUE);
     scrollok(stdscr, FALSE);
     
-    cars = FILE_CARS ? scandir(".", &namelist, no_dot_file_filter, alphasort) : 0;
+    if (!NOT_ATTY) {
+        cars = FILE_CARS ? scandir(".", &namelist, no_dot_file_filter, alphasort) : 0;
+    } else {
+        // Read from stdin for what to put in cars
+        cars = 0;
+        len = 0;
+        realloc_ptr = NULL;
+        while (fgetline(line, sizeof(line) / sizeof(dirent_char_t), stdin) != NULL) {
+            realloc_ptr = realloc(namelist, sizeof(struct dirent *) * (cars + 1));
+            if (realloc_ptr) {
+                namelist = realloc_ptr;
+            } else {
+                // could not allocate memory for a new car
+                break;
+            }
+
+            namelist[cars] = malloc(sizeof(struct dirent));
+            if (!namelist[cars]) {
+                // could not allocate memory for a new car
+                break;
+            }
+
+            memset(namelist[cars]->d_name, 0, sizeof(namelist[cars]->d_name));
+            strncpy(namelist[cars]->d_name, line, (sizeof(namelist[cars]->d_name) / sizeof(dirent_char_t)) - 1);
+
+            cars++;
+        }
+    }
 
     for (x = COLS - 1; ; --x) {
         if (LOGO == 1) {
