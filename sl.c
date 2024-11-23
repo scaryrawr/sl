@@ -54,6 +54,7 @@
 #include <io.h>
 #define isatty _isatty
 #define fileno _fileno
+#define string_copy wcsncpy
 
 inline int usleep(int micro) {
     Sleep(micro / 1000);
@@ -70,6 +71,7 @@ inline int usleep(int micro) {
 
 #define dirent_char_t char
 #define fgetline fgets
+#define string_copy strncpy
 
 #endif
 #include "sl.h"
@@ -172,7 +174,7 @@ int main(int argc, char *argv[])
             }
 
             memset(namelist[cars]->d_name, 0, sizeof(namelist[cars]->d_name));
-            strncpy(namelist[cars]->d_name, line, (sizeof(namelist[cars]->d_name) / sizeof(dirent_char_t)) - 1);
+            string_copy(namelist[cars]->d_name, line, (sizeof(namelist[cars]->d_name) / sizeof(dirent_char_t)) - 1);
 
             cars++;
         }
