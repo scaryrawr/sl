@@ -1,14 +1,10 @@
 {
   "name": "fedora",
   "build": {
-    "dockerfile": "Dockerfile"
+    "dockerfile": "fedora:latest"
   },
   "features": {
-    "ghcr.io/devcontainers/features/common-utils:2": {
-      "installZsh": "true",
-      "username": "vscode",
-      "upgradePackages": "false"
-    }
+    "ghcr.io/devcontainers/features/common-utils:2": {}
   },
   "containerUser": "vscode",
   "remoteUser": "vscode",
