@@ -3,9 +3,10 @@
  *        Copyright 1993,1998,2014-2015
  *                  Toyoda Masashi
  *                  (mtoyoda@acm.org)
- *        Last Modified: 2021/01/03
+ *        Last Modified: 2024/11/23
  *========================================
  */
+/* sl version 5.06 : Add support piping into SL.                  2024/11/23 */
 /* sl version 5.05 : Add support for unicode file names.          2021/01/03 */
 /* sl version 5.04 : Add file cars as -f option.                  2020/08/19 */
 /* sl version 5.03 : Fix some more compiler warnings.                        */
