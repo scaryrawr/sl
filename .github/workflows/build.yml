@@ -39,7 +39,6 @@ jobs:
       
       - name: Configure CMake
         if: runner.os == 'Windows'
-        shell: bash
         working-directory: ${{github.workspace}}/build
         run: cmake $GITHUB_WORKSPACE -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
 
