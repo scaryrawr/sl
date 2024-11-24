@@ -3,9 +3,10 @@
  *        Copyright 1993,1998,2014-2015
  *                  Toyoda Masashi
  *                  (mtoyoda@acm.org)
- *        Last Modified: 2021/01/03
+ *        Last Modified: 2024/11/23
  *========================================
  */
+/* sl version 5.06 : Add support piping into SL.                  2024/11/23 */
 /* sl version 5.05 : Add support for unicode file names.          2021/01/03 */
 /* sl version 5.04 : Add file cars as -f option.                  2020/08/19 */
 /* sl version 5.03 : Fix some more compiler warnings.                        */
@@ -132,6 +133,7 @@ int main(int argc, char *argv[])
     dirent_char_t line[1024];
     size_t len;
     struct dirent **realloc_ptr;
+    FILE *stdin_file;
 
     for (i = 1; i < argc; ++i) {
         if (*argv[i] == '-') {
@@ -143,14 +145,6 @@ int main(int argc, char *argv[])
         NOT_ATTY = 1;
     }
 
-    setlocale(LC_ALL, "");
-    initscr();
-    noecho();
-    curs_set(0);
-    nodelay(stdscr, TRUE);
-    leaveok(stdscr, TRUE);
-    scrollok(stdscr, FALSE);
-    
     if (!NOT_ATTY) {
         cars = FILE_CARS ? scandir(".", &namelist, no_dot_file_filter, alphasort) : 0;
     } else {
@@ -180,6 +174,21 @@ int main(int argc, char *argv[])
         }
     }
 
+    stdin_file = NULL;
+#ifdef WIN32
+    if (NOT_ATTY) {
+        stdin_file = freopen("CONIN$", "r", stdin);
+    }
+#endif
+
+    setlocale(LC_ALL, "");
+    initscr();
+    noecho();
+    curs_set(0);
+    nodelay(stdscr, TRUE);
+    leaveok(stdscr, TRUE);
+    scrollok(stdscr, FALSE);
+
     for (x = COLS - 1; ; --x) {
         if (LOGO == 1) {
             if (add_sl(x) == ERR) break;
@@ -205,6 +214,9 @@ int main(int argc, char *argv[])
 
     mvcur(0, COLS - 1, LINES - 1, 0);
     endwin();
+    if (stdin_file) {
+        fclose(stdin_file);
+    }
 
     return 0;
 }
