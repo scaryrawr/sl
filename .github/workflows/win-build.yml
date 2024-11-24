@@ -1,4 +1,4 @@
-name: Build POSIX SL
+name: Build SL
 
 on:
   push:
@@ -16,10 +16,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
+    runs-on: windows-latest
 
     steps:
       - name: Checkout
@@ -27,13 +24,17 @@ jobs:
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build
-
+      
       - name: Configure CMake
-        shell: bash
+        shell: pwsh
         working-directory: ${{github.workspace}}/build
-        run: cmake .. -DCMAKE_BUILD_TYPE=Release
+        run: cmake .. -DCMAKE_TOOLCHAIN_FILE="${env:VCPKG_INSTALLATION_ROOT}\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         working-directory: ${{github.workspace}}/build
         shell: bash
         run: cmake --build . --config Release
+
+      - name: Build Installer
+        working-directory: ${{github.workspace}}/build
+        run: cpack -C Release
