@@ -1,0 +1,71 @@
+name: Windows Build SL
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - v*
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+      
+      - name: Configure CMake
+        shell: pwsh
+        working-directory: ${{github.workspace}}/build
+        run: cmake .. -DCMAKE_TOOLCHAIN_FILE="${env:VCPKG_INSTALLATION_ROOT}\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: cmake --build . --config Release
+
+      - name: Build Installer
+        working-directory: ${{github.workspace}}/build
+        run: cpack -C Release
+
+      - name: Upload Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: sl-5.06.0-win64.exe
+          path: build/sl-5.06.0-win64.exe
+
+  release:
+    name: Release
+    needs: build
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/5')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Installer
+        id: download-extension
+        uses: actions/download-artifact@v4
+        with:
+          path: build
+          pattern: sl-5.06.0-win64.exe
+          merge-multiple: true
+
+      - name: List Files
+        run: ls -R ${{ steps.download-extension.outputs.download-path }}
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          prerelease: false
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            ${{ steps.download-extension.outputs.download-path }}/sl-5.06.0-win64.exe
