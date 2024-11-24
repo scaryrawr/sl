@@ -1,12 +1,11 @@
 {
   "name": "fedora",
-  "build": {
-    "dockerfile": "fedora:latest"
-  },
+  "image": "fedora:latest",
   "features": {
-    "ghcr.io/devcontainers/features/common-utils:2": {}
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "username": "vscode"
+    }
   },
-  "containerUser": "vscode",
-  "remoteUser": "vscode",
-  "postCreateCommand": "sudo dnf install -y cmake ninja-build clang ncurses-devel dnf-plugins-core rpmdevtools"
+  "postCreateCommand": "sudo dnf install -y cmake ninja-build clang ncurses-devel dnf-plugins-core rpmdevtools",
+  "containerUser": "vscode"
 }
