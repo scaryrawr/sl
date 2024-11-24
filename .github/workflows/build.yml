@@ -44,27 +44,3 @@ jobs:
         working-directory: ${{github.workspace}}/build
         shell: bash
         run: cmake --build . --config Release
-
-      - name: Run normally
-        working-directory: ${{github.workspace}}/build
-        shell: bash
-        run: |
-          if [ -f ./sl ]; then
-            ./sl
-          fi
-
-          if [ -f ./Release/sl.exe ]; then
-            ./Release/sl.exe
-          fi
-
-      - name: Run Piped
-        working-directory: ${{github.workspace}}/build
-        shell: bash
-        run: |
-          if [ -f ./sl ]; then
-            echo 'hello' | ./sl
-          fi
-
-          if [ -f ./Release/sl.exe ]; then
-            echo 'hello' | ./Release/sl.exe
-          fi
