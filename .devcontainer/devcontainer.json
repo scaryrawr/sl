@@ -6,6 +6,6 @@
       "username": "vscode"
     }
   },
-  "postCreateCommand": "sudo dnf install -y cmake ninja-build clang ncurses-devel dnf-plugins-core rpmdevtools",
+  "postCreateCommand": "sudo dnf install -y cmake ninja-build clang ncurses-devel dnf-plugins-core rpmdevtools rpkg",
   "containerUser": "vscode"
 }
