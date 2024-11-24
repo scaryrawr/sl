@@ -1,5 +1,5 @@
 Name:       sl
-Version:    5.05
+Version:    5.06
 Release:    %autorelease
 Summary:    SL (Steam Locomotive) runs across your terminal when you type "sl" as you meant to type "ls".
 
