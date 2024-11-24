@@ -44,3 +44,15 @@ jobs:
         working-directory: ${{github.workspace}}/build
         shell: bash
         run: cmake --build . --config Release
+
+      - name: Run
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: |
+          if [ -f ./sl ]; then
+            ./sl
+          fi
+
+          if [ -f ./Release/sl.exe ]; then
+            ./Release/sl.exe
+          fi
