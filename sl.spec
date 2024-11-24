@@ -1,5 +1,5 @@
-Name:       {{{ git_name name=sl }}}
-Version:    {{{ git_version lead=5.0 }}}
+Name:       {{{ git_dir_name }}}
+Version:    {{{ git_dir_version }}}
 Release:    1%{?dist}
 Summary:    SL (Steam Locomotive) runs across your terminal when you type "sl" as you meant to type "ls".
 
@@ -23,8 +23,6 @@ SL (Steam Locomotive) runs across your terminal when you type "sl" as you meant 
 
 %prep
 {{{ git_dir_setup_macro }}}
-
-%autosetup
 
 %build
 %cmake
