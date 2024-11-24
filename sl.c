@@ -131,7 +131,6 @@ int main(int argc, char *argv[])
 {
     int x, i, j;
     dirent_char_t line[1024];
-    size_t len;
     struct dirent **realloc_ptr;
     FILE *stdin_file;
 
@@ -150,7 +149,6 @@ int main(int argc, char *argv[])
     } else {
         // Read from stdin for what to put in cars
         cars = 0;
-        len = 0;
         realloc_ptr = NULL;
         while (fgetline(line, sizeof(line) / sizeof(dirent_char_t), stdin) != NULL) {
             realloc_ptr = realloc(namelist, sizeof(struct dirent *) * (cars + 1));
@@ -241,7 +239,7 @@ int add_sl(int x)
     static wchar_t *car[LOGOHEIGHT + 1]
         = {LCAR1, LCAR2, LCAR3, LCAR4, LCAR5, LCAR6, DELLN};
 
-    int i, j, y, pos, py1 = 0, py2 = 0, py3 = 0;
+    int i, j, y, pos, py1 = 0, py2 = 0;
     wchar_t carName[LCARLENGTH];
     if (x < - (LOGOLENGTH + ((cars > 0) ? cars * (LCARLENGTH - 1) : 0))) {
         return ERR;
@@ -255,7 +253,7 @@ int add_sl(int x)
             return ERR;
         }
 
-        py1 = 2;  py2 = 4;  py3 = 6;
+        py1 = 2;  py2 = 4;
     }
 
     for (i = 0; i <= LOGOHEIGHT; ++i) {
