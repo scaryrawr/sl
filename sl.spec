@@ -1,12 +1,13 @@
-Name:       sl
-Version:    5.06
-Release:    %autorelease
+Name:       {{{ git_dir_name }}}
+Version:    {{{ git_dir_version lead=5 }}}
+Release:    1%{?dist}
 Summary:    SL (Steam Locomotive) runs across your terminal when you type "sl" as you meant to type "ls".
 
 License:    SL
 URL:        https://github.com/scaryrawr/sl
-Source0:    https://github.com/scaryrawr/sl/archive/refs/tags/%{version}.tar.gz
-Source1:    LICENSE
+VCS:        {{{ git_dir_vcs }}}
+
+Source:    {{{ git_dir_pack }}}
 
 BuildRequires:  gcc
 BuildRequires:  cmake
@@ -21,7 +22,7 @@ SL (Steam Locomotive) runs across your terminal when you type "sl" as you meant 
 %license LICENSE
 
 %prep
-%autosetup
+{{{ git_dir_setup_macro }}}
 
 %build
 %cmake
@@ -31,4 +32,4 @@ SL (Steam Locomotive) runs across your terminal when you type "sl" as you meant 
 %cmake_install
 
 %changelog
-%autochangelog
+{{{ git_dir_changelog }}}
