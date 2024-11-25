@@ -84,4 +84,4 @@ jobs:
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
-            ${{ steps.download-extension.outputs.download-path }}/sl-*.exe
+            ${{ steps.download-extension.outputs.download-path }}/sl-*/sl-*.exe
