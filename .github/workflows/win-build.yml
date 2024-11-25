@@ -47,7 +47,7 @@ jobs:
         working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
-          INSTALLER=$(find . -maxdepth 0 -name 'sl-*.exe')
+          INSTALLER=$(ls sl-*.exe)
           NEW_INSTALLER=$(echo $INSTALLER | sed 's/win64/woa64/')
           mv $INSTALLER $NEW_INSTALLER
 
@@ -56,7 +56,7 @@ jobs:
         working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
-          INSTALLER=$(find . -maxdepth 0 -name 'sl-*.exe')
+          INSTALLER=$(ls sl-*.exe)
           echo "installer=${INSTALLER}" >> $GITHUB_OUTPUT
 
       - name: Upload Installer
