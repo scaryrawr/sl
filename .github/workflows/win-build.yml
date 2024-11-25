@@ -44,7 +44,6 @@ jobs:
 
       - name: Rename Installer for ARM64
         if: matrix.target == 'ARM64'
-        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           INSTALLER=$(find build -name 'sl-*.exe')
@@ -53,7 +52,6 @@ jobs:
 
       - name: Find Installer
         id: installer
-        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           INSTALLER=$(find build -name 'sl-*.exe')
@@ -63,7 +61,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.installer.outputs.installer }}
-          path: build/${{ steps.installer.outputs.installer }}
+          path: ${{ steps.installer.outputs.installer }}
 
   release:
     name: Release
