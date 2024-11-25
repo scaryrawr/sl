@@ -22,6 +22,8 @@ sudo dnf copr enable scaryrawr/sl
 sudo dnf install sl
 ```
 
+Windows users can download the latest release from the [releases page](https://github.com/scaryrawr/sl/releases/latest/).
+
 From source:
 
 ```sh
