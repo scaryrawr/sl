@@ -49,5 +49,6 @@ set(CPACK_NSIS_URL_INFO_ABOUT "https://github.com/scaryrawr/sl")
 set(CPACK_NSIS_HELP_LINK "https://github.com/scaryrawr/sl/issues")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
 set(CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/README.md")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/scaryrawr/sl")
 
 include(CPack)
