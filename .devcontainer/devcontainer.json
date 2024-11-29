@@ -1,5 +1,5 @@
 {
-  "name": "fedora",
+  "name": "sl",
   "image": "mcr.microsoft.com/devcontainers/cpp:ubuntu-24.04",
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {}
