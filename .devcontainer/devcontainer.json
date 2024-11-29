@@ -1,11 +1,7 @@
 {
   "name": "fedora",
-  "image": "fedora:latest",
+  "image": "mcr.microsoft.com/devcontainers/cpp:ubuntu-24.04",
   "features": {
-    "ghcr.io/devcontainers/features/common-utils:2": {
-      "username": "vscode"
-    }
-  },
-  "postCreateCommand": "sudo dnf install -y cmake ninja-build clang ncurses-devel dnf-plugins-core rpmdevtools rpkg",
-  "containerUser": "vscode"
+    "ghcr.io/devcontainers/features/common-utils:2": {}
+  }
 }
