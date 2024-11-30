@@ -66,16 +66,22 @@ inline int usleep(int micro) {
 }
 
 #define dirent_char_t wchar_t
+#define format_print wprintf
 #define fgetline fgetws
-
+#define CONSOLE_INPUT "CONIN$"
+#define CONSOLE_OUTPUT "CONOUT$"
 #else
 
 #include <dirent.h>
 #include <unistd.h>
 
 #define dirent_char_t char
+#define format_print printf
 #define fgetline fgets
 #define string_copy strncpy
+
+#define CONSOLE_INPUT "/dev/tty"
+#define CONSOLE_OUTPUT "/dev/tty"
 
 #endif
 #include "sl.h"
@@ -188,6 +194,7 @@ int main(int argc, char *argv[])
     dirent_char_t line[1024];
     struct dirent **realloc_ptr;
     FILE *stdin_file;
+    FILE *stdout_file;
     cag_option_context context;
     cag_option_init(&context, options, CAG_ARRAY_SIZE(options), argc, argv);
     option(&context);
@@ -224,10 +231,19 @@ int main(int argc, char *argv[])
         }
     }
 
+    stdout_file = NULL;
+    if (!isatty(fileno(stdout))) {
+        for (i = 0; i < cars; ++i) {
+            format_print("%s\n", namelist[i]->d_name);
+        }
+
+        stdout_file = freopen(CONSOLE_OUTPUT, "w", stdout);
+    }
+
     stdin_file = NULL;
 #ifdef WIN32
     if (NOT_ATTY) {
-        stdin_file = freopen("CONIN$", "r", stdin);
+        stdin_file = freopen(CONSOLE_INPUT, "r", stdin);
     }
 #endif
 
@@ -266,6 +282,10 @@ int main(int argc, char *argv[])
     endwin();
     if (stdin_file) {
         fclose(stdin_file);
+    }
+
+    if (stdout_file) {
+        fclose(stdout_file);
     }
 
     return 0;
