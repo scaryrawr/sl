@@ -48,6 +48,9 @@
 #include <sys/types.h>
 #include <wchar.h>
 #include <string.h>
+#include <cargs.h>
+#include "config.h"
+
 #ifdef WIN32
 
 #include "scandir.h"
@@ -82,7 +85,7 @@ void add_man(int y, int x);
 int add_C51(int x);
 int add_D51(int x);
 int add_sl(int x);
-void option(char *str);
+void option(struct cag_option_context* context);
 int my_mvaddstr(int y, int x, wchar_t *str);
 int no_dot_file_filter(const struct dirent *entry);
 
@@ -95,6 +98,50 @@ int FILE_CARS = 1;
 
 int cars                 = 0;
 struct dirent **namelist = NULL;
+static struct cag_option options[] = {
+    {
+        .identifier = 'a',
+        .access_letters = "a",
+        .access_name = "accident",
+        .description = "Steam Locomotive accident"
+    },
+    {
+        .identifier = 'F',
+        .access_letters = "F",
+        .access_name = "fly",
+        .description = "Flying Steam Locomotive"
+    },
+    {
+        .identifier = 'l',
+        .access_letters = "l",
+        .access_name = "logo",
+        .description = "Steam Locomotive Logo"
+    },
+    {
+        .identifier = 'c',
+        .access_letters = "c",
+        .access_name = "C51",
+        .description = "C51 Steam Locomotive"
+    },
+    {
+        .identifier = 'f',
+        .access_letters = "f",
+        .access_name = "file-cars",
+        .description = "Disables showing files as cars"
+    },
+    {
+        .identifier = 'v',
+        .access_letters = "v",
+        .access_name = "version",
+        .description = "Print version information and quit"
+    },
+    {
+        .identifier = 'h',
+        .access_letters = "h",
+        .access_name = "help",
+        .description = "Shows the command help"
+    }
+};
 
 int my_mvaddstr(int y, int x, wchar_t *str)
 {
@@ -111,18 +158,26 @@ int my_mvaddstr(int y, int x, wchar_t *str)
     return OK;
 }
 
-void option(char *str)
+void option(struct cag_option_context* context)
 {
     extern int ACCIDENT, LOGO, FLY, C51, FILE_CARS;
-
-    while (*str != '\0') {
-        switch (*str++) {
-            case 'a': ACCIDENT  = 1; break;
-            case 'F': FLY       = 1; break;
-            case 'l': LOGO      = 1; break;
-            case 'c': C51       = 1; break;
-            case 'f': FILE_CARS = 0; break;
-            default:                break;
+    while (cag_option_fetch(context)) {
+        switch (cag_option_get_identifier(context)) {
+        case 'a': ACCIDENT  = 1; break;
+        case 'F': FLY       = 1; break;
+        case 'l': LOGO      = 1; break;
+        case 'c': C51       = 1; break;
+        case 'f': FILE_CARS = 0; break;
+        case 'h':
+            printf("Usage: sl [OPTION]...\n");
+            cag_option_print(options, CAG_ARRAY_SIZE(options), stdout);
+            exit(EXIT_SUCCESS);
+        case 'v':
+            printf("sl version%2d.%02d\n", SL_VERSION_MAJOR, SL_VERSION_MINOR);
+            exit(EXIT_SUCCESS);
+        case '?':
+            cag_option_print_error(context, stdout);
+            break;
         }
     }
 }
@@ -133,12 +188,9 @@ int main(int argc, char *argv[])
     dirent_char_t line[1024];
     struct dirent **realloc_ptr;
     FILE *stdin_file;
-
-    for (i = 1; i < argc; ++i) {
-        if (*argv[i] == '-') {
-            option(argv[i] + 1);
-        }
-    }
+    cag_option_context context;
+    cag_option_init(&context, options, CAG_ARRAY_SIZE(options), argc, argv);
+    option(&context);
 
     if (!isatty(fileno(stdin))) {
         NOT_ATTY = 1;

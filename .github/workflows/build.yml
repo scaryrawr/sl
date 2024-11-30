@@ -31,7 +31,7 @@ jobs:
       - name: Configure CMake
         shell: bash
         working-directory: ${{github.workspace}}/build
-        run: cmake .. -DCMAKE_BUILD_TYPE=Release
+        run: cmake ..  -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         working-directory: ${{github.workspace}}/build
