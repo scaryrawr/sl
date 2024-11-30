@@ -21,7 +21,7 @@ if(APPLE)
         add_compile_definitions(_XOPEN_SOURCE_EXTENDED)
 endif()
 
-find_package(cargs CONFIG REQUIRED)
+find_package(Cargs CONFIG REQUIRED)
 
 configure_file(config.h.in config.h)
 
