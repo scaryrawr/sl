@@ -5,6 +5,7 @@
     {
       "name": "pdcurses",
       "platform": "windows"
-    }
+    },
+    "cargs"
   ]
 }

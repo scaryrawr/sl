@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project("Steam Locamotive"
+project("SL"
         VERSION 5.06
         DESCRIPTION "CHOO CHOO"
         LANGUAGES C)
@@ -21,8 +21,12 @@ if(APPLE)
         add_compile_definitions(_XOPEN_SOURCE_EXTENDED)
 endif()
 
-target_link_libraries(sl ${CURSES_LIBRARIES})
-target_include_directories(sl PUBLIC ${CURSES_INCLUDE_DIRS})
+find_package(Cargs CONFIG REQUIRED)
+
+configure_file(config.h.in config.h)
+
+target_link_libraries(sl ${CURSES_LIBRARIES} cargs)
+target_include_directories(sl PUBLIC ${CURSES_INCLUDE_DIRS} "${PROJECT_BINARY_DIR}")
 target_compile_options(sl PUBLIC ${CURSES_CFLAGS_OTHER})
 
 install(TARGETS sl
