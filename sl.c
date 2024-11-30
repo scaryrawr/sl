@@ -102,8 +102,8 @@ static struct cag_option options[] = {
     {
         .identifier = 'a',
         .access_letters = "a",
-        .access_name = "accident",
-        .description = "Steam Locomotive accident"
+        .access_name = "all",
+        .description = "Accident/all"
     },
     {
         .identifier = 'F',
@@ -272,6 +272,10 @@ int main(int argc, char *argv[])
 }
 
 int no_dot_file_filter(const struct dirent *entry) {
+    if (ACCIDENT == 1) {
+        return 1;
+    }
+
     return '.' != entry->d_name[0];
 }
 
