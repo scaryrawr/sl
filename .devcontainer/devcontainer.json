@@ -1,11 +1,24 @@
 {
-  "name": "fedora",
+  "name": "sl",
   "image": "fedora:latest",
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
       "username": "vscode"
     }
   },
-  "postCreateCommand": "sudo dnf install -y cmake ninja-build clang ncurses-devel dnf-plugins-core rpmdevtools rpkg",
-  "containerUser": "vscode"
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools-extension-pack",
+        "github.vscode-github-actions"
+      ]
+    }
+  },
+  "containerEnv": {
+    "VCPKG_FORCE_SYSTEM_BINARIES": "1",
+    "VCPKG_ROOT": "/home/vscode/.local/share/vcpkg"
+  },
+  "onCreateCommand": "${containerWorkspaceFolder}/.devcontainer/onCreateCommand.sh",
+  "containerUser": "vscode",
+  "remoteUser": "vscode"
 }
