@@ -1,0 +1,21 @@
+name: Fedora Build SL
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build and Test
+        uses: devcontainers/ci@v0.3
+        with:
+          runCmd: |
+            mkdir ~/rpkg-build
+            rpkg install --outdir ~/rpkg-build
+            ~/rpkg-build/sl*/BUILDROOT/usr/bin/sl -h
+            ~/rpkg-build/sl*/BUILDROOT/usr/bin/sl -v
