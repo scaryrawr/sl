@@ -196,6 +196,8 @@ int main(int argc, char *argv[])
     struct dirent **realloc_ptr;
     FILE *stdin_file;
     FILE *stdout_file;
+    int stdout_orig;
+    fpos_t stdout_pos;
     cag_option_context context;
     cag_option_init(&context, options, CAG_ARRAY_SIZE(options), argc, argv);
     option(&context);
@@ -234,10 +236,8 @@ int main(int argc, char *argv[])
 
     stdout_file = NULL;
     if (!isatty(fileno(stdout))) {
-        for (i = 0; i < cars; ++i) {
-            format_print("%s\n", namelist[i]->d_name);
-        }
-
+        fgetpos(stdout, &stdout_pos);
+        stdout_orig = dup(fileno(stdout));
         stdout_file = freopen(CONSOLE_OUTPUT, "w", stdout);
     }
 
@@ -271,6 +271,21 @@ int main(int argc, char *argv[])
         usleep(40000);
     }
 
+    mvcur(0, COLS - 1, LINES - 1, 0);
+    endwin();
+
+    if (stdout_file) {
+        if (stdout_orig >= 0 && dup2(stdout_orig, fileno(stdout)) != -1) {
+            clearerr(stdout);
+            fsetpos(stdout, &stdout_pos);
+            for (i = 0; i < cars; ++i) {
+                format_print("%s\n", namelist[i]->d_name);
+            }
+        }
+        
+        close(stdout_orig);
+    }
+
     for (j = 0; j < cars; ++j) {
         free(namelist[j]);
         namelist[j] = NULL;
@@ -279,14 +294,8 @@ int main(int argc, char *argv[])
     free(namelist);
     namelist = NULL;
 
-    mvcur(0, COLS - 1, LINES - 1, 0);
-    endwin();
     if (stdin_file) {
         fclose(stdin_file);
-    }
-
-    if (stdout_file) {
-        fclose(stdout_file);
     }
 
     return 0;
