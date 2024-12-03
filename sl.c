@@ -68,6 +68,7 @@ inline int usleep(int micro) {
 
 #define dirent_char_t wchar_t
 #define format_print wprintf
+#define FORMAT(x) L##x
 #define fgetline fgetws
 #define CONSOLE_INPUT "CONIN$"
 #define CONSOLE_OUTPUT "CONOUT$"
@@ -78,6 +79,7 @@ inline int usleep(int micro) {
 
 #define dirent_char_t char
 #define format_print printf
+#define FORMAT(x) x
 #define fgetline fgets
 #define string_copy strncpy
 
@@ -235,7 +237,7 @@ int main(int argc, char *argv[])
     stdout_file = NULL;
     if (!isatty(fileno(stdout))) {
         for (i = 0; i < cars; ++i) {
-            format_print("%s\n", namelist[i]->d_name);
+            format_print(FORMAT("%s\n"), namelist[i]->d_name);
         }
 
         stdout_file = freopen(CONSOLE_OUTPUT, "w", stdout);

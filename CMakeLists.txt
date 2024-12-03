@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.30)
 project("SL"
         VERSION 5.07
         DESCRIPTION "CHOO CHOO"
@@ -7,11 +7,15 @@ project("SL"
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_executable(sl sl.c scandir.c sl.h scandir.h)
+
+find_package(Cargs CONFIG REQUIRED)
+
 if(WIN32)
-        find_path(CURSES_INCLUDE_DIRS NAMES curses.h REQUIRED)
-        find_library(CURSES_LIBRARIES NAMES pdcurses REQUIRED)
+        find_package(unofficial-pdcurses CONFIG REQUIRED)
+        set(CURSES_LIBRARIES unofficial::pdcurses::pdcurses)
         find_program(CURSES_DLL NAMES pdcurses.dll REQUIRED)
-        install(FILES ${CURSES_DLL} DESTINATION bin COMPONENT applications)
+        find_program(CARGS_DLL NAMES cargs.dll REQUIRED)
+        install(FILES ${CURSES_DLL} ${CARGS_DLL} DESTINATION bin COMPONENT applications)
 else()
         find_package(PkgConfig REQUIRED)
         pkg_check_modules(CURSES REQUIRED ncursesw)
@@ -20,8 +24,6 @@ endif()
 if(APPLE)
         add_compile_definitions(_XOPEN_SOURCE_EXTENDED)
 endif()
-
-find_package(Cargs CONFIG REQUIRED)
 
 configure_file(config.h.in config.h)
 
