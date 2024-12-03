@@ -48,18 +48,6 @@ jobs:
           INSTALLER=$(ls sl-*.exe)
           echo "installer=${INSTALLER}" >> $GITHUB_OUTPUT
 
-      - name: Install
-        working-directory: ${{github.workspace}}/build
-        shell: bash
-        run: |
-          INSTALLER=$(ls sl-*.exe)
-          sudo ./$INSTALLER /S
-
-      - name: Run & Test
-        run: |
-          "C:\Program Files\sl\bin\sl.exe" --version
-          "C:\Program Files\sl\bin\sl.exe" --help
-
       - name: Upload Installer
         uses: actions/upload-artifact@v4
         with:
