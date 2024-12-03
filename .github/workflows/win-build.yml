@@ -1,18 +1,7 @@
 name: Windows Build SL
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - v*
-  pull_request:
-    branches:
-      - main
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  workflow_call:
 
 jobs:
   build:
@@ -64,24 +53,3 @@ jobs:
         with:
           name: ${{ steps.installer.outputs.installer }}
           path: build/${{ steps.installer.outputs.installer }}
-
-  release:
-    name: Release
-    needs: build
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download Artifacts
-        id: download-extension
-        uses: actions/download-artifact@v4
-
-      - name: List Files
-        run: ls -R ${{ steps.download-extension.outputs.download-path }}
-
-      - uses: softprops/action-gh-release@v2
-        with:
-          prerelease: false
-          generate_release_notes: true
-          fail_on_unmatched_files: true
-          files: |
-            ${{ steps.download-extension.outputs.download-path }}/sl-*/sl-*.exe

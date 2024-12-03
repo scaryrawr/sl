@@ -1,11 +1,11 @@
-name: Posix Build SL
+name: SL Build
 
 on:
   push:
     branches:
       - main
     tags:
-      - v*
+      - sl-*
   pull_request:
     branches:
       - main
@@ -15,25 +15,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-13]
+  build-fedora:
+    uses: ./.github/workflows/fedora-build.yml
+  build-posix:
+    uses: ./.github/workflows/posix-build.yml
+  build-windows:
+    uses: ./.github/workflows/win-build.yml
 
+  release:
+    name: Release
+    needs: [build-fedora, build-posix, build-windows]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/sl-')
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Download Artifacts
+        id: download-extension
+        uses: actions/download-artifact@v4
 
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{github.workspace}}/build
+      - name: List Files
+        run: ls -R ${{ steps.download-extension.outputs.download-path }}
 
-      - name: Configure CMake
-        shell: bash
-        working-directory: ${{github.workspace}}/build
-        run: cmake ..  -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
-
-      - name: Build
-        working-directory: ${{github.workspace}}/build
-        shell: bash
-        run: cmake --build . --config Release
+      - uses: softprops/action-gh-release@v2
+        with:
+          prerelease: false
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            ${{ steps.download-extension.outputs.download-path }}/sl-*/sl-*.exe

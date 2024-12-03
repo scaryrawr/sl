@@ -11,6 +11,7 @@ Source:    {{{ git_dir_pack }}}
 
 BuildRequires:  gcc
 BuildRequires:  cmake
+BuildRequires:  vcpkg
 BuildRequires:  pkgconfig
 BuildRequires:  pkgconfig(ncurses)
 
@@ -25,7 +26,11 @@ SL (Steam Locomotive) runs across your terminal when you type "sl" as you meant 
 {{{ git_dir_setup_macro }}}
 
 %build
-%cmake
+git clone https://github.com/microsoft/vcpkg
+export VCPKG_FORCE_SYSTEM_BINARIES=1
+export VCPKG_ROOT=$PWD/vcpkg
+ln -s `which vcpkg` $VCPKG_ROOT/vcpkg
+%cmake -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
 %cmake_build
 
 %install
