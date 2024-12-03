@@ -53,7 +53,7 @@ jobs:
         shell: bash
         run: |
           INSTALLER=$(ls sl-*.exe)
-          ./$INSTALLER -q
+          ./$INSTALLER /S
 
       - name: Run & Test
         run: |
