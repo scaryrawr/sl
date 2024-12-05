@@ -49,7 +49,6 @@
 #include <sys/types.h>
 #include <wchar.h>
 #include <string.h>
-#include <cargs.h>
 #include "config.h"
 
 #ifdef WIN32
@@ -94,9 +93,9 @@ void add_man(int y, int x);
 int add_C51(int x);
 int add_D51(int x);
 int add_sl(int x);
-void option(struct cag_option_context* context);
 int my_mvaddstr(int y, int x, wchar_t *str);
 int no_dot_file_filter(const struct dirent *entry);
+void hello_world();
 
 int ACCIDENT  = 0;
 int LOGO      = 0;
@@ -107,50 +106,10 @@ int FILE_CARS = 1;
 
 int cars                 = 0;
 struct dirent **namelist = NULL;
-static struct cag_option options[] = {
-    {
-        .identifier = 'a',
-        .access_letters = "a",
-        .access_name = "all",
-        .description = "Accident/all"
-    },
-    {
-        .identifier = 'F',
-        .access_letters = "F",
-        .access_name = "fly",
-        .description = "Flying Steam Locomotive"
-    },
-    {
-        .identifier = 'l',
-        .access_letters = "l",
-        .access_name = "logo",
-        .description = "Steam Locomotive Logo"
-    },
-    {
-        .identifier = 'c',
-        .access_letters = "c",
-        .access_name = "C51",
-        .description = "C51 Steam Locomotive"
-    },
-    {
-        .identifier = 'f',
-        .access_letters = "f",
-        .access_name = "file-cars",
-        .description = "Disables showing files as cars"
-    },
-    {
-        .identifier = 'v',
-        .access_letters = "v",
-        .access_name = "version",
-        .description = "Print version information and quit"
-    },
-    {
-        .identifier = 'h',
-        .access_letters = "h",
-        .access_name = "help",
-        .description = "Shows the command help"
-    }
-};
+
+void hello_world() {
+    format_print(FORMAT("Hello from C World!\n"));
+}
 
 int my_mvaddstr(int y, int x, wchar_t *str)
 {
@@ -165,133 +124,6 @@ int my_mvaddstr(int y, int x, wchar_t *str)
     }
 
     return OK;
-}
-
-void option(struct cag_option_context* context)
-{
-    extern int ACCIDENT, LOGO, FLY, C51, FILE_CARS;
-    while (cag_option_fetch(context)) {
-        switch (cag_option_get_identifier(context)) {
-        case 'a': ACCIDENT  = 1; break;
-        case 'F': FLY       = 1; break;
-        case 'l': LOGO      = 1; break;
-        case 'c': C51       = 1; break;
-        case 'f': FILE_CARS = 0; break;
-        case 'h':
-            printf("Usage: sl [OPTION]...\n");
-            cag_option_print(options, CAG_ARRAY_SIZE(options), stdout);
-            exit(EXIT_SUCCESS);
-        case 'v':
-            printf("sl version%2d.%02d\n", SL_VERSION_MAJOR, SL_VERSION_MINOR);
-            exit(EXIT_SUCCESS);
-        case '?':
-            cag_option_print_error(context, stdout);
-            break;
-        }
-    }
-}
-
-int main(int argc, char *argv[])
-{
-    int x, i, j;
-    dirent_char_t line[1024];
-    struct dirent **realloc_ptr;
-    FILE *stdin_file;
-    FILE *stdout_file;
-    cag_option_context context;
-    cag_option_init(&context, options, CAG_ARRAY_SIZE(options), argc, argv);
-    option(&context);
-
-    if (!isatty(fileno(stdin))) {
-        NOT_ATTY = 1;
-    }
-
-    if (!NOT_ATTY) {
-        cars = FILE_CARS ? scandir(".", &namelist, no_dot_file_filter, alphasort) : 0;
-    } else {
-        // Read from stdin for what to put in cars
-        cars = 0;
-        realloc_ptr = NULL;
-        while (fgetline(line, sizeof(line) / sizeof(dirent_char_t), stdin) != NULL) {
-            realloc_ptr = realloc(namelist, sizeof(struct dirent *) * (cars + 1));
-            if (realloc_ptr) {
-                namelist = realloc_ptr;
-            } else {
-                // could not allocate memory for a new car
-                break;
-            }
-
-            namelist[cars] = malloc(sizeof(struct dirent));
-            if (!namelist[cars]) {
-                // could not allocate memory for a new car
-                break;
-            }
-
-            memset(namelist[cars]->d_name, 0, sizeof(namelist[cars]->d_name));
-            string_copy(namelist[cars]->d_name, line, (sizeof(namelist[cars]->d_name) / sizeof(dirent_char_t)) - 1);
-
-            cars++;
-        }
-    }
-
-    stdout_file = NULL;
-    if (!isatty(fileno(stdout))) {
-        for (i = 0; i < cars; ++i) {
-            format_print(FORMAT("%s\n"), namelist[i]->d_name);
-        }
-
-        stdout_file = freopen(CONSOLE_OUTPUT, "w", stdout);
-    }
-
-    stdin_file = NULL;
-#ifdef WIN32
-    if (NOT_ATTY) {
-        stdin_file = freopen(CONSOLE_INPUT, "r", stdin);
-    }
-#endif
-
-    setlocale(LC_ALL, "");
-    initscr();
-    noecho();
-    curs_set(0);
-    nodelay(stdscr, TRUE);
-    leaveok(stdscr, TRUE);
-    scrollok(stdscr, FALSE);
-
-    for (x = COLS - 1; ; --x) {
-        if (LOGO == 1) {
-            if (add_sl(x) == ERR) break;
-        }
-        else if (C51 == 1) {
-            if (add_C51(x) == ERR) break;
-        }
-        else {
-            if (add_D51(x) == ERR) break;
-        }
-        getch();
-        refresh();
-        usleep(40000);
-    }
-
-    for (j = 0; j < cars; ++j) {
-        free(namelist[j]);
-        namelist[j] = NULL;
-    }
-
-    free(namelist);
-    namelist = NULL;
-
-    mvcur(0, COLS - 1, LINES - 1, 0);
-    endwin();
-    if (stdin_file) {
-        fclose(stdin_file);
-    }
-
-    if (stdout_file) {
-        fclose(stdout_file);
-    }
-
-    return 0;
 }
 
 int no_dot_file_filter(const struct dirent *entry) {
