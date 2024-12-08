@@ -18,8 +18,12 @@ fn main() {
 
     if cfg!(target_os = "windows") {
         vcpkg::find_package("unofficial-pdcurses").unwrap();
-    } else {
+    } else if cfg!(target_os = "linux") {
         pkg_config::Config::new().probe("ncursesw").unwrap();
+    } else if cfg!(target_os = "macos") {
+        pkg_config::Config::new().probe("ncurses").unwrap();
+    } else {
+        pkg_config::Config::new().probe("curses").unwrap();
     }
 
     println!("cargo:rerun-if-changed=libsl/sl.c");
