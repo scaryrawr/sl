@@ -29,13 +29,13 @@ struct Args {
     #[arg(short, long)]
     logo: bool,
     /// It flies like the galaxy express 999.
-    #[arg(short, long)]
+    #[arg(short = 'F', long)]
     fly: bool,
     /// C51 appears instead of D51.
     #[arg(short, long)]
     c51: bool,
     /// Disables listing files and directories.
-    #[arg(short = 'F', long)]
+    #[arg(short, long)]
     files: bool,
 }
 
