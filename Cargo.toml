@@ -1,10 +1,30 @@
 [package]
 name = "sl"
-version = "0.1.0"
+version = "6.0.0"
 edition = "2021"
 build = "build.rs"
 
+[package.metadata.vcpkg]
+git = "https://github.com/microsoft/vcpkg"
+rev = "a345bbdc68cdfda65603e24413b21afb28f110fb"
+dependencies = []
+
+[package.metadata.vcpkg.target]
+x86_64-pc-windows-msvc = { triplet = "x64-windows-static", dependencies = [
+    "pdcurses",
+] }
+aarch64-pc-windows-msvc = { triplet = "arm64-windows-static", dependencies = [
+    "pdcurses",
+] }
+
 [dependencies]
+clap = { version = "4.5.23", features = ["derive"] }
+widestring = "1.1.0"
 
 [build-dependencies]
 cmake = "0.1.52"
+pkg-config = "0.3.31"
+vcpkg = "0.2.15"
+
+[target.windows.dependencies]
+windows = "0.58.0"
