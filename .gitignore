@@ -1,2 +1,4 @@
 /sl
 build/
+.cache/
+/target
