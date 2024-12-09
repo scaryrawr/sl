@@ -22,16 +22,16 @@ jobs:
 
       - name: Install vcpkg dependencies
         run: |
-          cargo vcpkg build --target=${{ matrix.target }}-pc-windows-msvc
+          cargo vcpkg build --target=${{ matrix.target }}-pc-windows-msvc --vcpkg-root="$env:VCPKG_INSTALLATION_ROOT"
 
       - name: Build Debug
         run: |
-          $env:VCPKG_ROOT=".\vcpkg"
+          $env:VCPKG_ROOT="$env:VCPKG_INSTALLATION_ROOT"
           cargo build --target=${{ matrix.target }}-pc-windows-msvc
 
       - name: Build Release
         run: |
-          $env:VCPKG_ROOT=".\vcpkg"
+          $env:VCPKG_ROOT="$env:VCPKG_INSTALLATION_ROOT"
           cargo build --target=${{ matrix.target }}-pc-windows-msvc --release
 
       - name: Build Installer
