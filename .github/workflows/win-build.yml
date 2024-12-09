@@ -30,13 +30,13 @@ jobs:
         run: |
           $env:VCPKGRS_DYNAMIC="1"
           $env:VCPKG_ROOT="$env:VCPKG_INSTALLATION_ROOT"
-          cargo build --target=${{ matrix.target }}-pc-windows-msvc
+          cargo build --target=${{ matrix.target }}-pc-windows-msvc --verbose
 
       - name: Build Release
         run: |
           $env:VCPKGRS_DYNAMIC="1"
           $env:VCPKG_ROOT="$env:VCPKG_INSTALLATION_ROOT"
-          cargo build --target=${{ matrix.target }}-pc-windows-msvc --release
+          cargo build --target=${{ matrix.target }}-pc-windows-msvc --release --verbose
 
       - name: Build Installer
         run: makensis sl.nsi
