@@ -8,32 +8,32 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        target: [ARM64, x64]
+        target: [aarch64, x86_x64]
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{github.workspace}}/build
-      
-      - name: Configure CMake
-        shell: pwsh
-        working-directory: ${{github.workspace}}/build
-        run: cmake .. -A ${{ matrix.target }} -DCMAKE_TOOLCHAIN_FILE="${env:VCPKG_INSTALLATION_ROOT}\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+      - name: Install toolchain
+        run: rustup target install ${{ matrix.target }}-pc-windows-msvc
 
-      - name: Build
-        working-directory: ${{github.workspace}}/build
-        shell: bash
-        run: cmake --build . --config Release
+      - name: Install VCPKG
+        run: cargo install cargo-vcpkg
+
+      - name: Install vcpkg dependencies
+        run: cargo vcpkg build --target=${{ matrix.target }}-pc-windows-msvc
+
+      - name: Build Debug
+        run: cargo build --target=${{ matrix.target }}-pc-windows-msvc
+
+      - name: Build Release
+        run: cargo build --target=${{ matrix.target }}-pc-windows-msvc --release
 
       - name: Build Installer
-        working-directory: ${{github.workspace}}/build
-        run: cpack -C Release
+        run: makensis sl.nsi
 
       - name: Rename Installer for ARM64
         if: matrix.target == 'ARM64'
-        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           INSTALLER=$(ls sl-*.exe)
@@ -42,7 +42,6 @@ jobs:
 
       - name: Find Installer
         id: installer
-        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           INSTALLER=$(ls sl-*.exe)
@@ -52,4 +51,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.installer.outputs.installer }}
-          path: build/${{ steps.installer.outputs.installer }}
+          path: ${{ steps.installer.outputs.installer }}
