@@ -22,16 +22,17 @@ jobs:
 
       - name: Install vcpkg dependencies
         run: |
-          $env:VCPKG_ROOT=".\target\vcpkg"
           cargo vcpkg build --target=${{ matrix.target }}-pc-windows-msvc
 
       - name: Build Debug
         run: |
-          $env:VCPKG_ROOT=".\target\vcpkg"
+          $env:VCPKG_ROOT=".\vcpkg"
           cargo build --target=${{ matrix.target }}-pc-windows-msvc
 
       - name: Build Release
-        run: cargo build --target=${{ matrix.target }}-pc-windows-msvc --release
+        run: |
+          $env:VCPKG_ROOT=".\vcpkg"
+          cargo build --target=${{ matrix.target }}-pc-windows-msvc --release
 
       - name: Build Installer
         run: makensis sl.nsi
