@@ -8,7 +8,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        target: [aarch64, x86_x64]
+        target: [aarch64, x86_64]
 
     steps:
       - name: Checkout
