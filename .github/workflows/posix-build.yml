@@ -13,13 +13,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{github.workspace}}/build
+      - name: Build Debug
+        run: cargo build
 
-      - name: Configure CMake
-        working-directory: ${{github.workspace}}/build
-        run: cmake ..  -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+      - name: Build Release
+        run: cargo build --release
 
-      - name: Build
-        working-directory: ${{github.workspace}}/build
-        run: cmake --build . --config Release
+      - name: Test
+        run: |
+          ./target/debug/sl -h
+          ./target/debug/sl -V
+          ./target/release/sl -h
+          ./target/release/sl -V
