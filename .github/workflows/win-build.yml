@@ -22,7 +22,8 @@ jobs:
 
       - name: Install vcpkg dependencies
         run: |
-          cargo vcpkg build --target=${{ matrix.target }}-pc-windows-msvc --vcpkg-root="$env:VCPKG_INSTALLATION_ROOT"
+          $env:VCPKG_ROOT="$env:VCPKG_INSTALLATION_ROOT"
+          cargo vcpkg build --target=${{ matrix.target }}-pc-windows-msvc
 
       - name: Build Debug
         run: |
