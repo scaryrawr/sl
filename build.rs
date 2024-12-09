@@ -17,7 +17,7 @@ fn main() {
         .build();
 
     if cfg!(target_os = "windows") {
-        vcpkg::find_package("pdcurses").unwrap();
+        vcpkg::find_package("unofficial-pdcurses").unwrap();
     } else if cfg!(target_os = "linux") {
         pkg_config::Config::new().probe("ncursesw").unwrap();
     } else if cfg!(target_os = "macos") {

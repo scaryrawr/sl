@@ -10,10 +10,10 @@ rev = "a345bbdc68cdfda65603e24413b21afb28f110fb"
 dependencies = []
 
 [package.metadata.vcpkg.target]
-x86_64-pc-windows-msvc = { triplet = "x64-windows-static", dependencies = [
+x86_64-pc-windows-msvc = { triplet = "x64-windows", dependencies = [
     "pdcurses",
 ] }
-aarch64-pc-windows-msvc = { triplet = "arm64-windows-static", dependencies = [
+aarch64-pc-windows-msvc = { triplet = "arm64-windows", dependencies = [
     "pdcurses",
 ] }
 
