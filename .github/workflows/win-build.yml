@@ -21,10 +21,14 @@ jobs:
         run: cargo install cargo-vcpkg
 
       - name: Install vcpkg dependencies
-        run: VCPKG_ROOT=vcpkg cargo vcpkg build --target=${{ matrix.target }}-pc-windows-msvc
+        run: |
+          $env:VCPKG_ROOT=vcpkg
+          cargo vcpkg build --target=${{ matrix.target }}-pc-windows-msvc
 
       - name: Build Debug
-        run: VCPKG_ROOT=vcpkg cargo build --target=${{ matrix.target }}-pc-windows-msvc
+        run: |
+          $env:VCPKG_ROOT=vcpkg
+          cargo build --target=${{ matrix.target }}-pc-windows-msvc
 
       - name: Build Release
         run: cargo build --target=${{ matrix.target }}-pc-windows-msvc --release
