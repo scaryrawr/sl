@@ -7,17 +7,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-13]
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Build Debug
-        run: cargo build
+        run: VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT cargo build
 
       - name: Build Release
-        run: cargo build --release
+        run: VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT cargo build --release
 
       - name: Test
         run: |
