@@ -10,14 +10,16 @@ fn main() {
     let vcpkg_root_env = env::var("VCPKG_ROOT").unwrap();
     let vcpkg_root = Path::new(&vcpkg_root_env);
     let mut toolchain = PathBuf::from(vcpkg_root);
-    toolchain.push("scripts/buildsystems/vcpkg.cmake");
+    toolchain.push("scripts");
+    toolchain.push("buildsystems");
+    toolchain.push("vcpkg.cmake");
 
     let dst = Config::new("libsl")
         .define("CMAKE_TOOLCHAIN_FILE", toolchain.to_str().unwrap())
         .build();
 
     if cfg!(target_os = "windows") {
-        vcpkg::find_package("unofficial-pdcurses").unwrap();
+        vcpkg::find_package("pdcurses").unwrap();
     } else if cfg!(target_os = "linux") {
         pkg_config::Config::new().probe("ncursesw").unwrap();
     } else if cfg!(target_os = "macos") {
