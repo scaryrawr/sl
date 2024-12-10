@@ -1,24 +1,26 @@
 use std::fs::File;
 use std::io;
-use std::os::windows::io::{AsRawHandle, FromRawHandle};
-use windows::Win32::Foundation::HANDLE;
-use windows::Win32::Storage::FileSystem::CreateFileW;
-use windows::Win32::Storage::FileSystem::{FILE_ATTRIBUTE_NORMAL, OPEN_EXISTING};
-use windows::Win32::System::Console::{GetStdHandle, SetStdHandle, STD_INPUT_HANDLE};
-use windows::Win32::System::SystemServices::GENERIC_READ;
+use std::os::windows::io::FromRawHandle;
+use windows::core::*;
+use windows::Win32::Foundation::{GENERIC_READ, GENERIC_WRITE, HANDLE};
+use windows::Win32::Storage::FileSystem::{
+    CreateFileW, FILE_ATTRIBUTE_NORMAL, FILE_SHARE_MODE, OPEN_EXISTING,
+};
+use windows::Win32::System::Console::{SetStdHandle, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE};
 
 pub fn reopen_stdin() -> io::Result<()> {
     // Open the console input
     let handle = unsafe {
         CreateFileW(
-            windows::w!("CONIN$"),
-            GENERIC_READ,
-            0,
-            std::ptr::null_mut(),
+            w!("CONIN$"),
+            GENERIC_READ.0,
+            FILE_SHARE_MODE(0),
+            None,
             OPEN_EXISTING,
             FILE_ATTRIBUTE_NORMAL,
-            HANDLE(0),
+            HANDLE(std::ptr::null_mut()),
         )
+        .unwrap()
     };
 
     if handle.is_invalid() {
@@ -27,9 +29,7 @@ pub fn reopen_stdin() -> io::Result<()> {
 
     // Set the standard input handle
     unsafe {
-        if !SetStdHandle(STD_INPUT_HANDLE, handle).as_bool() {
-            return Err(io::Error::last_os_error());
-        }
+        SetStdHandle(STD_INPUT_HANDLE, handle).unwrap();
     }
 
     // Convert the raw handle to a Rust File object
@@ -42,14 +42,15 @@ pub fn reopen_stdout() -> io::Result<()> {
     // Open the console input
     let handle = unsafe {
         CreateFileW(
-            windows::w!("CONOUT$"),
-            GENERIC_WRITE,
-            0,
-            std::ptr::null_mut(),
+            w!("CONOUT$"),
+            GENERIC_WRITE.0,
+            FILE_SHARE_MODE(0),
+            None,
             OPEN_EXISTING,
             FILE_ATTRIBUTE_NORMAL,
-            HANDLE(0),
+            HANDLE(std::ptr::null_mut()),
         )
+        .unwrap()
     };
 
     if handle.is_invalid() {
@@ -58,9 +59,7 @@ pub fn reopen_stdout() -> io::Result<()> {
 
     // Set the standard input handle
     unsafe {
-        if !SetStdHandle(STD_OUTPUT_HANDLE, handle).as_bool() {
-            return Err(io::Error::last_os_error());
-        }
+        SetStdHandle(STD_OUTPUT_HANDLE, handle).unwrap();
     }
 
     // Convert the raw handle to a Rust File object

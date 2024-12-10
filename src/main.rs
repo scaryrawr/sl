@@ -5,8 +5,8 @@ use std::thread::sleep;
 
 use clap::{command, Parser};
 use curses::{
-    curs_set, endwin, getch, initscr, leaveok, mvcur, nodelay, noecho, refresh, scrollok, stdscr,
-    COLS, LINES,
+    curs_set, endwin, initscr, leaveok, mvcur, nodelay, noecho, refresh, scrollok, wgetch, COLS,
+    LINES,
 };
 
 use freopen::{reopen_stdin, reopen_stdout};
@@ -66,12 +66,12 @@ fn main() {
 
     unsafe {
         set_locale();
-        initscr();
+        let screen = initscr();
         noecho();
         curs_set(0);
-        nodelay(stdscr, 1);
-        leaveok(stdscr, 1);
-        scrollok(stdscr, 0);
+        nodelay(screen, 1);
+        leaveok(screen, 1);
+        scrollok(screen, 0);
 
         let mut x = COLS - 1;
         let print_train = if args.logo {
@@ -92,7 +92,7 @@ fn main() {
 
         while print_train(x, names.iter().map(String::as_ref)) == 0 {
             x -= 1;
-            getch();
+            wgetch(screen);
             refresh();
             sleep(time::Duration::from_micros(40000));
         }
