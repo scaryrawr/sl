@@ -18,4 +18,4 @@ jobs:
             mkdir ~/rpkg-build
             rpkg install --outdir ~/rpkg-build
             ~/rpkg-build/sl*/BUILDROOT/usr/bin/sl -h
-            ~/rpkg-build/sl*/BUILDROOT/usr/bin/sl -v
+            ~/rpkg-build/sl*/BUILDROOT/usr/bin/sl -V

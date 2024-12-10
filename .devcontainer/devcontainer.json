@@ -10,7 +10,10 @@
     "vscode": {
       "extensions": [
         "ms-vscode.cpptools-extension-pack",
-        "github.vscode-github-actions"
+        "github.vscode-github-actions",
+        "rust-lang.rust-analyzer",
+        "fill-labs.dependi",
+        "vadimcn.vscode-lldb"
       ]
     }
   },

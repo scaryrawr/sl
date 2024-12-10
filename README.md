@@ -37,13 +37,8 @@ echo 'Set-Alias -Name sl -Value "C:\Program Files\sl\bin\sl.exe" -Force' >> $pro
 Set-Alias -Name sl -Value "C:\Program Files\sl\bin\sl.exe" -Force
 ```
 
-From source:
+Using cargo:
 
 ```sh
-git clone https://github.com/scaryrawr/sl
-cd sl
-mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake"
-cmake --build . --config Release
-sudo cmake --install .
+cargo install --git https://github.com/scaryrawr/sl
 ```
