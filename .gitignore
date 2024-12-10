@@ -1,4 +1,5 @@
 /sl
-build/
-.cache/
+/build
+/.cache
 /target
+/vcpkg
