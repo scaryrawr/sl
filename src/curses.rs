@@ -4,7 +4,6 @@ use std::ffi::{c_int, c_void};
 #[cfg_attr(target_os = "macos", link(name = "ncurses", kind = "dylib"))]
 #[cfg_attr(target_os = "linux", link(name = "ncursesw", kind = "dylib"))]
 extern "C" {
-    pub static stdscr: *mut c_void;
     pub static COLS: c_int;
     pub static LINES: c_int;
 
