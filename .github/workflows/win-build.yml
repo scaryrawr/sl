@@ -49,8 +49,8 @@ jobs:
           cmake .. -DARCH="${{ matrix.target }}"
           cpack -C Release
 
-      - name: Rename Installer for ARM64
-        if: matrix.target == 'ARM64'
+      - name: Rename Installer for aarch64
+        if: matrix.target == 'aarch64'
         working-directory: ${{github.workspace}}/target
         shell: bash
         run: |
