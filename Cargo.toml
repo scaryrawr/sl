@@ -19,6 +19,7 @@ aarch64-pc-windows-msvc = { triplet = "arm64-windows", dependencies = [
 
 [dependencies]
 clap = { version = "4.5.23", features = ["derive"] }
+libc = "0.2.168"
 widestring = "1.1.0"
 
 [build-dependencies]
