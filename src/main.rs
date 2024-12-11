@@ -13,11 +13,9 @@ use freopen::{reopen_stdin, reopen_stdout};
 use sl::{print_c51, print_d51, print_sl, set_locale};
 
 mod curses;
+mod freopen;
 mod sl;
 
-#[cfg_attr(target_family = "unix", path = "freopen_unix.rs")]
-#[cfg_attr(target_family = "windows", path = "freopen_windows.rs")]
-mod freopen;
 /// sl  cure your bad habit of mistyping
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
