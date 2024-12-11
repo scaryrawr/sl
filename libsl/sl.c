@@ -45,7 +45,6 @@
 #include "sl.h"
 #include <curses.h>
 #include <locale.h>
-#include <stdio.h>
 #include <sys/types.h>
 #include <wchar.h>
 
