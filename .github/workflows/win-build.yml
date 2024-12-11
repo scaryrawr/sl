@@ -30,13 +30,13 @@ jobs:
         run: |
           $env:VCPKGRS_DYNAMIC="1"
           $env:VCPKG_ROOT="$env:VCPKG_INSTALLATION_ROOT"
-          cargo build --target=${{ matrix.target }}-pc-windows-msvc --verbose
+          cargo build --target=${{ matrix.target }}-pc-windows-msvc
 
       - name: Build Release
         run: |
           $env:VCPKGRS_DYNAMIC="1"
           $env:VCPKG_ROOT="$env:VCPKG_INSTALLATION_ROOT"
-          cargo build --target=${{ matrix.target }}-pc-windows-msvc --release --verbose
+          cargo build --target=${{ matrix.target }}-pc-windows-msvc --release
 
       - name: Build Installer
         working-directory: ${{github.workspace}}/target
