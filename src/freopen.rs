@@ -1,7 +1,7 @@
 use std::ffi::CString;
 use std::io;
 
-use libc::{fdopen, freopen, STDIN_FILENO, STDOUT_FILENO};
+use libc::{fdopen, freopen};
 
 #[cfg(target_family = "unix")]
 static CONSOLE_IN: &str = "/dev/tty";
@@ -16,13 +16,7 @@ static CONSOLE_OUT: &str = "CONOUT$";
 pub fn reopen_stdin() -> io::Result<()> {
     let console = CString::new(CONSOLE_IN)?;
     let mode: CString = CString::new("r")?;
-    unsafe {
-        freopen(
-            console.as_ptr(),
-            mode.as_ptr(),
-            fdopen(STDIN_FILENO, mode.as_ptr()),
-        )
-    };
+    unsafe { freopen(console.as_ptr(), mode.as_ptr(), fdopen(0, mode.as_ptr())) };
 
     Ok(())
 }
@@ -30,13 +24,7 @@ pub fn reopen_stdin() -> io::Result<()> {
 pub fn reopen_stdout() -> io::Result<()> {
     let console = CString::new(CONSOLE_OUT)?;
     let mode: CString = CString::new("w")?;
-    unsafe {
-        freopen(
-            console.as_ptr(),
-            mode.as_ptr(),
-            fdopen(STDOUT_FILENO, mode.as_ptr()),
-        )
-    };
+    unsafe { freopen(console.as_ptr(), mode.as_ptr(), fdopen(1, mode.as_ptr())) };
 
     Ok(())
 }
