@@ -1,46 +1,29 @@
-cmake_minimum_required(VERSION 3.30)
+cmake_minimum_required(VERSION 3.28)
 project("SL"
-        VERSION 5.07
+        VERSION 6.0
         DESCRIPTION "CHOO CHOO"
         LANGUAGES C)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-add_executable(sl sl.c scandir.c sl.h scandir.h)
-
-find_package(Cargs CONFIG REQUIRED)
-
-if(WIN32)
-        find_package(unofficial-pdcurses CONFIG REQUIRED)
-        set(CURSES_LIBRARIES unofficial::pdcurses::pdcurses)
-        find_program(CURSES_DLL NAMES pdcurses.dll REQUIRED)
-        find_program(CARGS_DLL NAMES cargs.dll REQUIRED)
-        install(FILES ${CURSES_DLL} ${CARGS_DLL} DESTINATION bin COMPONENT applications)
+if(DEFINED ENV{VCPKG_INSTALLATION_ROOT})
+        set(VCPKG_ROOT "$ENV{VCPKG_INSTALLATION_ROOT}")
 else()
-        find_package(PkgConfig REQUIRED)
-        pkg_check_modules(CURSES REQUIRED ncursesw)
+        set(VCPKG_ROOT "${PROJECT_BINARY_DIR}/../vcpkg")
 endif()
 
-if(APPLE)
-        add_compile_definitions(_XOPEN_SOURCE_EXTENDED)
+if ("${ARCH}" STREQUAL "aarch64")
+find_program(CURSES_DLL NAMES pdcurses.dll REQUIRED PATHS "${VCPKG_ROOT}/packages/pdcurses_arm64-windows/bin")
+else()
+find_program(CURSES_DLL NAMES pdcurses.dll REQUIRED PATHS "${VCPKG_ROOT}/packages/pdcurses_x64-windows/bin")
 endif()
-
-configure_file(config.h.in config.h)
-
-target_link_libraries(sl ${CURSES_LIBRARIES} cargs)
-target_include_directories(sl PUBLIC ${CURSES_INCLUDE_DIRS} "${PROJECT_BINARY_DIR}")
-target_compile_options(sl PUBLIC ${CURSES_CFLAGS_OTHER})
-
-install(TARGETS sl
-        RUNTIME DESTINATION bin
-        COMPONENT applications)
+find_program(SL_EXE NAMES sl.exe PATHS "${PROJECT_BINARY_DIR}/release" "${PROJECT_BINARY_DIR}/${ARCH}-pc-windows-msvc/release" REQUIRED)
+install(FILES ${CURSES_DLL} ${SL_EXE} DESTINATION bin COMPONENT applications)
 
 set(CPACK_PACKAGE_NAME "sl")
 set(CPACK_PACKAGE_VENDOR "sl")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "SL (Steam Locomotive)")
-set(CPACK_PACKAGE_VERSION "5.07.0")
-set(CPACK_PACKAGE_VERSION_MAJOR "5")
-set(CPACK_PACKAGE_VERSION_MINOR "07")
+set(CPACK_PACKAGE_VERSION "6.0.0")
+set(CPACK_PACKAGE_VERSION_MAJOR "6")
+set(CPACK_PACKAGE_VERSION_MINOR "0")
 set(CPACK_PACKAGE_VERSION_PATCH "0")
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "sl")
 set(CPACK_COMPONENTS_ALL applications)

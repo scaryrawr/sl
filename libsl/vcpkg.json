@@ -1,11 +1,11 @@
 {
-  "name": "sl",
+  "name": "libsl",
   "version": "5.5.1",
   "dependencies": [
     {
       "name": "pdcurses",
       "platform": "windows"
-    },
-    "cargs"
-  ]
+    }
+  ],
+  "builtin-baseline": "a345bbdc68cdfda65603e24413b21afb28f110fb"
 }

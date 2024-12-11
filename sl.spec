@@ -11,30 +11,29 @@ Source:    {{{ git_dir_pack }}}
 
 BuildRequires:  gcc
 BuildRequires:  cmake
-BuildRequires:  vcpkg
+BuildRequires:  cargo
+BuildRequires:  rust
 BuildRequires:  pkgconfig
-BuildRequires:  pkgconfig(ncurses)
+BuildRequires:  pkgconfig(ncursesw)
 
 %description
 SL (Steam Locomotive) runs across your terminal when you type "sl" as you meant to type "ls".
 
 %files
 %{_bindir}/%{name}
+%{_mandir}/man1/%{name}.1*
 %license LICENSE
 
 %prep
 {{{ git_dir_setup_macro }}}
 
 %build
-git clone https://github.com/microsoft/vcpkg
-export VCPKG_FORCE_SYSTEM_BINARIES=1
-export VCPKG_ROOT=$PWD/vcpkg
-ln -s `which vcpkg` $VCPKG_ROOT/vcpkg
-%cmake -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
-%cmake_build
+cargo build --release
 
 %install
-%cmake_install
+install -D -p -m 755 target/release/sl %{buildroot}%{_bindir}/sl
+install -D -p -m 644 sl.1 %{buildroot}%{_mandir}/man1/sl.1
+install -D -p -m 644 sl.1.ja %{buildroot}%{_mandir}/man1/sl.1.ja
 
 %changelog
 {{{ git_dir_changelog }}}

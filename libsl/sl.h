@@ -66,7 +66,7 @@
 #define CAR03 L"  |   | |  | |  | |  | |   |  "
 #define CAR04 L"  |   |_|  |_|  |_|  |_|   |  "
 #define CAR05 L"  |                        |  "
-#define CAR06 L"  | %-22.22s |  "
+#define CAR06 L"  | %-22.22ls |  "
 #define CAR07 L"__|________________________|_ "
 #define CAR08 L"|__________________________|_ "
 #define CAR09 L"   |_D__D__D_|  |_D__D__D_|   "
@@ -112,7 +112,7 @@
 #define LCAR1  L"____________________ "
 #define LCAR2  L"|  ___ ___ ___ ___ | "
 #define LCAR3  L"|  |_| |_| |_| |_| | "
-#define LCAR4  L"|  %-15.15s |  "
+#define LCAR4  L"|  %-15.15ls |  "
 #define LCAR5  L"|__________________| "
 #define LCAR6  L"   (O)        (O)    "
 

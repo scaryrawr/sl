@@ -1,10 +1,19 @@
 {
   "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools",
-  "editor.formatOnSave": false,
+  "[c]": {
+    "editor.formatOnSave": false
+  },
+  "[cpp]": {
+    "editor.formatOnSave": false
+  },
+  "[h]": {
+    "editor.formatOnSave": false
+  },
   "files.associations": {
     "ranges": "c"
   },
   "cmake.configureEnvironment": {
     "CMAKE_TOOLCHAIN_FILE": "${env:VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
-  }
+  },
+  "cmake.sourceDirectory": "/Users/mike/GitHub/sl/libsl"
 }
