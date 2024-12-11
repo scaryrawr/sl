@@ -38,6 +38,11 @@ jobs:
           $env:VCPKG_ROOT="$env:VCPKG_INSTALLATION_ROOT"
           cargo build --target=${{ matrix.target }}-pc-windows-msvc --release
 
+      - name: List Files
+        shell: bash
+        run: |
+          ls -R target
+
       - name: Build Installer
         working-directory: ${{github.workspace}}/target
         run: |
