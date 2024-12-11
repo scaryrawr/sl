@@ -39,10 +39,14 @@ jobs:
           cargo build --target=${{ matrix.target }}-pc-windows-msvc --release --verbose
 
       - name: Build Installer
-        run: makensis sl.nsi
+        working-directory: ${{github.workspace}}/target
+        run: |
+          cmake .. -DARCH="${{ matrix.target }}"
+          cpack -C Release
 
       - name: Rename Installer for ARM64
         if: matrix.target == 'ARM64'
+        working-directory: ${{github.workspace}}/target
         shell: bash
         run: |
           INSTALLER=$(ls sl-*.exe)
@@ -51,6 +55,7 @@ jobs:
 
       - name: Find Installer
         id: installer
+        working-directory: ${{github.workspace}}/target
         shell: bash
         run: |
           INSTALLER=$(ls sl-*.exe)
@@ -60,4 +65,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.installer.outputs.installer }}
-          path: ${{ steps.installer.outputs.installer }}
+          path: target/${{ steps.installer.outputs.installer }}
