@@ -1,5 +1,5 @@
 Name:       {{{ git_dir_name }}}
-Version:    {{{ git_dir_version lead=5 }}}
+Version:    {{{ git_dir_version lead=6 }}}
 Release:    1%{?dist}
 Summary:    SL (Steam Locomotive) runs across your terminal when you type "sl" as you meant to type "ls".
 
