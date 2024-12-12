@@ -6,16 +6,20 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container: fedora-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: |
+          sudo dnf install -y dnf-plugins-core cargo @c-development @rpm-development-tools rpkg
+          sudo dnf builddep -y sl.spec
+
       - name: Build and Test
-        uses: devcontainers/ci@v0.3
-        with:
-          runCmd: |
-            mkdir ~/rpkg-build
-            rpkg install --outdir ~/rpkg-build
-            ~/rpkg-build/sl*/BUILDROOT/usr/bin/sl -h
-            ~/rpkg-build/sl*/BUILDROOT/usr/bin/sl -V
+        run: |
+          mkdir ~/rpkg-build
+          rpkg install --outdir ~/rpkg-build
+          ~/rpkg-build/sl*/BUILDROOT/usr/bin/sl -h
+          ~/rpkg-build/sl*/BUILDROOT/usr/bin/sl -V
