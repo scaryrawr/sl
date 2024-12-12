@@ -14,7 +14,7 @@ jobs:
       - name: Build and Test
         uses: devcontainers/ci@v0.3
         with:
-          imageName: fedora:latest
+          imageName: fedora
           runCmd: |
             sudo dnf install -y dnf-plugins-core rpkg git
             rpkg spec | awk '/Wrote/ {print $2}' | xargs sudo dnf builddep
