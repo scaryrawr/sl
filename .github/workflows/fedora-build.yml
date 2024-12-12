@@ -11,6 +11,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Remove devcontainer
+        run: rm -rf .devcontainer
+
       - name: Build and Test
         uses: devcontainers/ci@v0.3
         with:
