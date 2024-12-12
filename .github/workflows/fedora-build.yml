@@ -14,7 +14,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo dnf install -y dnf-plugins-core cargo @c-development @rpm-development-tools rpkg
+          sudo dnf install -y dnf-plugins-core rpkg
           rpkg spec | awk '/Wrote/ {print $2}' | xargs sudo dnf builddep
 
       - name: Build and Test
