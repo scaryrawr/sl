@@ -15,6 +15,7 @@ BuildRequires:  cargo
 BuildRequires:  rust
 BuildRequires:  pkgconfig
 BuildRequires:  pkgconfig(ncursesw)
+BuildRequires:  vcpkg
 
 %description
 SL (Steam Locomotive) runs across your terminal when you type "sl" as you meant to type "ls".
