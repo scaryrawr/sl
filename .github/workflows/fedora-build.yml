@@ -15,11 +15,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: List Files
-        run: ls
-
       - name: Install build dependencies
-        run: rpkg spec | awk '/Wrote/ {print $2}' | xargs sudo dnf builddep
+        run: |
+          git switch -c "sl-build-$(date +'%Y%m%d%s')"
+          rpkg spec | awk '/Wrote/ {print $2}' | xargs sudo dnf builddep
 
       - name: Build and Test
         run: |
