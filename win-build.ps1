@@ -3,3 +3,7 @@ $env:VCPKGRS_DYNAMIC="1"
 cargo install cargo-vcpkg
 cargo vcpkg build
 cargo build --release
+pushd target
+cmake .. -DARCH="$env:PROCESSOR_ARCHITECTURE"
+cpack -C Release
+popd
