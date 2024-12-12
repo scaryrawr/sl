@@ -6,23 +6,19 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: fedora:latest
 
     steps:
-      - name: Configure container environment
-        run: sudo dnf install -y dnf-plugins-core rpkg git
-
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install build dependencies
-        run: |
-          git init .
-          rpkg spec | awk '/Wrote/ {print $2}' | xargs sudo dnf builddep
-
       - name: Build and Test
-        run: |
-          mkdir ~/rpkg-build
-          rpkg install --outdir ~/rpkg-build
-          ~/rpkg-build/sl*/BUILDROOT/usr/bin/sl -h
-          ~/rpkg-build/sl*/BUILDROOT/usr/bin/sl -V
+        uses: devcontainers/ci@v0.3
+        with:
+          imageName: fedora:latest
+          runCmd: |
+            sudo dnf install -y dnf-plugins-core rpkg git
+            rpkg spec | awk '/Wrote/ {print $2}' | xargs sudo dnf builddep
+            mkdir ~/rpkg-build
+            rpkg install --outdir ~/rpkg-build
+            ~/rpkg-build/sl*/BUILDROOT/usr/bin/sl -h
+            ~/rpkg-build/sl*/BUILDROOT/usr/bin/sl -V
