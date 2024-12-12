@@ -17,8 +17,7 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          git config --global --add safe.directory /__w/sl/sl
-          git switch -c "sl-build-$(date +'%Y%m%d%s')"
+          git init .
           rpkg spec | awk '/Wrote/ {print $2}' | xargs sudo dnf builddep
 
       - name: Build and Test
