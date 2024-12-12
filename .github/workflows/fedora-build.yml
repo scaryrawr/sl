@@ -15,6 +15,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: List Files
+        run: ls
+
       - name: Install build dependencies
         run: rpkg spec | awk '/Wrote/ {print $2}' | xargs sudo dnf builddep
 
