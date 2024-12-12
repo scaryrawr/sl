@@ -9,13 +9,14 @@ jobs:
     container: fedora:latest
 
     steps:
+      - name: Configure container environment
+        run: sudo dnf install -y dnf-plugins-core cargo @c-development @rpm-development-tools rpkg git
+
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: |
-          sudo dnf install -y dnf-plugins-core rpkg
-          rpkg spec | awk '/Wrote/ {print $2}' | xargs sudo dnf builddep
+      - name: Install build dependencies
+        run: sudo dnf builddep -y sl.spec
 
       - name: Build and Test
         run: |
