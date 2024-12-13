@@ -4,15 +4,11 @@ use std::io::{stdin, stdout, BufRead, IsTerminal, Stdin, Stdout};
 use std::thread::sleep;
 
 use clap::{command, Parser};
-use curses::{
-    curs_set, endwin, initscr, leaveok, mvcur, nodelay, noecho, refresh, scrollok, wgetch, COLS,
-    LINES,
-};
 
 use freopen::{reopen_stdin, reopen_stdout};
+use libc::{c_int, wchar_t};
 use sl::{print_c51, print_d51, print_sl, set_locale};
 
-mod curses;
 mod freopen;
 mod sl;
 
@@ -35,6 +31,20 @@ struct Args {
     /// Disables listing files and directories.
     #[arg(short, long)]
     files: bool,
+}
+
+#[no_mangle]
+pub static mut COLS: i32 = 0;
+#[no_mangle]
+pub static mut LINES: i32 = 0;
+
+#[no_mangle]
+pub extern "C" fn my_mvaddstr(_y: c_int, _x: c_int, _str: *const wchar_t) -> i32 {
+    return 1;
+    // let mut x = x;
+    // if let Ok(characters) = unsafe { CStr::from_ptr(str).to_str() } {
+    //     characters
+    // }
 }
 
 fn main() {
@@ -64,13 +74,6 @@ fn main() {
 
     unsafe {
         set_locale();
-        let screen = initscr();
-        noecho();
-        curs_set(0);
-        nodelay(screen, 1);
-        leaveok(screen, 1);
-        scrollok(screen, 0);
-
         let mut x = COLS - 1;
         let print_train = if args.logo {
             print_sl
@@ -90,12 +93,7 @@ fn main() {
 
         while print_train(x, names.iter().map(String::as_ref)) == 0 {
             x -= 1;
-            wgetch(screen);
-            refresh();
             sleep(time::Duration::from_micros(40000));
         }
-
-        mvcur(0, COLS - 1, LINES - 1, 0);
-        endwin();
     }
 }
