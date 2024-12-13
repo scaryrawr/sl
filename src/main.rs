@@ -45,10 +45,13 @@ type SlChar = u16;
 #[cfg(target_family = "unix")]
 type SlChar = u32;
 
+const OK: i32 = 0;
+const ERR: i32 = -1;
+
 #[no_mangle]
 pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
     if y < 0 || y > unsafe { LINES } - 1 {
-        return -11;
+        return ERR;
     }
     let mut x = x;
 
@@ -59,12 +62,13 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
 
     let characters = unsafe { CCStr::from_ptr_str(str) };
     if (x + characters.len() as i32) < 0 {
-        return 1;
+        return ERR;
     }
 
     let mut stdout = stdout();
+    terminal::enable_raw_mode().unwrap();
     if let Ok(mut queue) = stdout.queue(cursor::MoveTo(0, 0)) {
-        for c in characters.chars() {
+        for c in characters.chars().map(|c| c.unwrap_or(' ')) {
             x += 1;
             if x < 0 {
                 continue;
@@ -76,23 +80,21 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
 
             match queue.queue(cursor::MoveTo(x as u16, y as u16)) {
                 Ok(q) => queue = q,
-                Err(_) => return 1,
+                Err(_) => return ERR,
             }
-
-            let c = if let Ok(c) = c { c } else { ' ' };
 
             match queue.queue(Print(c)) {
                 Ok(q) => queue = q,
-                Err(_) => return 1,
+                Err(_) => return ERR,
             }
         }
 
         match stdout.flush() {
-            Ok(_) => 0,
-            Err(_) => 1,
+            Ok(_) => OK,
+            Err(_) => ERR,
         }
     } else {
-        return 1;
+        return ERR;
     }
 }
 
@@ -122,6 +124,7 @@ fn main() {
     }
 
     stdout.execute(cursor::Hide).unwrap();
+
     unsafe {
         set_locale();
         update_size();
@@ -150,6 +153,8 @@ fn main() {
             update_size();
         }
     }
+    stdout.execute(cursor::Show).unwrap();
+    terminal::disable_raw_mode().unwrap();
 }
 
 fn update_size() {
