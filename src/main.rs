@@ -1,15 +1,14 @@
-use core::time;
-use std::ffi::c_int;
-use std::fs;
-use std::io::{stdin, stdout, BufRead, Error, IsTerminal, Stdin, Stdout, Write};
-
 use clap::{command, Parser};
-
+use core::time;
 use crossterm::event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::terminal::{Clear, ClearType};
 use crossterm::{cursor, style::Print, terminal, ExecutableCommand, QueueableCommand};
 use freopen::reopen_stdout;
 use sl::{print_c51, print_d51, print_sl, set_locale};
+use std::ffi::c_int;
+use std::fs;
+use std::io::{stdin, stdout, BufRead, Error, IsTerminal, Stdin, Stdout, Write};
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 mod freopen;
 mod sl;
@@ -53,23 +52,79 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
     if y < 0 || y > unsafe { LINES } - 1 {
         return ERR;
     }
+
     let mut x = x;
 
     #[cfg(target_family = "windows")]
+    type CCString = widestring::U16CString;
+    #[cfg(target_family = "windows")]
     type CCStr = widestring::U16CStr;
+    #[cfg(target_family = "unix")]
+    type CCString = widestring::U32CString;
     #[cfg(target_family = "unix")]
     type CCStr = widestring::U32CStr;
 
-    let characters = unsafe { CCStr::from_ptr_str(str) };
-    if (x + characters.len() as i32) < 0 {
+    let mut characters = unsafe { CCString::from_ptr_str(str).into_ustring() };
+    let original = unsafe { CCStr::from_ptr_str(str) };
+    let mut temp: String = characters
+        .chars()
+        .filter_map(|c| Some(c.unwrap_or(' ')))
+        .collect();
+
+    // Remove characters from the end of the string until it fits the screen
+    while temp.width() > original.len() {
+        if let Some(mut pos) = characters
+            .chars()
+            .rev()
+            .filter_map(|c| Some(c.unwrap_or(' ')))
+            .position(|c| c == '|')
+        {
+            pos = characters.len() - pos - 1;
+            if pos > 0 {
+                characters.remove_char(pos - 1);
+            } else {
+                break;
+            }
+        } else {
+            break;
+        }
+
+        temp = characters
+            .chars()
+            .filter_map(|c| Some(c.unwrap_or(' ')))
+            .collect();
+    }
+
+    // Add spaces if the a character removed caused us to be at an odd number
+    while temp.width() < original.len() {
+        if let Some(mut pos) = characters
+            .chars()
+            .rev()
+            .filter_map(|c| Some(c.unwrap_or(' ')))
+            .position(|c| c == '|')
+        {
+            pos = characters.len() - pos - 1;
+            characters.insert_char(pos, ' ');
+        } else {
+            break;
+        }
+
+        temp = characters
+            .chars()
+            .filter_map(|c| Some(c.unwrap_or(' ')))
+            .collect();
+    }
+
+    if (x + UnicodeWidthStr::width(temp.as_str()) as i32) < 0 {
         return ERR;
     }
 
     let mut stdout = stdout();
     if let Ok(mut queue) = stdout.queue(cursor::MoveTo(0, 0)) {
-        for c in characters.chars().map(|c| c.unwrap_or(' ')) {
+        for c in temp.chars() {
             x += 1;
             if x < 0 {
+                x += c.width().unwrap_or(1) as i32 - 1;
                 continue;
             }
 
@@ -86,6 +141,8 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
                 Ok(q) => queue = q,
                 Err(_) => return ERR,
             }
+
+            x += c.width().unwrap_or(1) as i32 - 1;
         }
 
         match stdout.flush() {
