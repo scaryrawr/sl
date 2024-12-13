@@ -1,4 +1,5 @@
-use clap::{command, Parser};
+use clap::Parser;
+use cli::CliOptions;
 use core::time;
 use crossterm::event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::terminal::{Clear, ClearType};
@@ -10,29 +11,9 @@ use std::fs;
 use std::io::{stdin, stdout, BufRead, Error, IsTerminal, Stdin, Stdout, Write};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
+mod cli;
 mod freopen;
 mod sl;
-
-/// sl  cure your bad habit of mistyping
-#[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
-struct Args {
-    /// An accident is occurring. People cry for help. Lists all files.
-    #[arg(short, long)]
-    accident: bool,
-    /// Little version.
-    #[arg(short, long)]
-    logo: bool,
-    /// It flies like the galaxy express 999.
-    #[arg(short = 'F', long)]
-    fly: bool,
-    /// C51 appears instead of D51.
-    #[arg(short, long)]
-    c51: bool,
-    /// Disables listing files and directories.
-    #[arg(short, long)]
-    files: bool,
-}
 
 #[no_mangle]
 pub static mut COLS: i32 = 0;
@@ -155,7 +136,7 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
 }
 
 fn main() -> Result<(), Error> {
-    let args = Args::parse();
+    let args = CliOptions::parse();
     let stdin = stdin();
     let names: Vec<String> = if !Stdin::is_terminal(&stdin) {
         let names: Vec<String> = stdin
