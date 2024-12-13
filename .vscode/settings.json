@@ -12,5 +12,5 @@
   "files.associations": {
     "ranges": "c"
   },
-  "cmake.sourceDirectory": "/workspaces/sl/libsl"
+  "cmake.sourceDirectory": "${workspaceFolder}/libsl"
 }
