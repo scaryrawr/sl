@@ -17,31 +17,11 @@ jobs:
       - name: Install toolchain
         run: rustup target install ${{ matrix.target }}-pc-windows-msvc
 
-      - name: Install VCPKG
-        run: cargo install cargo-vcpkg
-
-      - name: Install vcpkg dependencies
-        run: |
-          $env:VCPKGRS_DYNAMIC="1"
-          $env:VCPKG_ROOT="$env:VCPKG_INSTALLATION_ROOT"
-          cargo vcpkg build --target=${{ matrix.target }}-pc-windows-msvc
-
       - name: Build Debug
-        run: |
-          $env:VCPKGRS_DYNAMIC="1"
-          $env:VCPKG_ROOT="$env:VCPKG_INSTALLATION_ROOT"
-          cargo build --target=${{ matrix.target }}-pc-windows-msvc
+        run: cargo build --target=${{ matrix.target }}-pc-windows-msvc
 
       - name: Build Release
-        run: |
-          $env:VCPKGRS_DYNAMIC="1"
-          $env:VCPKG_ROOT="$env:VCPKG_INSTALLATION_ROOT"
-          cargo build --target=${{ matrix.target }}-pc-windows-msvc --release
-
-      - name: List Files
-        shell: bash
-        run: |
-          ls -R target
+        run: cargo build --target=${{ matrix.target }}-pc-windows-msvc --release
 
       - name: Build Installer
         working-directory: ${{github.workspace}}/target
