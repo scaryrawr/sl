@@ -333,7 +333,6 @@ dependencies = [
  "cmake",
  "crossterm",
  "libc",
- "signal-hook",
  "widestring",
 ]
 

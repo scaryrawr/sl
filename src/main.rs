@@ -1,11 +1,11 @@
 use core::time;
 use std::ffi::c_int;
 use std::fs;
-use std::io::{stdin, stdout, BufRead, IsTerminal, Stdin, Stdout, Write};
-use std::thread::sleep;
+use std::io::{stdin, stdout, BufRead, Error, IsTerminal, Stdin, Stdout, Write};
 
 use clap::{command, Parser};
 
+use crossterm::event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::terminal::{Clear, ClearType};
 use crossterm::{cursor, style::Print, terminal, ExecutableCommand, QueueableCommand};
 use freopen::{reopen_stdin, reopen_stdout};
@@ -66,7 +66,6 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
     }
 
     let mut stdout = stdout();
-    terminal::enable_raw_mode().unwrap();
     if let Ok(mut queue) = stdout.queue(cursor::MoveTo(0, 0)) {
         for c in characters.chars().map(|c| c.unwrap_or(' ')) {
             x += 1;
@@ -98,19 +97,28 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
     }
 }
 
-fn main() {
+fn main() -> Result<(), Error> {
     let args = Args::parse();
     let stdin = stdin();
     let names: Vec<String> = if !Stdin::is_terminal(&stdin) {
-        let names: Vec<String> = stdin.lock().lines().map(|l| l.unwrap()).collect();
-        reopen_stdin().unwrap();
+        let names: Vec<String> = stdin
+            .lock()
+            .lines()
+            .filter_map(|l| match l {
+                Ok(s) => Some(s),
+                Err(_) => None,
+            })
+            .collect();
+        reopen_stdin()?;
         names
     } else if args.files {
         vec![]
     } else {
-        let mut files: Vec<String> = fs::read_dir(".")
-            .unwrap()
-            .map(|p| String::from(p.unwrap().file_name().to_str().unwrap()))
+        let mut files: Vec<String> = fs::read_dir(".")?
+            .filter_map(|p| match p {
+                Ok(p) => Some(String::from(p.file_name().to_str()?)),
+                Err(_) => None,
+            })
             .filter(|s| args.accident || !s.starts_with('.'))
             .collect();
         files.sort();
@@ -120,14 +128,14 @@ fn main() {
     let mut stdout = stdout();
     if !Stdout::is_terminal(&stdout) {
         names.iter().for_each(|n| println!("{}", n));
-        reopen_stdout().unwrap();
+        reopen_stdout()?;
     }
 
-    stdout.execute(cursor::Hide).unwrap();
-
+    terminal::enable_raw_mode()?;
+    stdout.execute(cursor::Hide)?;
     unsafe {
         set_locale();
-        update_size();
+        update_size()?;
 
         let mut x = COLS - 1;
         let print_train = if args.logo {
@@ -146,24 +154,36 @@ fn main() {
             sl::FLY = 1;
         }
 
-        stdout.queue(Clear(ClearType::All)).unwrap();
+        stdout.queue(Clear(ClearType::All))?;
         while print_train(x, names.iter().map(String::as_ref)) == 0 {
             x -= 1;
-            sleep(time::Duration::from_micros(40000));
-            update_size();
+            if poll(time::Duration::from_micros(40_000))? {
+                if let Event::Key(KeyEvent {
+                    code: KeyCode::Char('c'),
+                    modifiers: KeyModifiers::CONTROL,
+                    ..
+                }) = read()?
+                {
+                    break;
+                }
+            }
+
+            // "handle" resize
+            update_size()?;
         }
     }
-    stdout.execute(cursor::Show).unwrap();
-    terminal::disable_raw_mode().unwrap();
+    stdout.execute(cursor::Show)?;
+    terminal::disable_raw_mode()?;
+
+    Ok(())
 }
 
-fn update_size() {
-    if let Ok((cols, lines)) = terminal::size() {
-        unsafe {
-            COLS = cols as i32;
-            LINES = lines as i32;
-        }
-    } else {
-        eprintln!("Failed to get terminal size");
+fn update_size() -> Result<(), Error> {
+    let (cols, lines) = terminal::size()?;
+    unsafe {
+        COLS = cols as i32;
+        LINES = lines as i32;
     }
+
+    Ok(())
 }
