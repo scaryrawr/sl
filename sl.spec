@@ -13,9 +13,6 @@ BuildRequires:  gcc
 BuildRequires:  cmake
 BuildRequires:  cargo
 BuildRequires:  rust
-BuildRequires:  pkgconfig
-BuildRequires:  pkgconfig(ncursesw)
-BuildRequires:  vcpkg
 
 %description
 SL (Steam Locomotive) runs across your terminal when you type "sl" as you meant to type "ls".
@@ -29,10 +26,6 @@ SL (Steam Locomotive) runs across your terminal when you type "sl" as you meant 
 {{{ git_dir_setup_macro }}}
 
 %build
-git clone https://github.com/microsoft/vcpkg
-export VCPKG_FORCE_SYSTEM_BINARIES=1
-export VCPKG_ROOT=$PWD/vcpkg
-ln -s `which vcpkg` $VCPKG_ROOT/vcpkg
 cargo build --release
 
 %install

@@ -12,8 +12,5 @@
   "files.associations": {
     "ranges": "c"
   },
-  "cmake.configureEnvironment": {
-    "CMAKE_TOOLCHAIN_FILE": "${env:VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
-  },
-  "cmake.sourceDirectory": "/Users/mike/GitHub/sl/libsl"
+  "cmake.sourceDirectory": "${workspaceFolder}/libsl"
 }

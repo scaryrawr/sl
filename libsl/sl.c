@@ -43,10 +43,16 @@
 /*                                              by Toyoda Masashi 1992/12/11 */
 
 #include "sl.h"
-#include <curses.h>
 #include <locale.h>
-#include <sys/types.h>
 #include <wchar.h>
+
+#define ERR -1
+#define OK 0
+
+extern int my_mvaddstr(int y, int x, wchar_t *str);
+
+extern int COLS;
+extern int LINES;
 
 void set_locale();
 void add_smoke(int y, int x);
@@ -54,8 +60,6 @@ void add_man(int y, int x);
 int add_C51(int x, wchar_t *namelist[], int cars);
 int add_D51(int x, wchar_t *namelist[], int cars);
 int add_sl(int x, wchar_t *namelist[], int cars);
-int my_mvaddstr(int y, int x, wchar_t *str);
-
 
 int ACCIDENT  = 0;
 int FLY       = 0;
@@ -63,21 +67,6 @@ int FLY       = 0;
 void set_locale()
 {
   setlocale(LC_ALL, "");
-}
-
-int my_mvaddstr(int y, int x, wchar_t *str)
-{
-    for ( ; x < 0; ++x, ++str)
-        if (*str == L'\0')  return ERR;
-    for ( ; *str != L'\0'; ++str, ++x)
-    {
-        wchar_t buff[2];
-        buff[0] = *str;
-        buff[1] = L'\0';
-        if (mvaddwstr(y, x, buff) == ERR)  return ERR;
-    }
-
-    return OK;
 }
 
 int add_sl(int x, wchar_t* namelist[], int cars)
