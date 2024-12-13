@@ -1,4 +1,5 @@
 use core::time;
+use std::ffi::c_int;
 use std::fs;
 use std::io::{stdin, stdout, BufRead, IsTerminal, Stdin, Stdout, Write};
 use std::thread::sleep;
@@ -8,7 +9,6 @@ use clap::{command, Parser};
 use crossterm::terminal::{Clear, ClearType};
 use crossterm::{cursor, style::Print, terminal, ExecutableCommand, QueueableCommand};
 use freopen::{reopen_stdin, reopen_stdout};
-use libc::{c_int, wchar_t};
 use sl::{print_c51, print_d51, print_sl, set_locale};
 
 mod freopen;
@@ -40,8 +40,13 @@ pub static mut COLS: i32 = 0;
 #[no_mangle]
 pub static mut LINES: i32 = 0;
 
+#[cfg(target_family = "windows")]
+type SlChar = u16;
+#[cfg(target_family = "unix")]
+type SlChar = u32;
+
 #[no_mangle]
-pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const wchar_t) -> i32 {
+pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
     if y < 0 || y > unsafe { LINES } - 1 {
         return -11;
     }

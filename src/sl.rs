@@ -1,7 +1,10 @@
-use libc::wchar_t;
 use std::ffi::c_int;
+#[cfg(target_family = "windows")]
+type SlChar = u16;
+#[cfg(target_family = "unix")]
+type SlChar = u32;
 
-type SlStr = *const wchar_t;
+type SlStr = *const SlChar;
 
 #[link(name = "sl", kind = "static")]
 extern "C" {
