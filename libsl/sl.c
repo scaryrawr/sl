@@ -43,9 +43,7 @@
 /*                                              by Toyoda Masashi 1992/12/11 */
 
 #include "sl.h"
-#include <errno.h>
 #include <locale.h>
-#include <sys/types.h>
 #include <wchar.h>
 
 #define ERR -1
