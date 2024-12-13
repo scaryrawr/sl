@@ -8,7 +8,7 @@ use clap::{command, Parser};
 use crossterm::event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::terminal::{Clear, ClearType};
 use crossterm::{cursor, style::Print, terminal, ExecutableCommand, QueueableCommand};
-use freopen::{reopen_stdin, reopen_stdout};
+use freopen::reopen_stdout;
 use sl::{print_c51, print_d51, print_sl, set_locale};
 
 mod freopen;
@@ -109,7 +109,6 @@ fn main() -> Result<(), Error> {
                 Err(_) => None,
             })
             .collect();
-        reopen_stdin()?;
         names
     } else if args.files {
         vec![]
@@ -172,7 +171,8 @@ fn main() -> Result<(), Error> {
             update_size()?;
         }
     }
-    stdout.execute(cursor::Show)?;
+    stdout.queue(Clear(ClearType::All))?.queue(cursor::Show)?;
+    stdout.flush()?;
     terminal::disable_raw_mode()?;
 
     Ok(())
