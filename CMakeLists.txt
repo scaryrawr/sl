@@ -4,17 +4,6 @@ project("SL"
         DESCRIPTION "CHOO CHOO"
         LANGUAGES C)
 
-if(DEFINED ENV{VCPKG_INSTALLATION_ROOT})
-        set(VCPKG_ROOT "$ENV{VCPKG_INSTALLATION_ROOT}")
-else()
-        set(VCPKG_ROOT "${PROJECT_BINARY_DIR}/../vcpkg")
-endif()
-
-if ("${ARCH}" STREQUAL "aarch64")
-find_program(CURSES_DLL NAMES pdcurses.dll REQUIRED PATHS "${VCPKG_ROOT}/packages/pdcurses_arm64-windows/bin")
-else()
-find_program(CURSES_DLL NAMES pdcurses.dll REQUIRED PATHS "${VCPKG_ROOT}/packages/pdcurses_x64-windows/bin")
-endif()
 find_program(SL_EXE NAMES sl.exe PATHS "${PROJECT_BINARY_DIR}/release" "${PROJECT_BINARY_DIR}/${ARCH}-pc-windows-msvc/release" REQUIRED)
 install(FILES ${CURSES_DLL} ${SL_EXE} DESTINATION bin COMPONENT applications)
 
