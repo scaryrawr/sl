@@ -26,11 +26,11 @@ SL (Steam Locomotive) runs across your terminal when you type "sl" as you meant 
 {{{ git_dir_setup_macro }}}
 
 %build
-cargo build --release
+COMPLETION_DIR="completions" cargo build --release
 
 %install
 install -D -p -m 755 target/release/sl %{buildroot}%{_bindir}/sl
-install -D -p -m 644 sl.1 %{buildroot}%{_mandir}/man1/sl.1
+install -D -p -m 644 completions/sl.1 %{buildroot}%{_mandir}/man1/sl.1
 install -D -p -m 644 sl.1.ja %{buildroot}%{_mandir}/man1/sl.1.ja
 
 %changelog

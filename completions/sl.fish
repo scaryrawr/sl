@@ -1,0 +1,7 @@
+complete -c sl -s a -l accident -d 'An accident is occurring. People cry for help. Lists all files'
+complete -c sl -s l -l logo -d 'Little version'
+complete -c sl -s F -l fly -d 'It flies like the galaxy express 999'
+complete -c sl -s c -l c51 -d 'C51 appears instead of D51'
+complete -c sl -s f -l files -d 'Disables listing files and directories'
+complete -c sl -s h -l help -d 'Print help'
+complete -c sl -s V -l version -d 'Print version'
