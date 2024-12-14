@@ -22,8 +22,12 @@ pub static mut LINES: i32 = 0;
 
 #[cfg(target_family = "windows")]
 type SlChar = u16;
+#[cfg(target_family = "windows")]
+use widestring::u16str as ccstr;
 #[cfg(target_family = "unix")]
 type SlChar = u32;
+#[cfg(target_family = "unix")]
+use widestring::u32str as ccstr;
 
 const OK: i32 = 0;
 const ERR: i32 = -1;
@@ -53,47 +57,61 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
         .collect();
 
     // Remove characters from the end of the string until it fits the screen
-    while temp.width() > original.len() {
-        if let Some(mut pos) = characters
+    let oversize = temp.width() - original.len();
+    if oversize > 0 {
+        if let Some(pos) = characters
             .chars()
             .rev()
             .filter_map(|c| Some(c.unwrap_or(' ')))
             .position(|c| c == '|')
+            .and_then(|p| Some(characters.len() - p - 1))
         {
-            pos = characters.len() - pos - 1;
             if pos > 0 {
                 characters.remove_char(pos - 1);
-            } else {
-                break;
-            }
-        } else {
-            break;
-        }
+                let mut removable_width = 0;
+                if let Some(start) = characters.char_indices().rev().find_map(|(i, c)| {
+                    if i < pos {
+                        if let Some(width) = c.unwrap_or(' ').width() {
+                            removable_width += width;
+                        }
+                    }
 
-        temp = characters
-            .chars()
-            .filter_map(|c| Some(c.unwrap_or(' ')))
-            .collect();
+                    if removable_width >= oversize {
+                        Some(i)
+                    } else {
+                        None
+                    }
+                }) {
+                    characters.replace_range(start..pos - 1, ccstr!(""));
+                    temp = characters
+                        .chars()
+                        .filter_map(|c| Some(c.unwrap_or(' ')))
+                        .collect();
+                }
+            }
+        }
     }
 
     // Add spaces if the a character removed caused us to be at an odd number
-    while temp.width() < original.len() {
-        if let Some(mut pos) = characters
+    let undersize = original.len() - temp.width();
+    if undersize > 0 {
+        let pos = characters
             .chars()
             .rev()
             .filter_map(|c| Some(c.unwrap_or(' ')))
             .position(|c| c == '|')
-        {
-            pos = characters.len() - pos - 1;
-            characters.insert_char(pos, ' ');
-        } else {
-            break;
-        }
+            .and_then(|p| Some(characters.len() - p - 1));
+        let spaces = CCString::from_str(" ".repeat(undersize));
 
-        temp = characters
-            .chars()
-            .filter_map(|c| Some(c.unwrap_or(' ')))
-            .collect();
+        if let Some(pos) = pos {
+            if let Ok(spaces) = spaces.as_ref() {
+                characters.insert_ustr(pos, spaces.as_ustr());
+                temp = characters
+                    .chars()
+                    .filter_map(|c| Some(c.unwrap_or(' ')))
+                    .collect();
+            }
+        }
     }
 
     if (x + UnicodeWidthStr::width(temp.as_str()) as i32) < 0 {
@@ -126,10 +144,7 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
             x += c.width().unwrap_or(1) as i32 - 1;
         }
 
-        match stdout.flush() {
-            Ok(_) => OK,
-            Err(_) => ERR,
-        }
+        OK
     } else {
         return ERR;
     }
@@ -193,6 +208,7 @@ fn main() -> Result<(), Error> {
 
         stdout.queue(Clear(ClearType::All))?;
         while print_train(x, names.iter().map(String::as_ref)) == 0 {
+            stdout.flush()?;
             x -= 1;
             if poll(time::Duration::from_micros(40_000))? {
                 if let Event::Key(KeyEvent {
