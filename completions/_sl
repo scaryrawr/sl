@@ -1,0 +1,45 @@
+#compdef sl
+
+autoload -U is-at-least
+
+_sl() {
+    typeset -A opt_args
+    typeset -a _arguments_options
+    local ret=1
+
+    if is-at-least 5.2; then
+        _arguments_options=(-s -S -C)
+    else
+        _arguments_options=(-s -C)
+    fi
+
+    local context curcontext="$curcontext" state line
+    _arguments "${_arguments_options[@]}" : \
+'-a[An accident is occurring. People cry for help. Lists all files]' \
+'--accident[An accident is occurring. People cry for help. Lists all files]' \
+'-l[Little version]' \
+'--logo[Little version]' \
+'-F[It flies like the galaxy express 999]' \
+'--fly[It flies like the galaxy express 999]' \
+'-c[C51 appears instead of D51]' \
+'--c51[C51 appears instead of D51]' \
+'-f[Disables listing files and directories]' \
+'--files[Disables listing files and directories]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'-V[Print version]' \
+'--version[Print version]' \
+&& ret=0
+}
+
+(( $+functions[_sl_commands] )) ||
+_sl_commands() {
+    local commands; commands=()
+    _describe -t commands 'sl commands' commands "$@"
+}
+
+if [ "$funcstack[1]" = "_sl" ]; then
+    _sl "$@"
+else
+    compdef _sl sl
+fi
