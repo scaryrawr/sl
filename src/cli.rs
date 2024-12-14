@@ -1,6 +1,6 @@
 use clap::{command, Parser};
 
-/// sl  cure your bad habit of mistyping
+/// sl cures your bad habit of mistyping.
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct CliOptions {
