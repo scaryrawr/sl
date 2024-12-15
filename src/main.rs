@@ -114,6 +114,7 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
                 return Some(i);
             }
 
+            // we want the beginning of the next character, so we increment after checking x
             let c_width = c.width().unwrap_or(1) as i32;
             x += c_width;
             None
@@ -135,6 +136,7 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
     if past_end > 0 {
         if let Some(position) = buffer.char_indices().rev().find_map(|(i, c)| {
             let c_width = c.width().unwrap_or(1) as i32;
+            // We want to get the front of the current character, so decrement before checking past_end
             past_end -= c_width;
             if past_end <= 0 {
                 return Some(i);
