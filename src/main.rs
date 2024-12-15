@@ -32,37 +32,25 @@ use widestring::u32str as ccstr;
 const OK: i32 = 0;
 const ERR: i32 = -1;
 
-#[no_mangle]
-pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
-    if y < 0 || y > unsafe { LINES } - 1 {
-        return ERR;
-    }
+#[cfg(target_family = "windows")]
+type UCString = widestring::U16String;
+#[cfg(target_family = "windows")]
+type CCStr = widestring::U16CStr;
+#[cfg(target_family = "unix")]
+type UCString = widestring::U32String;
+#[cfg(target_family = "unix")]
+type CCStr = widestring::U32CStr;
 
-    let mut x = x;
-
-    #[cfg(target_family = "windows")]
-    type CCString = widestring::U16CString;
-    #[cfg(target_family = "windows")]
-    type CCStr = widestring::U16CStr;
-    #[cfg(target_family = "unix")]
-    type CCString = widestring::U32CString;
-    #[cfg(target_family = "unix")]
-    type CCStr = widestring::U32CStr;
-
-    let mut characters = unsafe { CCString::from_ptr_str(str).into_ustring() };
-    let original = unsafe { CCStr::from_ptr_str(str) };
-    let mut temp: String = characters
-        .chars()
-        .filter_map(|c| Some(c.unwrap_or(' ')))
-        .collect();
-
+fn fit_train_car(original: &CCStr) -> UCString {
+    let mut temp = original.to_string_lossy().to_string();
+    let mut characters = UCString::from_str(&temp);
     // Remove characters from the end of the string until it fits the screen
     let oversize = temp.width() - original.len();
     if oversize > 0 {
         if let Some(pos) = characters
+            .to_string_lossy()
             .chars()
             .rev()
-            .filter_map(|c| Some(c.unwrap_or(' ')))
             .position(|c| c == '|')
             .and_then(|p| Some(characters.len() - p - 1))
         {
@@ -96,62 +84,97 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
     let undersize = original.len() - temp.width();
     if undersize > 0 {
         let pos = characters
+            .to_string_lossy()
             .chars()
             .rev()
-            .filter_map(|c| Some(c.unwrap_or(' ')))
             .position(|c| c == '|')
             .and_then(|p| Some(characters.len() - p - 1));
-        let spaces = CCString::from_str(" ".repeat(undersize));
 
         if let Some(pos) = pos {
-            if let Ok(spaces) = spaces.as_ref() {
-                characters.insert_ustr(pos, spaces.as_ustr());
-                temp = characters
-                    .chars()
-                    .filter_map(|c| Some(c.unwrap_or(' ')))
-                    .collect();
-            }
+            characters.insert_char(pos, ' ');
         }
     }
 
-    if (x + UnicodeWidthStr::width(temp.as_str()) as i32) < 0 {
+    return characters;
+}
+
+#[no_mangle]
+pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
+    // Vertically off screen
+    if y < 0 || y > unsafe { LINES } - 1 {
         return ERR;
     }
 
-    if let Some(mut location) = temp.char_indices().find_map(|(i, c)| {
-        x += c.width().unwrap_or(1) as i32;
-        if x < 0 {
-            return None;
-        }
-        if x >= unsafe { COLS } {
-            return None;
-        } else {
-            return Some(i);
-        }
-    }) {
-        let mut stdout = stdout();
-        if let Ok(queue) = stdout.queue(cursor::MoveTo(x as u16, y as u16)) {
-            let end = std::cmp::min(
-                std::cmp::min(temp.len(), (unsafe { COLS } - x) as usize),
-                characters.len(),
-            );
-            location = std::cmp::min(location, end);
-            temp = characters[location..end]
-                .chars()
-                .filter_map(|c| Some(c.unwrap_or(' ')))
-                .collect();
-            match queue.queue(Print(&temp)) {
-                Err(_) => return ERR,
-                _ => {}
+    // Everything is off the screen to the right
+    if x >= unsafe { COLS } {
+        return ERR;
+    }
+
+    // The number of characters is the expected width to take up, but that is possibly incorrect, so we need
+    // to make a fitting string.
+    let mut buffer: String = fit_train_car(unsafe { CCStr::from_ptr_str(str) })
+        .to_string_lossy()
+        .to_string();
+
+    let end_position = x + (buffer.width() as i32);
+
+    // Everything is off screen to the left
+    if end_position < 0 {
+        return ERR;
+    }
+
+    let mut x = x;
+    // Remove everything that will be off the screen to the left
+    if x < 0 {
+        if let Some(position) = buffer.char_indices().find_map(|(i, c)| {
+            if x >= 0 {
+                return Some(i);
             }
+
+            let c_width = c.width().unwrap_or(1) as i32;
+            x += c_width;
+            None
+        }) {
+            buffer = buffer[position..].to_string();
         } else {
             return ERR;
         }
 
-        return OK;
+        if x > 0 {
+            // Pad with leading spaces
+            buffer.insert_str(0, &" ".repeat(x as usize));
+            x = 0;
+        }
     }
 
-    ERR
+    // Remove everything that would be offscreen to the right
+    let mut past_end = end_position - unsafe { COLS };
+    if past_end > 0 {
+        if let Some(position) = buffer.char_indices().rev().find_map(|(i, c)| {
+            let c_width = c.width().unwrap_or(1) as i32;
+            past_end -= c_width;
+            if past_end <= 0 {
+                return Some(i);
+            }
+
+            None
+        }) {
+            buffer = buffer[..position].to_string();
+        } else {
+            return ERR;
+        }
+    }
+
+    let mut stdout = stdout();
+    match stdout.queue(cursor::MoveTo(x as u16, y as u16)) {
+        Err(_) => return ERR,
+        _ => {}
+    }
+
+    match stdout.queue(Print(buffer)) {
+        Ok(_) => return OK,
+        Err(_) => return ERR,
+    }
 }
 
 fn main() -> Result<(), Error> {
