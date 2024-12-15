@@ -118,36 +118,40 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
         return ERR;
     }
 
-    let mut stdout = stdout();
-    if let Ok(mut queue) = stdout.queue(cursor::MoveTo(0, 0)) {
-        for c in temp.chars() {
-            x += 1;
-            if x < 0 {
-                x += c.width().unwrap_or(1) as i32 - 1;
-                continue;
-            }
-
-            if x > unsafe { COLS } - 1 {
-                break;
-            }
-
-            match queue.queue(cursor::MoveTo(x as u16, y as u16)) {
-                Ok(q) => queue = q,
+    if let Some(mut location) = temp.char_indices().find_map(|(i, c)| {
+        x += c.width().unwrap_or(1) as i32;
+        if x < 0 {
+            return None;
+        }
+        if x >= unsafe { COLS } {
+            return None;
+        } else {
+            return Some(i);
+        }
+    }) {
+        let mut stdout = stdout();
+        if let Ok(queue) = stdout.queue(cursor::MoveTo(x as u16, y as u16)) {
+            let end = std::cmp::min(
+                std::cmp::min(temp.len(), (unsafe { COLS } - x) as usize),
+                characters.len(),
+            );
+            location = std::cmp::min(location, end);
+            temp = characters[location..end]
+                .chars()
+                .filter_map(|c| Some(c.unwrap_or(' ')))
+                .collect();
+            match queue.queue(Print(&temp)) {
                 Err(_) => return ERR,
+                _ => {}
             }
-
-            match queue.queue(Print(c)) {
-                Ok(q) => queue = q,
-                Err(_) => return ERR,
-            }
-
-            x += c.width().unwrap_or(1) as i32 - 1;
+        } else {
+            return ERR;
         }
 
-        OK
-    } else {
-        return ERR;
+        return OK;
     }
+
+    ERR
 }
 
 fn main() -> Result<(), Error> {
