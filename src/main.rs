@@ -22,44 +22,34 @@ pub static mut LINES: i32 = 0;
 
 #[cfg(target_family = "windows")]
 type SlChar = u16;
-#[cfg(target_family = "windows")]
-use widestring::u16str as ccstr;
 #[cfg(target_family = "unix")]
 type SlChar = u32;
-#[cfg(target_family = "unix")]
-use widestring::u32str as ccstr;
 
 const OK: i32 = 0;
 const ERR: i32 = -1;
 
 #[cfg(target_family = "windows")]
-type UCString = widestring::U16String;
-#[cfg(target_family = "windows")]
 type CCStr = widestring::U16CStr;
-#[cfg(target_family = "unix")]
-type UCString = widestring::U32String;
 #[cfg(target_family = "unix")]
 type CCStr = widestring::U32CStr;
 
-fn fit_train_car(original: &CCStr) -> UCString {
-    let mut temp = original.to_string_lossy().to_string();
-    let mut characters = UCString::from_str(&temp);
+fn fit_train_car(original: &CCStr) -> String {
+    let mut characters = original.to_string_lossy().to_string();
     // Remove characters from the end of the string until it fits the screen
-    let oversize = temp.width() - original.len();
+    let oversize = characters.width() - original.len();
     if oversize > 0 {
         if let Some(pos) = characters
-            .to_string_lossy()
             .chars()
             .rev()
             .position(|c| c == '|')
             .and_then(|p| Some(characters.len() - p - 1))
         {
             if pos > 0 {
-                characters.remove_char(pos - 1);
+                characters.remove(pos - 1);
                 let mut removable_width = 0;
                 if let Some(start) = characters.char_indices().rev().find_map(|(i, c)| {
                     if i < pos {
-                        if let Some(width) = c.unwrap_or(' ').width() {
+                        if let Some(width) = c.width() {
                             removable_width += width;
                         }
                     }
@@ -70,28 +60,23 @@ fn fit_train_car(original: &CCStr) -> UCString {
                         None
                     }
                 }) {
-                    characters.replace_range(start..pos - 1, ccstr!(""));
-                    temp = characters
-                        .chars()
-                        .filter_map(|c| Some(c.unwrap_or(' ')))
-                        .collect();
+                    characters.replace_range(start..pos - 1, "");
                 }
             }
         }
     }
 
     // Add spaces if the a character removed caused us to be at an odd number
-    let undersize = original.len() - temp.width();
+    let undersize = original.len() - characters.width();
     if undersize > 0 {
         let pos = characters
-            .to_string_lossy()
             .chars()
             .rev()
             .position(|c| c == '|')
             .and_then(|p| Some(characters.len() - p - 1));
 
         if let Some(pos) = pos {
-            characters.insert_char(pos, ' ');
+            characters.insert_str(pos, " ".repeat(undersize).as_str());
         }
     }
 
@@ -112,9 +97,7 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
 
     // The number of characters is the expected width to take up, but that is possibly incorrect, so we need
     // to make a fitting string.
-    let mut buffer: String = fit_train_car(unsafe { CCStr::from_ptr_str(str) })
-        .to_string_lossy()
-        .to_string();
+    let mut buffer: String = fit_train_car(unsafe { CCStr::from_ptr_str(str) });
 
     let end_position = x + (buffer.width() as i32);
 
