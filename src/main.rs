@@ -9,6 +9,7 @@ use sl::{print_c51, print_d51, print_sl, set_locale};
 use std::ffi::c_int;
 use std::fs;
 use std::io::{stdin, stdout, BufRead, Error, IsTerminal, Stdin, Stdout, Write};
+use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 mod cli;
@@ -36,23 +37,23 @@ type CCStr = widestring::U32CStr;
 
 fn fit_train_car(original: &CCStr) -> String {
     let mut characters = original.to_string_lossy().to_string();
+
     // Remove characters from the end of the string until it fits the screen
     let oversize = characters.width() - original.len();
     if oversize > 0 {
-        if let Some(pos) = characters
-            .chars()
+        let mut clusters: Vec<&str> = characters.graphemes(true).collect();
+        if let Some(pos) = clusters
+            .iter()
             .rev()
-            .position(|c| c == '|')
-            .and_then(|p| Some(characters.len() - p - 1))
+            .position(|c| *c == "|")
+            .and_then(|p| Some(clusters.len() - p - 1))
         {
             if pos > 0 {
-                characters.remove(pos - 1);
                 let mut removable_width = 0;
-                if let Some(start) = characters.char_indices().rev().find_map(|(i, c)| {
+                if let Some(start) = clusters.iter().enumerate().rev().find_map(|(i, c)| {
                     if i < pos {
-                        if let Some(width) = c.width() {
-                            removable_width += width;
-                        }
+                        let width = c.width();
+                        removable_width += width;
                     }
 
                     if removable_width >= oversize {
@@ -61,7 +62,8 @@ fn fit_train_car(original: &CCStr) -> String {
                         None
                     }
                 }) {
-                    characters.replace_range(start..pos - 1, "");
+                    clusters.splice(start..pos, std::iter::empty());
+                    characters = clusters.join("");
                 }
             }
         }
