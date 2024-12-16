@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
 project("SL"
-        VERSION 6.1
+        VERSION 6.0.1
         DESCRIPTION "CHOO CHOO"
         LANGUAGES C)
 
