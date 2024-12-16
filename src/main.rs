@@ -14,6 +14,7 @@ use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 mod cli;
 mod freopen;
 mod sl;
+mod unicode_width;
 
 #[no_mangle]
 pub static mut COLS: i32 = 0;
