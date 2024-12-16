@@ -28,110 +28,137 @@ type SlChar = u32;
 const OK: i32 = 0;
 const ERR: i32 = -1;
 
+#[cfg(target_family = "windows")]
+type CCStr = widestring::U16CStr;
+#[cfg(target_family = "unix")]
+type CCStr = widestring::U32CStr;
+
+fn fit_train_car(original: &CCStr) -> String {
+    let mut characters = original.to_string_lossy().to_string();
+    // Remove characters from the end of the string until it fits the screen
+    let oversize = characters.width() - original.len();
+    if oversize > 0 {
+        if let Some(pos) = characters
+            .chars()
+            .rev()
+            .position(|c| c == '|')
+            .and_then(|p| Some(characters.len() - p - 1))
+        {
+            if pos > 0 {
+                characters.remove(pos - 1);
+                let mut removable_width = 0;
+                if let Some(start) = characters.char_indices().rev().find_map(|(i, c)| {
+                    if i < pos {
+                        if let Some(width) = c.width() {
+                            removable_width += width;
+                        }
+                    }
+
+                    if removable_width >= oversize {
+                        Some(i)
+                    } else {
+                        None
+                    }
+                }) {
+                    characters.replace_range(start..pos - 1, "");
+                }
+            }
+        }
+    }
+
+    // Add spaces if the a character removed caused us to be at an odd number
+    let undersize = original.len() - characters.width();
+    if undersize > 0 {
+        let pos = characters
+            .chars()
+            .rev()
+            .position(|c| c == '|')
+            .and_then(|p| Some(characters.len() - p - 1));
+
+        if let Some(pos) = pos {
+            characters.insert_str(pos, " ".repeat(undersize).as_str());
+        }
+    }
+
+    return characters;
+}
+
 #[no_mangle]
 pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
+    // Vertically off screen
     if y < 0 || y > unsafe { LINES } - 1 {
         return ERR;
     }
 
-    let mut x = x;
-
-    #[cfg(target_family = "windows")]
-    type CCString = widestring::U16CString;
-    #[cfg(target_family = "windows")]
-    type CCStr = widestring::U16CStr;
-    #[cfg(target_family = "unix")]
-    type CCString = widestring::U32CString;
-    #[cfg(target_family = "unix")]
-    type CCStr = widestring::U32CStr;
-
-    let mut characters = unsafe { CCString::from_ptr_str(str).into_ustring() };
-    let original = unsafe { CCStr::from_ptr_str(str) };
-    let mut temp: String = characters
-        .chars()
-        .filter_map(|c| Some(c.unwrap_or(' ')))
-        .collect();
-
-    // Remove characters from the end of the string until it fits the screen
-    while temp.width() > original.len() {
-        if let Some(mut pos) = characters
-            .chars()
-            .rev()
-            .filter_map(|c| Some(c.unwrap_or(' ')))
-            .position(|c| c == '|')
-        {
-            pos = characters.len() - pos - 1;
-            if pos > 0 {
-                characters.remove_char(pos - 1);
-            } else {
-                break;
-            }
-        } else {
-            break;
-        }
-
-        temp = characters
-            .chars()
-            .filter_map(|c| Some(c.unwrap_or(' ')))
-            .collect();
-    }
-
-    // Add spaces if the a character removed caused us to be at an odd number
-    while temp.width() < original.len() {
-        if let Some(mut pos) = characters
-            .chars()
-            .rev()
-            .filter_map(|c| Some(c.unwrap_or(' ')))
-            .position(|c| c == '|')
-        {
-            pos = characters.len() - pos - 1;
-            characters.insert_char(pos, ' ');
-        } else {
-            break;
-        }
-
-        temp = characters
-            .chars()
-            .filter_map(|c| Some(c.unwrap_or(' ')))
-            .collect();
-    }
-
-    if (x + UnicodeWidthStr::width(temp.as_str()) as i32) < 0 {
+    // Everything is off the screen to the right
+    if x >= unsafe { COLS } {
         return ERR;
+    }
+
+    // The number of characters is the expected width to take up, but that is possibly incorrect, so we need
+    // to make a fitting string.
+    let mut buffer: String = fit_train_car(unsafe { CCStr::from_ptr_str(str) });
+
+    let end_position = x + (buffer.width() as i32);
+
+    // Everything is off screen to the left
+    if end_position < 0 {
+        return ERR;
+    }
+
+    let mut x = x;
+    // Remove everything that will be off the screen to the left
+    if x < 0 {
+        if let Some(position) = buffer.char_indices().find_map(|(i, c)| {
+            if x >= 0 {
+                return Some(i);
+            }
+
+            // we want the beginning of the next character, so we increment after checking x
+            let c_width = c.width().unwrap_or(1) as i32;
+            x += c_width;
+            None
+        }) {
+            buffer = buffer[position..].to_string();
+        } else {
+            return ERR;
+        }
+
+        if x > 0 {
+            // Pad with leading spaces
+            buffer.insert_str(0, &" ".repeat(x as usize));
+            x = 0;
+        }
+    }
+
+    // Remove everything that would be offscreen to the right
+    let mut past_end = end_position - unsafe { COLS };
+    if past_end > 0 {
+        if let Some(position) = buffer.char_indices().rev().find_map(|(i, c)| {
+            let c_width = c.width().unwrap_or(1) as i32;
+            // We want to get the front of the current character, so decrement before checking past_end
+            past_end -= c_width;
+            if past_end <= 0 {
+                return Some(i);
+            }
+
+            None
+        }) {
+            buffer = buffer[..position].to_string();
+        } else {
+            return ERR;
+        }
     }
 
     let mut stdout = stdout();
-    if let Ok(mut queue) = stdout.queue(cursor::MoveTo(0, 0)) {
-        for c in temp.chars() {
-            x += 1;
-            if x < 0 {
-                x += c.width().unwrap_or(1) as i32 - 1;
-                continue;
-            }
+    match stdout.queue(cursor::MoveTo(x as u16, y as u16)) {
+        Err(_) => return ERR,
+        _ => {}
+    }
 
-            if x > unsafe { COLS } - 1 {
-                break;
-            }
-
-            match queue.queue(cursor::MoveTo(x as u16, y as u16)) {
-                Ok(q) => queue = q,
-                Err(_) => return ERR,
-            }
-
-            match queue.queue(Print(c)) {
-                Ok(q) => queue = q,
-                Err(_) => return ERR,
-            }
-
-            x += c.width().unwrap_or(1) as i32 - 1;
-        }
-
-        match stdout.flush() {
-            Ok(_) => OK,
-            Err(_) => ERR,
-        }
-    } else {
-        return ERR;
+    match stdout.queue(Print(buffer)) {
+        Ok(_) => return OK,
+        Err(_) => return ERR,
     }
 }
 
@@ -193,6 +220,7 @@ fn main() -> Result<(), Error> {
 
         stdout.queue(Clear(ClearType::All))?;
         while print_train(x, names.iter().map(String::as_ref)) == 0 {
+            stdout.flush()?;
             x -= 1;
             if poll(time::Duration::from_micros(40_000))? {
                 if let Event::Key(KeyEvent {
