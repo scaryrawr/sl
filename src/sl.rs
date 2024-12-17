@@ -89,6 +89,7 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
     // The number of characters is the expected width to take up, but that is possibly incorrect, so we need
     // to make a fitting string.
     let mut buffer: String = fit_train_car(unsafe { CCStr::from_ptr_str(str) });
+    let mut clusters: Vec<&str> = buffer.graphemes(true).collect();
 
     let end_position = x + (buffer.width() as i32);
 
@@ -100,17 +101,18 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
     let mut x = x;
     // Remove everything that will be off the screen to the left
     if x < 0 {
-        if let Some(position) = buffer.char_indices().find_map(|(i, c)| {
+        if let Some(position) = clusters.iter().enumerate().find_map(|(i, c)| {
             if x >= 0 {
                 return Some(i);
             }
 
             // we want the beginning of the next character, so we increment after checking x
-            let c_width = c.width().unwrap_or(1) as i32;
+            let c_width = c.width() as i32;
             x += c_width;
             None
         }) {
-            buffer = buffer[position..].to_string();
+            clusters.splice(0..position, std::iter::empty());
+            buffer = clusters.join("");
         } else {
             return ERR;
         }
@@ -125,17 +127,19 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
     // Remove everything that would be offscreen to the right
     let mut past_end = end_position - unsafe { COLS };
     if past_end > 0 {
-        if let Some(position) = buffer.char_indices().rev().find_map(|(i, c)| {
-            let c_width = c.width().unwrap_or(1) as i32;
+        clusters = buffer.graphemes(true).collect();
+        if let Some(position) = clusters.iter().enumerate().rev().find_map(|(i, c)| {
+            let c_width = c.width() as i32;
             // We want to get the front of the current character, so decrement before checking past_end
             past_end -= c_width;
-            if past_end <= 0 {
+            if past_end < 0 {
                 return Some(i);
             }
 
             None
         }) {
-            buffer = buffer[..position].to_string();
+            clusters.splice(position..(clusters.len() - 1), std::iter::empty());
+            buffer = clusters.join("");
         } else {
             return ERR;
         }
@@ -157,7 +161,12 @@ fn fit_train_car(original: &CCStr) -> String {
     let mut characters = original.to_string_lossy().to_string();
 
     // Remove characters from the end of the string until it fits the screen
-    let oversize = characters.width() - original.len();
+    let oversize = if characters.width() > original.len() {
+        characters.width() - original.len()
+    } else {
+        0
+    };
+
     if oversize > 0 {
         let mut clusters: Vec<&str> = characters.graphemes(true).collect();
         if let Some(pos) = clusters
