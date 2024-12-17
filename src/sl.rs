@@ -1,6 +1,7 @@
 use crossterm::{cursor, style::Print, QueueableCommand};
 use std::ffi::c_int;
 use std::io::stdout;
+use std::vec;
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
@@ -112,14 +113,15 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
             None
         }) {
             clusters.splice(0..position, std::iter::empty());
-            buffer = clusters.join("");
         } else {
             return ERR;
         }
 
         if x > 0 {
             // Pad with leading spaces
-            buffer.insert_str(0, &" ".repeat(x as usize));
+            let mut temp = vec![" "; x as usize];
+            temp.append(&mut clusters);
+            clusters = temp;
             x = 0;
         }
     }
@@ -127,7 +129,6 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
     // Remove everything that would be offscreen to the right
     let mut past_end = end_position - unsafe { COLS };
     if past_end > 0 {
-        clusters = buffer.graphemes(true).collect();
         if let Some(position) = clusters.iter().enumerate().rev().find_map(|(i, c)| {
             let c_width = c.width() as i32;
             // We want to get the front of the current character, so decrement before checking past_end
@@ -139,7 +140,6 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
             None
         }) {
             clusters.splice(position..(clusters.len() - 1), std::iter::empty());
-            buffer = clusters.join("");
         } else {
             return ERR;
         }
@@ -151,6 +151,7 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
         _ => {}
     }
 
+    buffer = clusters.join("");
     match stdout.queue(Print(buffer)) {
         Ok(_) => return OK,
         Err(_) => return ERR,
