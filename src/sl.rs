@@ -1,17 +1,13 @@
 use crossterm::{cursor, style::Print, QueueableCommand};
-use std::ffi::c_int;
+use libc::c_uint;
+use std::ffi::{c_int, CStr, CString};
 use std::io::stdout;
 use std::vec;
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
-
 mod unicode_width;
 
-#[cfg(target_family = "windows")]
-type SlChar = u16;
-#[cfg(target_family = "unix")]
-type SlChar = u32;
-
+type SlChar = u8;
 type SlStr = *const SlChar;
 
 #[no_mangle]
@@ -30,21 +26,14 @@ extern "C" {
     fn add_sl(current_column: c_int, names: *const SlStr, count: c_int) -> c_int;
 }
 
-#[cfg(target_family = "windows")]
-fn create_string(value: &str) -> widestring::U16CString {
-    widestring::U16CString::from_str(value).unwrap()
-}
-
-#[cfg(target_family = "unix")]
-fn create_string(value: &str) -> widestring::U32CString {
-    widestring::U32CString::from_str(value).unwrap()
-}
-
 pub fn print_d51<'a, StringIterator>(current_column: c_int, names: StringIterator) -> i32
 where
     StringIterator: IntoIterator<Item = &'a str>,
 {
-    let strings: Vec<_> = names.into_iter().map(|s| create_string(s)).collect();
+    let strings: Vec<_> = names
+        .into_iter()
+        .map(|s| CString::new(s).unwrap())
+        .collect();
     let pointers: Vec<_> = strings.iter().map(|s| s.as_ptr()).collect();
     unsafe { add_D51(current_column, pointers.as_ptr(), pointers.len() as c_int) }
 }
@@ -53,7 +42,10 @@ pub fn print_sl<'a, StringIterator>(current_column: c_int, names: StringIterator
 where
     StringIterator: IntoIterator<Item = &'a str>,
 {
-    let strings: Vec<_> = names.into_iter().map(|s| create_string(s)).collect();
+    let strings: Vec<_> = names
+        .into_iter()
+        .map(|s| CString::new(s).unwrap())
+        .collect();
     let pointers: Vec<_> = strings.iter().map(|s| s.as_ptr()).collect();
     unsafe { add_sl(current_column, pointers.as_ptr(), pointers.len() as c_int) }
 }
@@ -62,7 +54,10 @@ pub fn print_c51<'a, StringIterator>(current_column: c_int, names: StringIterato
 where
     StringIterator: IntoIterator<Item = &'a str>,
 {
-    let strings: Vec<_> = names.into_iter().map(|s| create_string(s)).collect();
+    let strings: Vec<_> = names
+        .into_iter()
+        .map(|s| CString::new(s).unwrap())
+        .collect();
     let pointers: Vec<_> = strings.iter().map(|s| s.as_ptr()).collect();
     unsafe { add_C51(current_column, pointers.as_ptr(), pointers.len() as c_int) }
 }
@@ -70,13 +65,81 @@ where
 const OK: i32 = 0;
 const ERR: i32 = -1;
 
-#[cfg(target_family = "windows")]
-type CCStr = widestring::U16CStr;
-#[cfg(target_family = "unix")]
-type CCStr = widestring::U32CStr;
+#[no_mangle]
+extern "C" fn print_car(
+    buffer: *mut SlChar,
+    buffer_len: c_uint,
+    format: SlStr,
+    text: SlStr,
+    text_display_width: c_uint,
+) -> i32 {
+    let format = match unsafe { CStr::from_ptr(format) }.to_str() {
+        Ok(s) => s,
+        Err(_) => return ERR,
+    };
+
+    // No format string, just copy text
+    if !format.contains("{}") {
+        let copy_len = std::cmp::min(format.len(), buffer_len as usize - 1);
+        unsafe {
+            std::ptr::copy_nonoverlapping(format.as_ptr(), buffer, copy_len);
+            *buffer.add(copy_len) = 0;
+        }
+        return OK;
+    }
+
+    let text = match unsafe { CStr::from_ptr(text) }.to_str() {
+        Ok(s) => s,
+        Err(_) => return ERR,
+    };
+
+    let text_display_width = text_display_width as usize;
+
+    let mut text_clusters: Vec<&str> = text.graphemes(true).collect();
+    let mut working_text = text.to_string();
+
+    // We need to remove clusters until we will fit in the buffer
+    if working_text.width() > text_display_width
+        || working_text.len() + format.len() - 2 > buffer_len as usize
+    {
+        if let Some(start) = (0..text_clusters.len()).rev().find_map(|i| {
+            let front_width = text_clusters[0..i].iter().map(|c| c.width()).sum::<usize>();
+            if front_width < text_display_width {
+                let front_len = text_clusters[0..i].iter().map(|c| c.len()).sum::<usize>();
+                if front_len + (text_display_width - front_width) + (format.len() - 2)
+                    <= buffer_len as usize
+                {
+                    return Some(i);
+                }
+            }
+
+            None
+        }) {
+            text_clusters.splice(start.., std::iter::empty());
+        }
+
+        working_text = text_clusters.join("").to_string();
+    }
+
+    let spaces = if working_text.width() < text_display_width {
+        text_display_width - working_text.width()
+    } else {
+        0
+    };
+
+    working_text += " ".repeat(spaces).as_str();
+
+    let format = format.replace("{}", working_text.as_str());
+    let copy_len = std::cmp::min(format.len(), buffer_len as usize - 1);
+    unsafe {
+        std::ptr::copy_nonoverlapping(format.as_ptr(), buffer, copy_len);
+        *buffer.add(copy_len) = 0;
+    }
+    return OK;
+}
 
 #[no_mangle]
-pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
+extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: SlStr) -> i32 {
     // Vertically off screen
     if y < 0 || y > unsafe { LINES } - 1 {
         return ERR;
@@ -89,7 +152,7 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
 
     // The number of characters is the expected width to take up, but that is possibly incorrect, so we need
     // to make a fitting string.
-    let mut buffer: String = fit_train_car(unsafe { CCStr::from_ptr_str(str) });
+    let mut buffer: String = fit_train_car(unsafe { CStr::from_ptr(str) });
     let mut clusters: Vec<&str> = buffer.graphemes(true).collect();
 
     let end_position = x + (buffer.width() as i32);
@@ -158,12 +221,12 @@ pub extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: *const SlChar) -> i32 {
     }
 }
 
-fn fit_train_car(original: &CCStr) -> String {
+fn fit_train_car(original: &CStr) -> String {
     let mut characters = original.to_string_lossy().to_string();
 
     // Remove characters from the end of the string until it fits the screen
-    let oversize = if characters.width() > original.len() {
-        characters.width() - original.len()
+    let oversize = if characters.width() > original.count_bytes() {
+        characters.width() - original.count_bytes()
     } else {
         0
     };
@@ -198,7 +261,7 @@ fn fit_train_car(original: &CCStr) -> String {
     }
 
     // Add spaces if the a character removed caused us to be at an odd number
-    let undersize = original.len() - characters.width();
+    let undersize = original.count_bytes() - characters.width();
     if undersize > 0 {
         let pos = characters
             .chars()

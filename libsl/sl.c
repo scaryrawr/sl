@@ -44,12 +44,13 @@
 
 #include "sl.h"
 #include <locale.h>
-#include <wchar.h>
+#include <stdio.h>
 
 #define ERR -1
 #define OK 0
 
-extern int my_mvaddstr(int y, int x, wchar_t *str);
+extern int my_mvaddstr(int y, int x, char *str);
+extern void print_car(char *buffer, unsigned int buffer_length, const char *fmt, const char* text, unsigned int text_display_width);
 
 extern int COLS;
 extern int LINES;
@@ -57,9 +58,9 @@ extern int LINES;
 void set_locale();
 void add_smoke(int y, int x);
 void add_man(int y, int x);
-int add_C51(int x, wchar_t *namelist[], int cars);
-int add_D51(int x, wchar_t *namelist[], int cars);
-int add_sl(int x, wchar_t *namelist[], int cars);
+int add_C51(int x, char *namelist[], int cars);
+int add_D51(int x, char *namelist[], int cars);
+int add_sl(int x, char *namelist[], int cars);
 
 int ACCIDENT  = 0;
 int FLY       = 0;
@@ -69,9 +70,9 @@ void set_locale()
   setlocale(LC_ALL, "");
 }
 
-int add_sl(int x, wchar_t* namelist[], int cars)
+int add_sl(int x, char* namelist[], int cars)
 {
-    static wchar_t *sl[LOGOPATTERNS][LOGOHEIGHT + 1]
+    static char *sl[LOGOPATTERNS][LOGOHEIGHT + 1]
         = {{LOGO1, LOGO2, LOGO3, LOGO4, LWHL11, LWHL12, DELLN},
            {LOGO1, LOGO2, LOGO3, LOGO4, LWHL21, LWHL22, DELLN},
            {LOGO1, LOGO2, LOGO3, LOGO4, LWHL31, LWHL32, DELLN},
@@ -79,14 +80,14 @@ int add_sl(int x, wchar_t* namelist[], int cars)
            {LOGO1, LOGO2, LOGO3, LOGO4, LWHL51, LWHL52, DELLN},
            {LOGO1, LOGO2, LOGO3, LOGO4, LWHL61, LWHL62, DELLN}};
 
-    static wchar_t *coal[LOGOHEIGHT + 1]
+    static char *coal[LOGOHEIGHT + 1]
         = {LCOAL1, LCOAL2, LCOAL3, LCOAL4, LCOAL5, LCOAL6, DELLN};
 
-    static wchar_t *car[LOGOHEIGHT + 1]
+    static char *car[LOGOHEIGHT + 1]
         = {LCAR1, LCAR2, LCAR3, LCAR4, LCAR5, LCAR6, DELLN};
 
     int i, j, y, pos, py1 = 0, py2 = 0;
-    wchar_t carName[LCARLENGTH];
+    char carName[LCARLENGTH];
     if (x < - (LOGOLENGTH + ((cars > 0) ? cars * (LCARLENGTH - 1) : 0))) {
         return ERR;
     }
@@ -115,7 +116,7 @@ int add_sl(int x, wchar_t* namelist[], int cars)
                 break;
             }
 
-            swprintf(carName, LCARLENGTH, car[i], namelist[j]);
+            print_car(carName, LCARLENGTH, car[i], namelist[j], 16);
             my_mvaddstr(y + i + (FLY * j) + py2, x + 42 + (LCARLENGTH - 1) * j, carName);
         }
     }
@@ -139,9 +140,9 @@ int add_sl(int x, wchar_t* namelist[], int cars)
     return OK;
 }
 
-int add_D51(int x, wchar_t* namelist[], int cars)
+int add_D51(int x, char* namelist[], int cars)
 {
-    static wchar_t *d51[D51PATTERNS][D51HEIGHT + 1]
+    static char *d51[D51PATTERNS][D51HEIGHT + 1]
         = {{D51STR1, D51STR2, D51STR3, D51STR4, D51STR5, D51STR6, D51STR7,
             D51WHL11, D51WHL12, D51WHL13, D51DEL},
            {D51STR1, D51STR2, D51STR3, D51STR4, D51STR5, D51STR6, D51STR7,
@@ -155,16 +156,16 @@ int add_D51(int x, wchar_t* namelist[], int cars)
            {D51STR1, D51STR2, D51STR3, D51STR4, D51STR5, D51STR6, D51STR7,
             D51WHL61, D51WHL62, D51WHL63, D51DEL}};
     
-    static wchar_t *coal[D51HEIGHT + 1]
+    static char *coal[D51HEIGHT + 1]
         = {COAL01, COAL02, COAL03, COAL04, COAL05,
            COAL06, COAL07, COAL08, COAL09, COAL10, COALDEL};
     
-    static wchar_t *car[D51HEIGHT + 1]
+    static char *car[D51HEIGHT + 1]
         = {CAR01, CAR02, CAR03, CAR04, CAR05,
            CAR06, CAR07, CAR08, CAR09, CAR10, COALDEL};
 
     int y, i, j, pos, dy = 0;
-    wchar_t carName[CARLENGTH];
+    char carName[CARLENGTH];
 
     if (x < - (D51LENGTH + ((cars > 0) ? cars * (CARLENGTH - 1) : 0))) {
         return ERR;
@@ -193,7 +194,7 @@ int add_D51(int x, wchar_t* namelist[], int cars)
                 break;
             }
 
-            swprintf(carName, CARLENGTH, car[i], namelist[j]);
+            print_car(carName, CARLENGTH, car[i], namelist[j], 22);
             my_mvaddstr(y + i + (FLY * (j + 1)) + dy, x + 53 + (CARLENGTH - 3) * (j + 1), carName);
         }
     }
@@ -221,9 +222,9 @@ int add_D51(int x, wchar_t* namelist[], int cars)
     return OK;
 }
 
-int add_C51(int x, wchar_t* namelist[], int cars)
+int add_C51(int x, char* namelist[], int cars)
 {
-    static wchar_t *c51[C51PATTERNS][C51HEIGHT + 1]
+    static char *c51[C51PATTERNS][C51HEIGHT + 1]
         = {{C51STR1, C51STR2, C51STR3, C51STR4, C51STR5, C51STR6, C51STR7,
             C51WH11, C51WH12, C51WH13, C51WH14, C51DEL},
            {C51STR1, C51STR2, C51STR3, C51STR4, C51STR5, C51STR6, C51STR7,
@@ -236,16 +237,16 @@ int add_C51(int x, wchar_t* namelist[], int cars)
             C51WH51, C51WH52, C51WH53, C51WH54, C51DEL},
            {C51STR1, C51STR2, C51STR3, C51STR4, C51STR5, C51STR6, C51STR7,
             C51WH61, C51WH62, C51WH63, C51WH64, C51DEL}};
-    static wchar_t *coal[C51HEIGHT + 1]
+    static char *coal[C51HEIGHT + 1]
         = {COALDEL, COAL01, COAL02, COAL03, COAL04, COAL05,
            COAL06, COAL07, COAL08, COAL09, COAL10, COALDEL};
 
-    static wchar_t *car[C51HEIGHT + 1]
+    static char *car[C51HEIGHT + 1]
         = {COALDEL, CAR01, CAR02, CAR03, CAR04, CAR05,
            CAR06, CAR07, CAR08, CAR09, CAR10, COALDEL};
 
     int y, i, j, pos, dy = 0;
-    wchar_t carName[CARLENGTH];
+    char carName[CARLENGTH];
     if (x < - (C51LENGTH + ((cars > 0) ? cars * (CARLENGTH - 1) : 0))) {
         return ERR;
     }
@@ -271,7 +272,7 @@ int add_C51(int x, wchar_t* namelist[], int cars)
                 break;
             }
 
-            swprintf(carName, CARLENGTH, car[i], namelist[j]);
+            print_car(carName, CARLENGTH, car[i], namelist[j], 22);
             my_mvaddstr(y + i + (FLY * (j + 1)) + dy, x + 55 + (CARLENGTH - 3) * (j + 1), carName);
         }
     }
@@ -303,7 +304,7 @@ int add_C51(int x, wchar_t* namelist[], int cars)
 
 void add_man(int y, int x)
 {
-    static wchar_t *man[2][2] = {{L"", L"(O)"}, {L"Help!", L"\\O/"}};
+    static char *man[2][2] = {{"", "(O)"}, {"Help!", "\\O/"}};
     int i;
 
     for (i = 0; i < 2; ++i) {
@@ -320,20 +321,20 @@ void add_smoke(int y, int x)
         int ptrn, kind;
     } S[1000];
     static int sum = 0;
-    static wchar_t *Smoke[2][SMOKEPTNS]
-        = {{L"(   )", L"(    )", L"(    )", L"(   )", L"(  )",
-            L"(  )" , L"( )"   , L"( )"   , L"()"   , L"()"  ,
-            L"O"    , L"O"     , L"O"     , L"O"    , L"O"   ,
-            L" "                                          },
-           {L"(@@@)", L"(@@@@)", L"(@@@@)", L"(@@@)", L"(@@)",
-            L"(@@)" , L"(@)"   , L"(@)"   , L"@@"   , L"@@"  ,
-            L"@"    , L"@"     , L"@"     , L"@"    , L"@"   ,
-            L" "                                          }};
-    static wchar_t *Eraser[SMOKEPTNS]
-        =  {L"     ", L"      ", L"      ", L"     ", L"    ",
-            L"    " , L"   "   , L"   "   , L"  "   , L"  "  ,
-            L" "    , L" "     , L" "     , L" "    , L" "   ,
-            L" "                                          };
+    static char *Smoke[2][SMOKEPTNS]
+        = {{"(   )", "(    )", "(    )", "(   )", "(  )",
+            "(  )" , "( )"   , "( )"   , "()"   , "()"  ,
+            "O"    , "O"     , "O"     , "O"    , "O"   ,
+            " "                                          },
+           {"(@@@)", "(@@@@)", "(@@@@)", "(@@@)", "(@@)",
+            "(@@)" , "(@)"   , "(@)"   , "@@"   , "@@"  ,
+            "@"    , "@"     , "@"     , "@"    , "@"   ,
+            " "                                          }};
+    static char *Eraser[SMOKEPTNS]
+        =  {"     ", "      ", "      ", "     ", "    ",
+            "    " , "   "   , "   "   , "  "   , "  "  ,
+            " "    , " "     , " "     , " "    , " "   ,
+            " "                                          };
     static int dy[SMOKEPTNS] = { 2,  1, 1, 1, 0, 0, 0, 0, 0, 0,
                                  0,  0, 0, 0, 0, 0             };
     static int dx[SMOKEPTNS] = {-2, -1, 0, 1, 1, 1, 1, 1, 2, 2,
