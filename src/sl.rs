@@ -2,7 +2,7 @@ use crossterm::{cursor, style::Print, QueueableCommand};
 use std::ffi::c_int;
 use std::io::stdout;
 use unicode_segmentation::UnicodeSegmentation;
-use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
+use unicode_width::UnicodeWidthStr;
 
 mod unicode_width;
 
