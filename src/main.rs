@@ -4,13 +4,11 @@ use core::time;
 use crossterm::event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::terminal::{Clear, ClearType};
 use crossterm::{cursor, terminal, ExecutableCommand, QueueableCommand};
-use freopen::reopen_stdout;
 use sl::{print_c51, print_d51, print_sl, set_locale, COLS, LINES};
 use std::fs;
-use std::io::{stdin, stdout, BufRead, Error, IsTerminal, Stdin, Stdout, Write};
+use std::io::{stdin, stdout, BufRead, Error, IsTerminal, Stdin, Write};
 
 mod cli;
-mod freopen;
 mod sl;
 
 fn main() -> Result<(), Error> {
@@ -41,11 +39,6 @@ fn main() -> Result<(), Error> {
     };
 
     let mut stdout = stdout();
-    if !Stdout::is_terminal(&stdout) {
-        names.iter().for_each(|n| println!("{}", n));
-        reopen_stdout()?;
-    }
-
     terminal::enable_raw_mode()?;
     stdout.execute(cursor::Hide)?;
     unsafe {
