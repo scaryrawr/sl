@@ -49,7 +49,7 @@
 #define OK 0
 
 extern int my_mvaddstr(int y, int x, char *str);
-extern void print_car(char *buffer, unsigned int buffer_length, const char *fmt, const char* text, unsigned int text_display_width);
+extern int print_car(char *buffer, unsigned int buffer_length, const char *fmt, const char* text, unsigned int text_display_width);
 
 extern int COLS;
 extern int LINES;
