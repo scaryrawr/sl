@@ -6,7 +6,7 @@ use crossterm::terminal::{Clear, ClearType};
 use crossterm::{cursor, terminal, ExecutableCommand, QueueableCommand};
 use sl::{print_c51, print_d51, print_sl, set_locale, COLS, LINES};
 use std::fs;
-use std::io::{stdin, stdout, BufRead, Error, IsTerminal, Stdin, Stdout, Write};
+use std::io::{stdin, stdout, BufRead, Error, IsTerminal, Stdin, Write};
 
 mod cli;
 mod sl;
