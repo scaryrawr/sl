@@ -44,7 +44,6 @@
 
 #include "sl.h"
 #include <locale.h>
-#include <stdio.h>
 
 #define ERR -1
 #define OK 0
@@ -87,7 +86,7 @@ int add_sl(int x, char* namelist[], int cars)
         = {LCAR1, LCAR2, LCAR3, LCAR4, LCAR5, LCAR6, DELLN};
 
     int i, j, y, pos, py1 = 0, py2 = 0;
-    char carName[LCARLENGTH];
+    char carName[NAME_BUFFER];
     if (x < - (LOGOLENGTH + ((cars > 0) ? cars * (LCARLENGTH - 1) : 0))) {
         return ERR;
     }
@@ -116,7 +115,7 @@ int add_sl(int x, char* namelist[], int cars)
                 break;
             }
 
-            print_car(carName, LCARLENGTH, car[i], namelist[j], 16);
+            print_car(carName, sizeof(carName), car[i], namelist[j], 16);
             my_mvaddstr(y + i + (FLY * j) + py2, x + 42 + (LCARLENGTH - 1) * j, carName);
         }
     }
@@ -165,7 +164,7 @@ int add_D51(int x, char* namelist[], int cars)
            CAR06, CAR07, CAR08, CAR09, CAR10, COALDEL};
 
     int y, i, j, pos, dy = 0;
-    char carName[CARLENGTH];
+    char carName[NAME_BUFFER];
 
     if (x < - (D51LENGTH + ((cars > 0) ? cars * (CARLENGTH - 1) : 0))) {
         return ERR;
@@ -194,7 +193,7 @@ int add_D51(int x, char* namelist[], int cars)
                 break;
             }
 
-            print_car(carName, CARLENGTH, car[i], namelist[j], 22);
+            print_car(carName, sizeof(carName), car[i], namelist[j], 22);
             my_mvaddstr(y + i + (FLY * (j + 1)) + dy, x + 53 + (CARLENGTH - 3) * (j + 1), carName);
         }
     }
@@ -246,7 +245,7 @@ int add_C51(int x, char* namelist[], int cars)
            CAR06, CAR07, CAR08, CAR09, CAR10, COALDEL};
 
     int y, i, j, pos, dy = 0;
-    char carName[CARLENGTH];
+    char carName[NAME_BUFFER];
     if (x < - (C51LENGTH + ((cars > 0) ? cars * (CARLENGTH - 1) : 0))) {
         return ERR;
     }
@@ -272,7 +271,7 @@ int add_C51(int x, char* namelist[], int cars)
                 break;
             }
 
-            print_car(carName, CARLENGTH, car[i], namelist[j], 22);
+            print_car(carName, sizeof(carName), car[i], namelist[j], 22);
             my_mvaddstr(y + i + (FLY * (j + 1)) + dy, x + 55 + (CARLENGTH - 3) * (j + 1), carName);
         }
     }

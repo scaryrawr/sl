@@ -78,6 +78,7 @@
 #define LOGOPATTERNS	 6
 #define LCOALLENTH      23
 #define LCARLENGTH      23
+#define NAME_BUFFER     256
 
 #define LOGO1  "     ++      +------ "
 #define LOGO2  "     ||      |+-+ |  "

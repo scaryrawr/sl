@@ -1,5 +1,5 @@
 use crossterm::{cursor, style::Print, QueueableCommand};
-use libc::c_uint;
+use libc::{c_char, c_uint};
 use std::ffi::{c_int, CStr, CString};
 use std::io::stdout;
 use std::vec;
@@ -7,8 +7,7 @@ use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 mod unicode_width;
 
-type SlChar = u8;
-type SlStr = *const SlChar;
+type PCSTR = *const c_char;
 
 #[no_mangle]
 pub static mut COLS: i32 = 0;
@@ -21,9 +20,9 @@ extern "C" {
     pub static mut FLY: c_int;
 
     pub fn set_locale();
-    fn add_D51(current_column: c_int, names: *const SlStr, count: c_int) -> c_int;
-    fn add_C51(current_column: c_int, names: *const SlStr, count: c_int) -> c_int;
-    fn add_sl(current_column: c_int, names: *const SlStr, count: c_int) -> c_int;
+    fn add_D51(current_column: c_int, names: *const PCSTR, count: c_int) -> c_int;
+    fn add_C51(current_column: c_int, names: *const PCSTR, count: c_int) -> c_int;
+    fn add_sl(current_column: c_int, names: *const PCSTR, count: c_int) -> c_int;
 }
 
 pub fn print_d51<'a, StringIterator>(current_column: c_int, names: StringIterator) -> i32
@@ -67,10 +66,10 @@ const ERR: i32 = -1;
 
 #[no_mangle]
 extern "C" fn print_car(
-    buffer: *mut SlChar,
+    buffer: *mut c_char,
     buffer_len: c_uint,
-    format: SlStr,
-    text: SlStr,
+    format: PCSTR,
+    text: PCSTR,
     text_display_width: c_uint,
 ) -> i32 {
     let format = match unsafe { CStr::from_ptr(format) }.to_str() {
@@ -82,7 +81,7 @@ extern "C" fn print_car(
     if !format.contains("{}") {
         let copy_len = std::cmp::min(format.len(), buffer_len as usize - 1);
         unsafe {
-            std::ptr::copy_nonoverlapping(format.as_ptr(), buffer, copy_len);
+            std::ptr::copy_nonoverlapping(format.as_ptr(), buffer as *mut u8, copy_len);
             *buffer.add(copy_len) = 0;
         }
         return OK;
@@ -97,18 +96,19 @@ extern "C" fn print_car(
 
     let mut text_clusters: Vec<&str> = text.graphemes(true).collect();
     let mut working_text = text.to_string();
+    let format_width = format.len() - 2;
 
     // We need to remove clusters until we will fit in the buffer
     if working_text.width() > text_display_width
-        || working_text.len() + format.len() - 2 > buffer_len as usize
+        || working_text.len() + (text_display_width - working_text.width()) + format_width
+            > buffer_len as usize
     {
         if let Some(start) = (0..text_clusters.len()).rev().find_map(|i| {
             let front_width = text_clusters[0..i].iter().map(|c| c.width()).sum::<usize>();
             if front_width < text_display_width {
                 let front_len = text_clusters[0..i].iter().map(|c| c.len()).sum::<usize>();
-                if front_len + (text_display_width - front_width) + (format.len() - 2)
-                    <= buffer_len as usize
-                {
+                let extra_spaces = text_display_width - front_width;
+                if front_len + extra_spaces + format_width < buffer_len as usize {
                     return Some(i);
                 }
             }
@@ -118,7 +118,7 @@ extern "C" fn print_car(
             text_clusters.splice(start.., std::iter::empty());
         }
 
-        working_text = text_clusters.join("").to_string();
+        working_text = text_clusters.join("");
     }
 
     let spaces = if working_text.width() < text_display_width {
@@ -132,14 +132,14 @@ extern "C" fn print_car(
     let format = format.replace("{}", working_text.as_str());
     let copy_len = std::cmp::min(format.len(), buffer_len as usize - 1);
     unsafe {
-        std::ptr::copy_nonoverlapping(format.as_ptr(), buffer, copy_len);
+        std::ptr::copy_nonoverlapping(format.as_ptr(), buffer as *mut u8, copy_len);
         *buffer.add(copy_len) = 0;
     }
     return OK;
 }
 
 #[no_mangle]
-extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: SlStr) -> i32 {
+extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: PCSTR) -> i32 {
     // Vertically off screen
     if y < 0 || y > unsafe { LINES } - 1 {
         return ERR;
@@ -152,7 +152,7 @@ extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: SlStr) -> i32 {
 
     // The number of characters is the expected width to take up, but that is possibly incorrect, so we need
     // to make a fitting string.
-    let mut buffer: String = fit_train_car(unsafe { CStr::from_ptr(str) });
+    let mut buffer: String = unsafe { CStr::from_ptr(str) }.to_string_lossy().to_string();
     let mut clusters: Vec<&str> = buffer.graphemes(true).collect();
 
     let end_position = x + (buffer.width() as i32);
@@ -219,60 +219,4 @@ extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: SlStr) -> i32 {
         Ok(_) => return OK,
         Err(_) => return ERR,
     }
-}
-
-fn fit_train_car(original: &CStr) -> String {
-    let mut characters = original.to_string_lossy().to_string();
-
-    // Remove characters from the end of the string until it fits the screen
-    let oversize = if characters.width() > original.count_bytes() {
-        characters.width() - original.count_bytes()
-    } else {
-        0
-    };
-
-    if oversize > 0 {
-        let mut clusters: Vec<&str> = characters.graphemes(true).collect();
-        if let Some(pos) = clusters
-            .iter()
-            .rev()
-            .position(|c| *c == "|")
-            .and_then(|p| Some(clusters.len() - p - 1))
-        {
-            if pos > 0 {
-                let mut removable_width = 0;
-                if let Some(start) = clusters.iter().enumerate().rev().find_map(|(i, c)| {
-                    if i < pos {
-                        let width = c.width();
-                        removable_width += width;
-                    }
-
-                    if removable_width >= oversize {
-                        Some(i)
-                    } else {
-                        None
-                    }
-                }) {
-                    clusters.splice(start..pos, std::iter::empty());
-                    characters = clusters.join("");
-                }
-            }
-        }
-    }
-
-    // Add spaces if the a character removed caused us to be at an odd number
-    let undersize = original.count_bytes() - characters.width();
-    if undersize > 0 {
-        let pos = characters
-            .chars()
-            .rev()
-            .position(|c| c == '|')
-            .and_then(|p| Some(characters.len() - p - 1));
-
-        if let Some(pos) = pos {
-            characters.insert_str(pos, " ".repeat(undersize).as_str());
-        }
-    }
-
-    return characters;
 }
