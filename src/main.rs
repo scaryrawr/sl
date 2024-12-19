@@ -8,7 +8,7 @@ use filedescriptor::{Error, FileDescriptor};
 use sl::{print_c51, print_d51, print_sl, update_locale, COLS, LINES};
 use std::fs;
 use std::io::{stdin, stdout, BufRead, BufReader, IsTerminal, Stdin, Write};
-use std::sync::{Arc, Mutex};
+use std::sync::mpsc::Receiver;
 
 mod cli;
 mod sl;
@@ -16,7 +16,7 @@ mod sl;
 fn main() -> Result<(), Error> {
     let args = CliOptions::parse();
     let stdin = stdin();
-    let names = get_car_names(&args, stdin)?;
+    let names_receiver = cars_receiver(&args, stdin)?;
 
     terminal::enable_raw_mode()?;
 
@@ -48,14 +48,17 @@ fn main() -> Result<(), Error> {
 
     let mut x = unsafe { COLS - 1 };
     stdout.queue(Clear(ClearType::All))?;
+    let mut names: Vec<String> = vec![];
     loop {
-        match names.lock() {
-            Ok(names) => {
-                if print_train(x, &names.iter().map(String::as_ref).collect::<Vec<&str>>()) != 0 {
-                    break;
-                }
+        match names_receiver.try_recv() {
+            Ok(name) => {
+                names.push(name);
             }
-            Err(_) => break,
+            Err(_) => {}
+        }
+
+        if print_train(x, &names.iter().map(String::as_ref).collect::<Vec<&str>>()) != 0 {
+            break;
         }
 
         stdout.flush()?;
@@ -85,36 +88,33 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn get_car_names(args: &CliOptions, stdin: Stdin) -> Result<Arc<Mutex<Vec<String>>>, Error> {
-    let names: Arc<Mutex<Vec<String>>> = if !Stdin::is_terminal(&stdin) {
-        let names = Arc::new(Mutex::new(vec![]));
-        let thread_names = Arc::clone(&names);
+fn cars_receiver(args: &CliOptions, stdin: Stdin) -> Result<Receiver<String>, Error> {
+    let (sender, receiver) = std::sync::mpsc::channel();
+    if !Stdin::is_terminal(&stdin) {
         let stdin_file = FileDescriptor::dup(&stdin.lock())?;
         std::thread::spawn(move || {
             let reader = BufReader::new(stdin_file);
             reader.lines().for_each(|line| match line {
-                Ok(line) => {
-                    let mut names = thread_names.lock().unwrap();
-                    names.push(line);
-                }
+                Ok(line) => sender.send(line).unwrap(),
                 Err(_) => {}
             });
         });
-        names
     } else if args.files {
-        Arc::new(Mutex::new(vec![]))
+        // Nothing to send
     } else {
-        let mut files: Vec<String> = fs::read_dir(".")?
-            .filter_map(|p| match p {
-                Ok(p) => Some(String::from(p.file_name().to_str()?)),
-                Err(_) => None,
-            })
-            .filter(|s| args.accident || !s.starts_with('.'))
-            .collect();
-        files.sort();
-        Arc::new(Mutex::new(files))
+        let accident = args.accident;
+        std::thread::spawn(move || {
+            fs::read_dir(".").unwrap().for_each(|p| {
+                let p = p.unwrap();
+                let name = p.file_name().to_str().unwrap().to_string();
+                if accident || !name.starts_with('.') {
+                    sender.send(name).unwrap();
+                }
+            });
+        });
     };
-    Ok(names)
+
+    Ok(receiver)
 }
 
 fn update_size() -> Result<(), Error> {
