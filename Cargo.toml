@@ -14,7 +14,7 @@ panic = "abort"
 [dependencies]
 clap = { version = "4.5.23", features = ["derive"] }
 crossterm = { version = "0.28.1", features = ["libc", "use-dev-tty"] }
-libc = "0.2.168"
+filedescriptor = "0.8.2"
 unicode-display-width = "0.3.0"
 unicode-segmentation = "1.12.0"
 

@@ -372,7 +372,7 @@ dependencies = [
  "clap_mangen",
  "cmake",
  "crossterm",
- "libc",
+ "filedescriptor",
  "unicode-display-width",
  "unicode-segmentation",
 ]
