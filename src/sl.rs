@@ -1,9 +1,10 @@
 use crossterm::{cursor, style::Print, QueueableCommand};
-use std::ffi::{c_char, c_int, c_uint, CStr, CString};
+use std::ffi::{c_char, c_int, CStr, CString};
 use std::io::stdout;
 use std::vec;
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
+mod print_car;
 mod unicode_width;
 
 type PCSTR = *const c_char;
@@ -50,80 +51,6 @@ pub fn print_c51<'a>(current_column: c_int, names: &[&str]) -> i32 {
 
 const OK: i32 = 0;
 const ERR: i32 = -1;
-
-#[no_mangle]
-extern "C" fn print_car(
-    buffer: *mut c_char,
-    buffer_len: c_uint,
-    format: PCSTR,
-    text: PCSTR,
-    text_display_width: c_uint,
-) -> i32 {
-    let format = match unsafe { CStr::from_ptr(format) }.to_str() {
-        Ok(s) => s,
-        Err(_) => return ERR,
-    };
-
-    // No format string, just copy text
-    if !format.contains("{}") {
-        let copy_len = std::cmp::min(format.len(), buffer_len as usize - 1);
-        unsafe {
-            std::ptr::copy_nonoverlapping(format.as_ptr(), buffer as *mut u8, copy_len);
-            *buffer.add(copy_len) = 0;
-        }
-        return OK;
-    }
-
-    let text = match unsafe { CStr::from_ptr(text) }.to_str() {
-        Ok(s) => s,
-        Err(_) => return ERR,
-    };
-
-    let text_display_width = text_display_width as usize;
-
-    let mut text_clusters: Vec<&str> = text.graphemes(true).collect();
-    let mut working_text = text.to_string();
-    let format_width = format.len() - 2;
-
-    // We need to remove clusters until we will fit in the buffer
-    if working_text.width() > text_display_width
-        || working_text.len() + (text_display_width - working_text.width()) + format_width
-            > buffer_len as usize
-    {
-        if let Some(start) = (0..text_clusters.len()).rev().find_map(|i| {
-            let front_width = text_clusters[0..i].iter().map(|c| c.width()).sum::<usize>();
-            if front_width < text_display_width {
-                let front_len = text_clusters[0..i].iter().map(|c| c.len()).sum::<usize>();
-                let extra_spaces = text_display_width - front_width;
-                if front_len + extra_spaces + format_width < buffer_len as usize {
-                    return Some(i);
-                }
-            }
-
-            None
-        }) {
-            text_clusters.splice(start.., std::iter::empty());
-        }
-
-        working_text = text_clusters.join("");
-    }
-
-    let spaces = if working_text.width() < text_display_width {
-        text_display_width - working_text.width()
-    } else {
-        0
-    };
-
-    working_text += " ".repeat(spaces).as_str();
-
-    let format = format.replace("{}", working_text.as_str());
-    let copy_len = std::cmp::min(format.len(), buffer_len as usize - 1);
-    unsafe {
-        std::ptr::copy_nonoverlapping(format.as_ptr(), buffer as *mut u8, copy_len);
-        *buffer.add(copy_len) = 0;
-    }
-    return OK;
-}
 
 #[no_mangle]
 extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: PCSTR) -> i32 {
