@@ -365,14 +365,14 @@ dependencies = [
 
 [[package]]
 name = "sl"
-version = "6.1.0"
+version = "6.1.1"
 dependencies = [
  "clap",
  "clap_complete",
  "clap_mangen",
  "cmake",
  "crossterm",
- "libc",
+ "filedescriptor",
  "unicode-display-width",
  "unicode-segmentation",
 ]

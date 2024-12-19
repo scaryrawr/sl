@@ -1,6 +1,5 @@
 use crossterm::{cursor, style::Print, QueueableCommand};
-use libc::{c_char, c_uint};
-use std::ffi::{c_int, CStr, CString};
+use std::ffi::{c_char, c_int, c_uint, CStr, CString};
 use std::io::stdout;
 use std::vec;
 use unicode_segmentation::UnicodeSegmentation;
@@ -19,44 +18,32 @@ extern "C" {
     pub static mut ACCIDENT: c_int;
     pub static mut FLY: c_int;
 
-    pub fn set_locale();
+    fn set_locale();
     fn add_D51(current_column: c_int, names: *const PCSTR, count: c_int) -> c_int;
     fn add_C51(current_column: c_int, names: *const PCSTR, count: c_int) -> c_int;
     fn add_sl(current_column: c_int, names: *const PCSTR, count: c_int) -> c_int;
 }
 
-pub fn print_d51<'a, StringIterator>(current_column: c_int, names: StringIterator) -> i32
-where
-    StringIterator: IntoIterator<Item = &'a str>,
-{
-    let strings: Vec<_> = names
-        .into_iter()
-        .map(|s| CString::new(s).unwrap())
-        .collect();
+pub fn update_locale() {
+    unsafe {
+        set_locale();
+    }
+}
+
+pub fn print_d51<'a>(current_column: c_int, names: &[&str]) -> i32 {
+    let strings: Vec<_> = names.iter().map(|s| CString::new(*s).unwrap()).collect();
     let pointers: Vec<_> = strings.iter().map(|s| s.as_ptr()).collect();
     unsafe { add_D51(current_column, pointers.as_ptr(), pointers.len() as c_int) }
 }
 
-pub fn print_sl<'a, StringIterator>(current_column: c_int, names: StringIterator) -> i32
-where
-    StringIterator: IntoIterator<Item = &'a str>,
-{
-    let strings: Vec<_> = names
-        .into_iter()
-        .map(|s| CString::new(s).unwrap())
-        .collect();
+pub fn print_sl<'a>(current_column: c_int, names: &[&str]) -> i32 {
+    let strings: Vec<_> = names.iter().map(|s| CString::new(*s).unwrap()).collect();
     let pointers: Vec<_> = strings.iter().map(|s| s.as_ptr()).collect();
     unsafe { add_sl(current_column, pointers.as_ptr(), pointers.len() as c_int) }
 }
 
-pub fn print_c51<'a, StringIterator>(current_column: c_int, names: StringIterator) -> i32
-where
-    StringIterator: IntoIterator<Item = &'a str>,
-{
-    let strings: Vec<_> = names
-        .into_iter()
-        .map(|s| CString::new(s).unwrap())
-        .collect();
+pub fn print_c51<'a>(current_column: c_int, names: &[&str]) -> i32 {
+    let strings: Vec<_> = names.iter().map(|s| CString::new(*s).unwrap()).collect();
     let pointers: Vec<_> = strings.iter().map(|s| s.as_ptr()).collect();
     unsafe { add_C51(current_column, pointers.as_ptr(), pointers.len() as c_int) }
 }
