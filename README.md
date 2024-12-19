@@ -7,6 +7,36 @@ Copyright 1993,1998,2014 Toyoda Masashi (<mtoyoda@acm.org>)
 
 ![Terminal Demo](cars.gif)
 
+## Usage
+
+```txt
+Usage: sl [OPTIONS]
+
+Options:
+  -a, --accident  An accident is occurring. People cry for help. Lists all files
+  -l, --logo      Little version
+  -F, --fly       It flies like the galaxy express 999
+  -c, --c51       C51 appears instead of D51
+  -f, --files     Disables listing files and directories
+  -h, --help      Print help
+  -V, --version   Print version
+```
+
+### Piping
+
+SL supports piping contents into it for printing things to the train car.
+
+```sh
+echo "Hello\nworld!" | sl
+```
+
+You can also pipe long/slow (only so slow though, if the train finishes before it gets a new line things are boring) running processes into it:
+
+```sh
+# Print package names as they are built as train cars!
+cargo build 2>&1 | awk -F' ' '/Compiling/ {print $2}' | sl
+```
+
 ## Installation
 
 ### macOS and x64 Linux
@@ -28,7 +58,7 @@ sudo dnf install sl
 
 ### Windows
 
-Using winget:
+Download the [latest release](https://github.com/scaryrawr/sl/releases/latest) or using winget (winget may be a few versions behind):
 
 ```pwsh
 winget install scaryrawr.sl
