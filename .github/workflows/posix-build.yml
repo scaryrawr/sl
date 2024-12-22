@@ -7,11 +7,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [macos-latest]
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install zig
+        run: brew install zig
 
       - name: Build Debug
         run: cargo build
