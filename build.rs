@@ -11,9 +11,11 @@ fn main() -> Result<(), Error> {
     println!("cargo:rerun-if-changed=libsl/sl.h");
     println!("cargo:rerun-if-changed=libsl/src/sl.zig");
 
-    let dst = zig::build("libsl");
+    let dst = zigcli::build("libsl");
+    let lib_dir = dst.join("lib");
 
-    println!("cargo:rustc-link-search=native={}", dst.display());
+    println!("cargo:rustc-link-search=native={}", lib_dir.display());
+    println!("cargo:rustc-link-lib=static=sl");
 
     let completion_dir = match env::var_os("COMPLETION_DIR") {
         None => return Ok(()),
