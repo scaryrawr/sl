@@ -14,7 +14,6 @@ pub static mut COLS: i32 = 0;
 #[no_mangle]
 pub static mut LINES: i32 = 0;
 
-#[link(name = "sl", kind = "static")]
 extern "C" {
     pub static mut ACCIDENT: i32;
     pub static mut FLY: i32;
