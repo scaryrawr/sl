@@ -5,7 +5,7 @@ use crossterm::event::{read, Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::terminal::{Clear, ClearType};
 use crossterm::{cursor, terminal, ExecutableCommand, QueueableCommand};
 use filedescriptor::{Error, FileDescriptor};
-use sl::{print_c51, print_d51, print_sl, update_locale, COLS, LINES};
+use sl::{print_c51, print_d51, print_sl, COLS, LINES};
 use std::fs;
 use std::io::{stdin, stdout, BufRead, BufReader, IsTerminal, Stdin, Write};
 use std::sync::mpsc::Receiver;
@@ -23,7 +23,6 @@ fn main() -> Result<(), Error> {
     let mut stdout = stdout();
     stdout.execute(cursor::Hide)?;
 
-    update_locale();
     update_size()?;
 
     let print_train = if args.logo {

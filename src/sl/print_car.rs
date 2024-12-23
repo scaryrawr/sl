@@ -1,7 +1,7 @@
 use super::unicode_width::UnicodeWidthStr;
 use std::{
     collections::HashMap,
-    ffi::{c_char, c_uint, CStr},
+    ffi::{c_char, CStr},
     sync::{LazyLock, Mutex},
 };
 use unicode_segmentation::UnicodeSegmentation;
@@ -24,10 +24,10 @@ fn cached_car(key: &str) -> Option<String> {
 #[no_mangle]
 extern "C" fn print_car(
     buffer: *mut c_char,
-    buffer_len: c_uint,
+    buffer_len: u32,
     format: PCSTR,
     text: PCSTR,
-    text_display_width: c_uint,
+    text_display_width: u32,
 ) -> i32 {
     let format = match unsafe { CStr::from_ptr(format) }.to_str() {
         Ok(s) => s,

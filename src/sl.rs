@@ -1,5 +1,5 @@
 use crossterm::{cursor, style::Print, QueueableCommand};
-use std::ffi::{c_char, c_int, CStr, CString};
+use std::ffi::{c_char, CStr, CString};
 use std::io::stdout;
 use std::vec;
 use unicode_segmentation::UnicodeSegmentation;
@@ -16,44 +16,41 @@ pub static mut LINES: i32 = 0;
 
 #[link(name = "sl", kind = "static")]
 extern "C" {
-    pub static mut ACCIDENT: c_int;
-    pub static mut FLY: c_int;
+    pub static mut ACCIDENT: i32;
+    pub static mut FLY: i32;
 
-    fn set_locale();
-    fn add_D51(current_column: c_int, names: *const PCSTR, count: c_int) -> c_int;
-    fn add_C51(current_column: c_int, names: *const PCSTR, count: c_int) -> c_int;
-    fn add_sl(current_column: c_int, names: *const PCSTR, count: c_int) -> c_int;
+    fn add_D51(current_column: i32, names: *const PCSTR, count: i32) -> i32;
+    fn add_C51(current_column: i32, names: *const PCSTR, count: i32) -> i32;
+    fn add_sl(current_column: i32, names: *const PCSTR, count: i32) -> i32;
 }
 
-pub fn update_locale() {
-    unsafe {
-        set_locale();
-    }
-}
-
-pub fn print_d51<'a>(current_column: c_int, names: &[&str]) -> i32 {
+fn add_wrapper(
+    current_column: i32,
+    names: &[&str],
+    add_train: unsafe extern "C" fn(i32, *const PCSTR, i32) -> i32,
+) -> i32 {
     let strings: Vec<_> = names.iter().map(|s| CString::new(*s).unwrap()).collect();
     let pointers: Vec<_> = strings.iter().map(|s| s.as_ptr()).collect();
-    unsafe { add_D51(current_column, pointers.as_ptr(), pointers.len() as c_int) }
+    unsafe { add_train(current_column, pointers.as_ptr(), pointers.len() as i32) }
 }
 
-pub fn print_sl<'a>(current_column: c_int, names: &[&str]) -> i32 {
-    let strings: Vec<_> = names.iter().map(|s| CString::new(*s).unwrap()).collect();
-    let pointers: Vec<_> = strings.iter().map(|s| s.as_ptr()).collect();
-    unsafe { add_sl(current_column, pointers.as_ptr(), pointers.len() as c_int) }
+pub fn print_d51(current_column: i32, names: &[&str]) -> i32 {
+    add_wrapper(current_column, names, add_D51)
 }
 
-pub fn print_c51<'a>(current_column: c_int, names: &[&str]) -> i32 {
-    let strings: Vec<_> = names.iter().map(|s| CString::new(*s).unwrap()).collect();
-    let pointers: Vec<_> = strings.iter().map(|s| s.as_ptr()).collect();
-    unsafe { add_C51(current_column, pointers.as_ptr(), pointers.len() as c_int) }
+pub fn print_sl(current_column: i32, names: &[&str]) -> i32 {
+    add_wrapper(current_column, names, add_sl)
+}
+
+pub fn print_c51(current_column: i32, names: &[&str]) -> i32 {
+    add_wrapper(current_column, names, add_C51)
 }
 
 const OK: i32 = 0;
 const ERR: i32 = -1;
 
 #[no_mangle]
-extern "C" fn my_mvaddstr(y: c_int, x: c_int, str: PCSTR) -> i32 {
+extern "C" fn my_mvaddstr(y: i32, x: i32, str: PCSTR) -> i32 {
     // Vertically off screen
     if y < 0 || y > unsafe { LINES } - 1 {
         return ERR;
