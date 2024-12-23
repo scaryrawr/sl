@@ -13,8 +13,7 @@
         "github.vscode-github-actions",
         "rust-lang.rust-analyzer",
         "fill-labs.dependi",
-        "vadimcn.vscode-lldb",
-        "ziglang.vscode-zig"
+        "vadimcn.vscode-lldb"
       ]
     }
   },
