@@ -9,7 +9,7 @@ fn main() -> Result<(), Error> {
     println!("cargo:rerun-if-changed=libsl/build.zig");
     println!("cargo:rerun-if-changed=libsl/sl.c");
     println!("cargo:rerun-if-changed=libsl/sl.h");
-    println!("cargo:rerun-if-changed=libsl/src/*.zig");
+    println!("cargo:rerun-if-changed=libsl/src/sl.zig");
 
     let dst = zig::build("libsl");
 
