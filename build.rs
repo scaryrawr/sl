@@ -14,8 +14,6 @@ fn main() -> Result<(), Error> {
     let dst = zig::build("libsl");
 
     println!("cargo:rustc-link-search=native={}", dst.display());
-    println!("cargo:rustc-link-lib=static=slc");
-    println!("cargo:rustc-link-lib=static=slzig");
 
     let completion_dir = match env::var_os("COMPLETION_DIR") {
         None => return Ok(()),
