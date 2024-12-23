@@ -43,33 +43,28 @@
 /*                                              by Toyoda Masashi 1992/12/11 */
 
 #include "sl.h"
-#include <locale.h>
+#include <stdint.h>
 
 #define ERR -1
 #define OK 0
 
-extern int my_mvaddstr(int y, int x, char *str);
-extern int print_car(char *buffer, unsigned int buffer_length, const char *fmt, const char* text, unsigned int text_display_width);
+extern int32_t my_mvaddstr(int32_t y, int32_t x, char *str);
+extern int32_t print_car(char *buffer, uint32_t buffer_length, const char *fmt, const char* text, uint32_t text_display_width);
 
-extern int COLS;
-extern int LINES;
+extern int32_t COLS;
+extern int32_t LINES;
 
 void set_locale();
-void add_smoke(int y, int x);
-void add_man(int y, int x);
-int add_C51(int x, char *namelist[], int cars);
-int add_D51(int x, char *namelist[], int cars);
-int add_sl(int x, char *namelist[], int cars);
+void add_smoke(int32_t y, int32_t x);
+void add_man(int32_t y, int32_t x);
+int32_t add_C51(int32_t x, char *namelist[], int32_t cars);
+int32_t add_D51(int32_t x, char *namelist[], int32_t cars);
+int32_t add_sl(int32_t x, char *namelist[], int32_t cars);
 
-int ACCIDENT  = 0;
-int FLY       = 0;
+int32_t ACCIDENT  = 0;
+int32_t FLY       = 0;
 
-void set_locale()
-{
-  setlocale(LC_ALL, "");
-}
-
-int add_sl(int x, char* namelist[], int cars)
+int32_t add_sl(int32_t x, char* namelist[], int32_t cars)
 {
     static char *sl[LOGOPATTERNS][LOGOHEIGHT + 1]
         = {{LOGO1, LOGO2, LOGO3, LOGO4, LWHL11, LWHL12, DELLN},
@@ -85,7 +80,7 @@ int add_sl(int x, char* namelist[], int cars)
     static char *car[LOGOHEIGHT + 1]
         = {LCAR1, LCAR2, LCAR3, LCAR4, LCAR5, LCAR6, DELLN};
 
-    int i, j, y, pos, py1 = 0, py2 = 0;
+    int32_t i, j, y, pos, py1 = 0, py2 = 0;
     char carName[NAME_BUFFER];
     if (x < - (LOGOLENGTH + ((cars > 0) ? cars * (LCARLENGTH - 1) : 0))) {
         return ERR;
@@ -139,7 +134,7 @@ int add_sl(int x, char* namelist[], int cars)
     return OK;
 }
 
-int add_D51(int x, char* namelist[], int cars)
+int32_t add_D51(int32_t x, char* namelist[], int32_t cars)
 {
     static char *d51[D51PATTERNS][D51HEIGHT + 1]
         = {{D51STR1, D51STR2, D51STR3, D51STR4, D51STR5, D51STR6, D51STR7,
@@ -163,7 +158,7 @@ int add_D51(int x, char* namelist[], int cars)
         = {CAR01, CAR02, CAR03, CAR04, CAR05,
            CAR06, CAR07, CAR08, CAR09, CAR10, COALDEL};
 
-    int y, i, j, pos, dy = 0;
+    int32_t y, i, j, pos, dy = 0;
     char carName[NAME_BUFFER];
 
     if (x < - (D51LENGTH + ((cars > 0) ? cars * (CARLENGTH - 1) : 0))) {
@@ -221,7 +216,7 @@ int add_D51(int x, char* namelist[], int cars)
     return OK;
 }
 
-int add_C51(int x, char* namelist[], int cars)
+int32_t add_C51(int32_t x, char* namelist[], int32_t cars)
 {
     static char *c51[C51PATTERNS][C51HEIGHT + 1]
         = {{C51STR1, C51STR2, C51STR3, C51STR4, C51STR5, C51STR6, C51STR7,
@@ -244,7 +239,7 @@ int add_C51(int x, char* namelist[], int cars)
         = {COALDEL, CAR01, CAR02, CAR03, CAR04, CAR05,
            CAR06, CAR07, CAR08, CAR09, CAR10, COALDEL};
 
-    int y, i, j, pos, dy = 0;
+    int32_t y, i, j, pos, dy = 0;
     char carName[NAME_BUFFER];
     if (x < - (C51LENGTH + ((cars > 0) ? cars * (CARLENGTH - 1) : 0))) {
         return ERR;
@@ -301,10 +296,10 @@ int add_C51(int x, char* namelist[], int cars)
 }
 
 
-void add_man(int y, int x)
+void add_man(int32_t y, int32_t x)
 {
     static char *man[2][2] = {{"", "(O)"}, {"Help!", "\\O/"}};
-    int i;
+    int32_t i;
 
     for (i = 0; i < 2; ++i) {
         my_mvaddstr(y + i, x, man[(LOGOLENGTH + x) / 12 % 2][i]);
@@ -312,14 +307,14 @@ void add_man(int y, int x)
 }
 
 
-void add_smoke(int y, int x)
+void add_smoke(int32_t y, int32_t x)
 #define SMOKEPTNS        16
 {
     static struct smokes {
-        int y, x;
-        int ptrn, kind;
+        int32_t y, x;
+        int32_t ptrn, kind;
     } S[1000];
-    static int sum = 0;
+    static int32_t sum = 0;
     static char *Smoke[2][SMOKEPTNS]
         = {{"(   )", "(    )", "(    )", "(   )", "(  )",
             "(  )" , "( )"   , "( )"   , "()"   , "()"  ,
@@ -334,11 +329,11 @@ void add_smoke(int y, int x)
             "    " , "   "   , "   "   , "  "   , "  "  ,
             " "    , " "     , " "     , " "    , " "   ,
             " "                                          };
-    static int dy[SMOKEPTNS] = { 2,  1, 1, 1, 0, 0, 0, 0, 0, 0,
+    static int32_t dy[SMOKEPTNS] = { 2,  1, 1, 1, 0, 0, 0, 0, 0, 0,
                                  0,  0, 0, 0, 0, 0             };
-    static int dx[SMOKEPTNS] = {-2, -1, 0, 1, 1, 1, 1, 1, 2, 2,
+    static int32_t dx[SMOKEPTNS] = {-2, -1, 0, 1, 1, 1, 1, 1, 2, 2,
                                  2,  2, 2, 3, 3, 3             };
-    int i;
+    int32_t i;
 
     if (x % 4 == 0) {
         for (i = 0; i < sum; ++i) {
