@@ -19,9 +19,16 @@ extern "C" {
     pub static mut ACCIDENT: c_int;
     pub static mut FLY: c_int;
 
+    fn set_locale();
     fn add_D51(current_column: c_int, names: *const PCSTR, count: c_int) -> c_int;
     fn add_C51(current_column: c_int, names: *const PCSTR, count: c_int) -> c_int;
     fn add_sl(current_column: c_int, names: *const PCSTR, count: c_int) -> c_int;
+}
+
+pub fn update_locale() {
+    unsafe {
+        set_locale();
+    }
 }
 
 pub fn print_d51<'a>(current_column: c_int, names: &[&str]) -> i32 {

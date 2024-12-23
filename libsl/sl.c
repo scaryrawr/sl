@@ -43,6 +43,7 @@
 /*                                              by Toyoda Masashi 1992/12/11 */
 
 #include "sl.h"
+#include <locale.h>
 
 #define ERR -1
 #define OK 0
@@ -53,6 +54,7 @@ extern int print_car(char *buffer, unsigned int buffer_length, const char *fmt, 
 extern int COLS;
 extern int LINES;
 
+void set_locale();
 void add_smoke(int y, int x);
 void add_man(int y, int x);
 int add_C51(int x, char *namelist[], int cars);
@@ -61,6 +63,11 @@ int add_sl(int x, char *namelist[], int cars);
 
 int ACCIDENT  = 0;
 int FLY       = 0;
+
+void set_locale()
+{
+  setlocale(LC_ALL, "");
+}
 
 int add_sl(int x, char* namelist[], int cars)
 {
