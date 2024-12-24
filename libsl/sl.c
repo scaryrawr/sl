@@ -50,13 +50,12 @@
 
 extern int32_t my_mvaddstr(int32_t y, int32_t x, char *str);
 extern int32_t print_car(char *buffer, uint32_t buffer_length, const char *fmt, const char* text, uint32_t text_display_width);
+extern void add_man(int32_t y, int32_t x);
 
 extern int32_t COLS;
 extern int32_t LINES;
 
-void set_locale();
 void add_smoke(int32_t y, int32_t x);
-void add_man(int32_t y, int32_t x);
 int32_t add_C51(int32_t x, char *namelist[], int32_t cars);
 int32_t add_D51(int32_t x, char *namelist[], int32_t cars);
 int32_t add_sl(int32_t x, char *namelist[], int32_t cars);
@@ -294,18 +293,6 @@ int32_t add_C51(int32_t x, char* namelist[], int32_t cars)
 
     return OK;
 }
-
-
-void add_man(int32_t y, int32_t x)
-{
-    static char *man[2][2] = {{"", "(O)"}, {"Help!", "\\O/"}};
-    int32_t i;
-
-    for (i = 0; i < 2; ++i) {
-        my_mvaddstr(y + i, x, man[(LOGOLENGTH + x) / 12 % 2][i]);
-    }
-}
-
 
 void add_smoke(int32_t y, int32_t x)
 #define SMOKEPTNS        16

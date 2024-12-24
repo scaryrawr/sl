@@ -4,6 +4,8 @@ use std::io::stdout;
 use std::vec;
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
+
+mod add_man;
 mod print_car;
 mod unicode_width;
 
