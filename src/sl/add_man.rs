@@ -1,11 +1,18 @@
-use crate::sl::my_mvaddstr;
-use std::ffi::CStr;
+use std::io::Error;
+
+use super::mvaddstr::mvaddstr;
 
 #[no_mangle]
-pub fn add_man(y: i32, x: i32) {
-    const MAN: [[&CStr; 2]; 2] = [[c"", c"Help!"], [c"(O)", c"\\O/"]];
-    MAN.iter().enumerate().for_each(|(i, row)| {
+pub fn add_man(y: i32, x: i32) -> Result<(), Error> {
+    const MAN: [[&str; 2]; 2] = [["", "Help!"], ["(O)", "\\O/"]];
+    match MAN.iter().enumerate().all(|(i, row)| {
         let man = row[(x.abs() / 12 % 2) as usize];
-        my_mvaddstr(y + i as i32, x, man.as_ptr());
-    });
+        mvaddstr(y + i as i32, x, man).is_ok()
+    }) {
+        true => Ok(()),
+        false => Err(Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "Out of bounds",
+        )),
+    }
 }
