@@ -2,15 +2,17 @@ use std::{env, io::Error};
 
 use clap::{Args, Command};
 use clap_complete::{generate_to, Shell};
-use cmake::Config;
 
 include!("src/cli.rs");
 
 fn main() -> Result<(), Error> {
-    let dst = Config::new("libsl").build();
-
+    println!("cargo:rerun-if-changed=libsl/build.zig");
+    println!("cargo:rerun-if-changed=libsl/src/sl.zig");
     println!("cargo:rerun-if-changed=libsl/sl.c");
     println!("cargo:rerun-if-changed=libsl/sl.h");
+
+    let dst = zig::build("libsl");
+
     println!("cargo:rustc-link-search=native={}", dst.display());
 
     let completion_dir = match env::var_os("COMPLETION_DIR") {

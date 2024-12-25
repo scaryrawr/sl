@@ -1,6 +1,5 @@
 use std::ffi::{c_char, CString};
 
-mod add_man;
 mod mvaddstr;
 mod print_car;
 mod unicode_width;

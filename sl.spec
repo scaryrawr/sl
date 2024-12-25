@@ -9,8 +9,7 @@ VCS:        {{{ git_dir_vcs }}}
 
 Source:    {{{ git_dir_pack }}}
 
-BuildRequires:  gcc
-BuildRequires:  cmake
+BuildRequires:  zig
 BuildRequires:  cargo
 BuildRequires:  rust
 
