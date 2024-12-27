@@ -14,7 +14,7 @@ const ERR: i32 = -1;
 
 pub fn mvaddstr(y: i32, x: i32, str: &str) -> Result<(), Error> {
     // Vertically off screen
-    if y < 0 || y > unsafe { LINES } - 1 || x >= unsafe { COLS } {
+    if y < 0 || y > unsafe { LINES } || x > unsafe { COLS } {
         return Err(Error::new(
             std::io::ErrorKind::InvalidInput,
             "Out of bounds",
@@ -79,7 +79,7 @@ pub fn mvaddstr(y: i32, x: i32, str: &str) -> Result<(), Error> {
 
             None
         }) {
-            clusters.splice(position..(clusters.len() - 1), std::iter::empty());
+            clusters.splice(position + 1..(clusters.len()), std::iter::empty());
         } else {
             return Err(Error::new(
                 std::io::ErrorKind::InvalidInput,
