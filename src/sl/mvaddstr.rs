@@ -73,13 +73,13 @@ pub fn mvaddstr(y: i32, x: i32, str: &str) -> Result<(), Error> {
             let c_width = c.width() as i32;
             // We want to get the front of the current character, so decrement before checking past_end
             past_end -= c_width;
-            if past_end < 0 {
+            if past_end <= 0 {
                 return Some(i);
             }
 
             None
         }) {
-            clusters.splice(position + 1..(clusters.len()), std::iter::empty());
+            clusters.splice(position..(clusters.len()), std::iter::empty());
         } else {
             return Err(Error::new(
                 std::io::ErrorKind::InvalidInput,
