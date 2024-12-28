@@ -1,18 +1,44 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug: SL",
-            "preLaunchTask": "rust: cargo build",
-            "program": "${workspaceFolder}/target/debug/sl",
+            "name": "Debug executable 'sl'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=sl",
+                    "--package=sl",
+                ],
+                "filter": {
+                    "name": "sl",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "-a"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'sl'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=sl",
+                    "--package=sl"
+                ],
+                "filter": {
+                    "name": "sl",
+                    "kind": "bin"
+                }
+            },
             "args": [],
-            "cwd": "${workspaceFolder}",
-            "terminal": "integrated"
+            "cwd": "${workspaceFolder}"
         }
     ]
 }
