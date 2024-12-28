@@ -57,80 +57,9 @@ extern int32_t COLS;
 extern int32_t LINES;
 
 int32_t add_C51(int32_t x, char *namelist[], int32_t cars);
-int32_t add_sl(int32_t x, char *namelist[], int32_t cars);
 
 int32_t ACCIDENT  = 0;
 int32_t FLY       = 0;
-
-int32_t add_sl(int32_t x, char* namelist[], int32_t cars)
-{
-    static char *sl[LOGOPATTERNS][LOGOHEIGHT + 1]
-        = {{LOGO1, LOGO2, LOGO3, LOGO4, LWHL11, LWHL12, DELLN},
-           {LOGO1, LOGO2, LOGO3, LOGO4, LWHL21, LWHL22, DELLN},
-           {LOGO1, LOGO2, LOGO3, LOGO4, LWHL31, LWHL32, DELLN},
-           {LOGO1, LOGO2, LOGO3, LOGO4, LWHL41, LWHL42, DELLN},
-           {LOGO1, LOGO2, LOGO3, LOGO4, LWHL51, LWHL52, DELLN},
-           {LOGO1, LOGO2, LOGO3, LOGO4, LWHL61, LWHL62, DELLN}};
-
-    static char *coal[LOGOHEIGHT + 1]
-        = {LCOAL1, LCOAL2, LCOAL3, LCOAL4, LCOAL5, LCOAL6, DELLN};
-
-    static char *car[LOGOHEIGHT + 1]
-        = {LCAR1, LCAR2, LCAR3, LCAR4, LCAR5, LCAR6, DELLN};
-
-    int32_t i, j, y, pos, py1 = 0, py2 = 0;
-    char carName[NAME_BUFFER];
-    if (x < - (LOGOLENGTH + ((cars > 0) ? cars * (LCARLENGTH - 1) : 0))) {
-        return ERR;
-    }
-
-    y = LINES / 2 - 3;
-
-    if (FLY == 1) {
-        y = (x / 6) + LINES - (COLS / 6) - LOGOHEIGHT;
-        if (y < (0 - (LOGOHEIGHT + 14))) {
-            return ERR;
-        }
-
-        py1 = 2;  py2 = 4;
-    }
-
-    for (i = 0; i <= LOGOHEIGHT; ++i) {
-        if (LOGOLENGTH + x > 0) {
-            my_mvaddstr(y + i, x, sl[(LOGOLENGTH + x) / 3 % LOGOPATTERNS][i]);
-            my_mvaddstr(y + i + py1, x + LCARLENGTH - 1, coal[i]);
-        }
-        for (j = 0; j < cars; ++j) {
-            pos = LOGOLENGTH + x + (LCARLENGTH - 1) * (j + 1);
-            if (pos < 0) {
-                continue;
-            } else if (pos > COLS + LOGOLENGTH) {
-                break;
-            }
-
-            print_car(carName, sizeof(carName), car[i], namelist[j], 16);
-            my_mvaddstr(y + i + (FLY * j) + py2, x + 42 + (LCARLENGTH - 1) * j, carName);
-        }
-    }
-
-    if (ACCIDENT == 1) {
-        for (j = 0; j < cars; ++j) {
-            pos = LOGOLENGTH + x + (LCARLENGTH - 1) * (j + 1);
-            if (pos < 0) {
-                continue;
-            } else if (pos > COLS + LOGOLENGTH) {
-                break;
-            }
-
-            add_man(y + 1, x + 14);
-            add_man(y + 1 + py2 + (FLY * j), x + 45 + (LCARLENGTH - 1) * j);
-            add_man(y + 1 + py2 + (FLY * j), x + 53 + (LCARLENGTH - 1) * j);
-        }
-    }
-    add_smoke(y - 1, x + LOGOFUNNEL);
-
-    return OK;
-}
 
 int32_t add_C51(int32_t x, char* namelist[], int32_t cars)
 {

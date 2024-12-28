@@ -6,7 +6,8 @@ const add_smoke = @import("add_smoke.zig").add_smoke;
 const mvaddstr = shared.mvaddstr;
 const print_car = shared.print_car;
 
-pub const TrainOffsets = struct { funnel: i32, display_width: i32, engine_windows: []const i32, car_windows: []const i32, car_text_width: u32 };
+pub const WindowOffsets = struct { height: i32, offsets: []const i32 };
+pub const TrainOffsets = struct { funnel: i32, engine_windows: WindowOffsets, car_windows: WindowOffsets, car_text_width: u32 };
 
 pub fn add_train(x: i32, comptime animations: usize, comptime height: usize, engine: [animations][height][:0]const u8, coal: [height][:0]const u8, car: [height][:0]const u8, offsets: TrainOffsets, namelist: [][*:0]const u8) i32 {
     const car_length = @as(i32, @intCast(car[0].len)) - 1;
@@ -53,8 +54,8 @@ pub fn add_train(x: i32, comptime animations: usize, comptime height: usize, eng
     }
 
     if (shared.ACCIDENT == 1) {
-        for (offsets.engine_windows) |offset| {
-            add_man(y + 2, x + offset);
+        for (offsets.engine_windows.offsets) |offset| {
+            add_man(y + offsets.engine_windows.height, x + offset);
         }
 
         for (0..count) |uj| {
@@ -66,8 +67,8 @@ pub fn add_train(x: i32, comptime animations: usize, comptime height: usize, eng
                 break;
             }
 
-            for (offsets.car_windows) |offset| {
-                add_man((y + 1) + (shared.FLY * (j + 2)), ((x + front_length) + offset) + (car_length * j));
+            for (offsets.car_windows.offsets) |offset| {
+                add_man((y + offsets.car_windows.height) + (shared.FLY * (j + 2)), ((x + front_length) + offset) + (car_length * j));
             }
         }
     }

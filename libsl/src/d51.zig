@@ -2,7 +2,7 @@ const sl = @cImport(@cInclude("sl.h"));
 const add_train = @import("add_train.zig").add_train;
 
 pub fn add_D51(x: i32, namelist: [][*:0]const u8) i32 {
-    const d51 = [6][11][:0]const u8{
+    const engine = [6][11][:0]const u8{
         [11][:0]const u8{
             "      ====        ________                ___________ ",
             "  _D _|  |_______/        \\__I_I_____===__|_________| ",
@@ -110,5 +110,5 @@ pub fn add_D51(x: i32, namelist: [][*:0]const u8) i32 {
         "                              ",
     };
 
-    return add_train(x, d51.len, d51[0].len, d51, coal, car, .{ .car_text_width = 22, .engine_windows = &.{ 43, 47 }, .car_windows = &.{ 4, 9, 14, 19 }, .funnel = 7, .display_width = 22 }, namelist);
+    return add_train(x, engine.len, engine[0].len, engine, coal, car, .{ .car_text_width = 22, .engine_windows = .{ .height = 2, .offsets = &.{ 43, 47 } }, .car_windows = .{ .height = 1, .offsets = &.{ 4, 9, 14, 19 } }, .funnel = 7 }, namelist);
 }
