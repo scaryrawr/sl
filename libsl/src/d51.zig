@@ -1,11 +1,5 @@
 const sl = @cImport(@cInclude("sl.h"));
-const add_man = @import("add_man.zig").add_man;
-const add_smoke = @import("add_smoke.zig").add_smoke;
-
-const shared = @import("shared.zig");
-
-const mvaddstr = shared.mvaddstr;
-const print_car = shared.print_car;
+const add_train = @import("add_train.zig").add_train;
 
 pub fn add_D51(x: i32, namelist: [][*:0]const u8) i32 {
     const d51 = [6][11][:0]const u8{
@@ -101,6 +95,7 @@ pub fn add_D51(x: i32, namelist: [][*:0]const u8) i32 {
         "    \\_/   \\_/    \\_/   \\_/    ",
         "                              ",
     };
+
     const car = [11][:0]const u8{
         "  __________________________  ",
         "  |   ___  ___  ___  ___   |   ",
@@ -115,64 +110,5 @@ pub fn add_D51(x: i32, namelist: [][*:0]const u8) i32 {
         "                              ",
     };
 
-    const count = namelist.len;
-    if (x < -(sl.D51LENGTH + (if (count > 0) @as(i32, @intCast(count)) * (32 - 1) else 0))) {
-        return -1;
-    }
-
-    var y = @divTrunc(shared.LINES, 2) - 5;
-    var dy: i32 = 0;
-    if (shared.FLY == 1) {
-        y = ((@divTrunc(x, 7) + shared.LINES) - @divTrunc(shared.COLS, 7)) - 10;
-        if (y < (0 - (10 + 8))) {
-            return -1;
-        }
-        dy = 1;
-    }
-
-    for (0..coal.len) |ui| {
-        const i = @as(i32, @intCast(ui));
-        if ((sl.D51LENGTH + x) > 0) {
-            _ = mvaddstr(y + i, x, d51[@as(usize, @intCast(@mod(x + sl.D51LENGTH, @as(i32, @intCast(d51.len)))))][ui]);
-            _ = mvaddstr((y + i) + dy, x + 53, coal[ui]);
-        }
-        {
-            for (0..count) |uj| {
-                const j = @as(i32, @intCast(uj));
-                const pos = (sl.D51LENGTH + x) + ((32 - 3) * (j + 1));
-                if (pos < 0) {
-                    continue;
-                } else if (pos > (shared.COLS + sl.D51LENGTH)) {
-                    break;
-                }
-
-                var carName: [256:0]u8 = undefined;
-                _ = print_car(&carName, carName.len, car[ui], namelist[uj], 22);
-                _ = mvaddstr(((y + i) + (shared.FLY * (j + 1))) + dy, (x + 53) + ((32 - 3) * (j + 1)), &carName);
-            }
-        }
-    }
-
-    if (shared.ACCIDENT == 1) {
-        if ((x + 47) > 0) {
-            add_man(y + 2, x + 43);
-            add_man(y + 2, x + 47);
-        }
-
-        for (0..count) |uj| {
-            const j = @as(i32, @intCast(uj));
-            const pos = (sl.D51LENGTH + x) + ((32 - 3) * (j + 1));
-            if (pos < 0) {
-                continue;
-            } else if (pos > (shared.COLS + sl.D51LENGTH)) {
-                break;
-            }
-
-            add_man((y + 1) + (shared.FLY * (j + 2)), ((x + sl.D51LENGTH) + 5) + ((32 - 3) * j));
-            add_man((y + 1) + (shared.FLY * (j + 2)), ((x + sl.D51LENGTH) + 15) + ((32 - 3) * j));
-        }
-    }
-
-    add_smoke(y - 1, x + 7);
-    return 0;
+    return add_train(x, d51.len, d51[0].len, d51, coal, car, .{ .car_text_width = 22, .engine_windows = &.{ 43, 47 }, .car_windows = &.{ 4, 9, 14, 19 }, .funnel = 7, .display_width = 22 }, namelist);
 }
