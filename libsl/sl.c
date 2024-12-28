@@ -51,11 +51,11 @@
 extern int32_t my_mvaddstr(int32_t y, int32_t x, char *str);
 extern int32_t print_car(char *buffer, uint32_t buffer_length, const char *fmt, const char* text, uint32_t text_display_width);
 extern void add_man(int32_t y, int32_t x);
+extern void add_smoke(int32_t y, int32_t x);
 
 extern int32_t COLS;
 extern int32_t LINES;
 
-void add_smoke(int32_t y, int32_t x);
 int32_t add_C51(int32_t x, char *namelist[], int32_t cars);
 int32_t add_D51(int32_t x, char *namelist[], int32_t cars);
 int32_t add_sl(int32_t x, char *namelist[], int32_t cars);
@@ -292,47 +292,4 @@ int32_t add_C51(int32_t x, char* namelist[], int32_t cars)
     add_smoke(y - 1, x + C51FUNNEL);
 
     return OK;
-}
-
-void add_smoke(int32_t y, int32_t x)
-#define SMOKEPTNS        16
-{
-    static struct smokes {
-        int32_t y, x;
-        int32_t ptrn, kind;
-    } S[1000];
-    static int32_t sum = 0;
-    static char *Smoke[2][SMOKEPTNS]
-        = {{"(   )", "(    )", "(    )", "(   )", "(  )",
-            "(  )" , "( )"   , "( )"   , "()"   , "()"  ,
-            "O"    , "O"     , "O"     , "O"    , "O"   ,
-            " "                                          },
-           {"(@@@)", "(@@@@)", "(@@@@)", "(@@@)", "(@@)",
-            "(@@)" , "(@)"   , "(@)"   , "@@"   , "@@"  ,
-            "@"    , "@"     , "@"     , "@"    , "@"   ,
-            " "                                          }};
-    static char *Eraser[SMOKEPTNS]
-        =  {"     ", "      ", "      ", "     ", "    ",
-            "    " , "   "   , "   "   , "  "   , "  "  ,
-            " "    , " "     , " "     , " "    , " "   ,
-            " "                                          };
-    static int32_t dy[SMOKEPTNS] = { 2,  1, 1, 1, 0, 0, 0, 0, 0, 0,
-                                 0,  0, 0, 0, 0, 0             };
-    static int32_t dx[SMOKEPTNS] = {-2, -1, 0, 1, 1, 1, 1, 1, 2, 2,
-                                 2,  2, 2, 3, 3, 3             };
-    int32_t i;
-
-    if (x % 4 == 0) {
-        for (i = 0; i < sum; ++i) {
-            my_mvaddstr(S[i].y, S[i].x, Eraser[S[i].ptrn]);
-            S[i].y    -= dy[S[i].ptrn];
-            S[i].x    += dx[S[i].ptrn];
-            S[i].ptrn += (S[i].ptrn < SMOKEPTNS - 1) ? 1 : 0;
-            my_mvaddstr(S[i].y, S[i].x, Smoke[S[i].kind][S[i].ptrn]);
-        }
-        my_mvaddstr(y, x, Smoke[sum % 2][0]);
-        S[sum].y = y;    S[sum].x = x;
-        S[sum].ptrn = 0; S[sum].kind = sum % 2;
-        sum ++;
-    }
 }
