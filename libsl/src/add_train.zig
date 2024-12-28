@@ -24,9 +24,11 @@ pub fn add_train(x: i32, comptime animations: usize, comptime height: usize, eng
     var dy: i32 = 0;
     if (shared.FLY == 1) {
         y = ((@divTrunc(x, frames) + shared.LINES) - @divTrunc(shared.COLS, frames)) - engine_height;
-        // if (y < (0 - (10 + 8))) {
-        //     return -1;
-        // }
+        // Try to estimate when the train is off screen enough.
+        if (y < -(engine_height * @divTrunc(shared.COLS, shared.LINES))) {
+            return -1;
+        }
+
         dy = 1;
     }
 
