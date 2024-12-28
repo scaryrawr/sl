@@ -1,4 +1,3 @@
-const sl = @cImport(@cInclude("sl.h"));
 const add_train = @import("add_train.zig").add_train;
 
 pub fn add_logo(x: i32, namelist: [][*:0]const u8) i32 {
