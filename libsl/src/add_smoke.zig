@@ -1,4 +1,4 @@
-extern fn my_mvaddstr(y: i32, x: i32, str: [*:0]const u8) i32;
+const mvaddstr = @import("shared.zig").mvaddstr;
 
 pub fn add_smoke(y: i32, x: i32) void {
     const struct_smokes = struct {
@@ -13,7 +13,7 @@ pub fn add_smoke(y: i32, x: i32) void {
         var sum: u32 = 0;
     };
 
-    const Smoke = [2][16][*:0]const u8{ [_][*:0]const u8{
+    const Smoke = [2][16][:0]const u8{ [_][:0]const u8{
         "(   )",
         "(    )",
         "(    )",
@@ -30,7 +30,7 @@ pub fn add_smoke(y: i32, x: i32) void {
         "O",
         "O",
         " ",
-    }, [_][*:0]const u8{
+    }, [_][:0]const u8{
         "(@@@)",
         "(@@@@)",
         "(@@@@)",
@@ -48,7 +48,7 @@ pub fn add_smoke(y: i32, x: i32) void {
         "@",
         " ",
     } };
-    const Eraser = [16][*:0]const u8{
+    const Eraser = [16][:0]const u8{
         "     ",
         "      ",
         "      ",
@@ -105,14 +105,14 @@ pub fn add_smoke(y: i32, x: i32) void {
 
     if (@mod(x, 4) == 0 and static.sum < static.smokes.len) {
         for (0..static.sum) |i| {
-            _ = my_mvaddstr(static.smokes[i].y, static.smokes[i].x, Eraser[static.smokes[i].ptrn]);
+            _ = mvaddstr(static.smokes[i].y, static.smokes[i].x, Eraser[static.smokes[i].ptrn]);
             static.smokes[i].y -= dy[static.smokes[i].ptrn];
             static.smokes[i].x += dx[static.smokes[i].ptrn];
             static.smokes[i].ptrn += if (static.smokes[i].ptrn < 15) 1 else 0;
-            _ = my_mvaddstr(static.smokes[i].y, static.smokes[i].x, Smoke[static.smokes[i].kind][static.smokes[i].ptrn]);
+            _ = mvaddstr(static.smokes[i].y, static.smokes[i].x, Smoke[static.smokes[i].kind][static.smokes[i].ptrn]);
         }
 
-        _ = my_mvaddstr(y, x, Smoke[@mod(static.sum, 2)][0]);
+        _ = mvaddstr(y, x, Smoke[@mod(static.sum, 2)][0]);
         static.smokes[static.sum].y = y;
         static.smokes[static.sum].x = x;
         static.smokes[static.sum].ptrn = 0;

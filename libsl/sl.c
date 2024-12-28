@@ -57,7 +57,6 @@ extern int32_t COLS;
 extern int32_t LINES;
 
 int32_t add_C51(int32_t x, char *namelist[], int32_t cars);
-int32_t add_D51(int32_t x, char *namelist[], int32_t cars);
 int32_t add_sl(int32_t x, char *namelist[], int32_t cars);
 
 int32_t ACCIDENT  = 0;
@@ -129,88 +128,6 @@ int32_t add_sl(int32_t x, char* namelist[], int32_t cars)
         }
     }
     add_smoke(y - 1, x + LOGOFUNNEL);
-
-    return OK;
-}
-
-int32_t add_D51(int32_t x, char* namelist[], int32_t cars)
-{
-    static char *d51[D51PATTERNS][D51HEIGHT + 1]
-        = {{D51STR1, D51STR2, D51STR3, D51STR4, D51STR5, D51STR6, D51STR7,
-            D51WHL11, D51WHL12, D51WHL13, D51DEL},
-           {D51STR1, D51STR2, D51STR3, D51STR4, D51STR5, D51STR6, D51STR7,
-            D51WHL21, D51WHL22, D51WHL23, D51DEL},
-           {D51STR1, D51STR2, D51STR3, D51STR4, D51STR5, D51STR6, D51STR7,
-            D51WHL31, D51WHL32, D51WHL33, D51DEL},
-           {D51STR1, D51STR2, D51STR3, D51STR4, D51STR5, D51STR6, D51STR7,
-            D51WHL41, D51WHL42, D51WHL43, D51DEL},
-           {D51STR1, D51STR2, D51STR3, D51STR4, D51STR5, D51STR6, D51STR7,
-            D51WHL51, D51WHL52, D51WHL53, D51DEL},
-           {D51STR1, D51STR2, D51STR3, D51STR4, D51STR5, D51STR6, D51STR7,
-            D51WHL61, D51WHL62, D51WHL63, D51DEL}};
-    
-    static char *coal[D51HEIGHT + 1]
-        = {COAL01, COAL02, COAL03, COAL04, COAL05,
-           COAL06, COAL07, COAL08, COAL09, COAL10, COALDEL};
-    
-    static char *car[D51HEIGHT + 1]
-        = {CAR01, CAR02, CAR03, CAR04, CAR05,
-           CAR06, CAR07, CAR08, CAR09, CAR10, COALDEL};
-
-    int32_t y, i, j, pos, dy = 0;
-    char carName[NAME_BUFFER];
-
-    if (x < - (D51LENGTH + ((cars > 0) ? cars * (CARLENGTH - 1) : 0))) {
-        return ERR;
-    }
-
-    y = LINES / 2 - 5;
-
-    if (FLY == 1) {
-        y = (x / 7) + LINES - (COLS / 7) - D51HEIGHT;
-        if (y < (0 - (D51HEIGHT + 8))) {
-            return ERR;
-        }
-        dy = 1;
-    }
-
-    for (i = 0; i <= D51HEIGHT; ++i) {
-        if (D51LENGTH + x > 0) {
-            my_mvaddstr(y + i, x, d51[(D51LENGTH + x) % D51PATTERNS][i]);
-            my_mvaddstr(y + i + dy, x + 53, coal[i]);
-        }
-        for (j = 0; j < cars; ++j) {
-            pos = D51LENGTH + x + (CARLENGTH - 3) * (j + 1);
-            if (pos < 0) {
-                continue;
-            } else if (pos > COLS + D51LENGTH) {
-                break;
-            }
-
-            print_car(carName, sizeof(carName), car[i], namelist[j], 22);
-            my_mvaddstr(y + i + (FLY * (j + 1)) + dy, x + 53 + (CARLENGTH - 3) * (j + 1), carName);
-        }
-    }
-
-    if (ACCIDENT == 1) {
-        if (x + 47 > 0) {
-            add_man(y + 2, x + 43);
-            add_man(y + 2, x + 47);
-        }
-
-        for (j = 0; j < cars; ++j) {
-            pos = D51LENGTH + x + (CARLENGTH - 3) * (j + 1);
-            if (pos < 0) {
-                continue;
-            } else if (pos > COLS + D51LENGTH) {
-                break;
-            }
-
-            add_man(y + 1 + (FLY * (j + 2)), x + D51LENGTH + 5 + ((CARLENGTH - 3) * j));
-            add_man(y + 1 + (FLY * (j + 2)), x + D51LENGTH + 15 + ((CARLENGTH - 3) * j));
-        }
-    }
-    add_smoke(y - 1, x + D51FUNNEL);
 
     return OK;
 }
