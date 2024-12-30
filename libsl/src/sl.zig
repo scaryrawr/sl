@@ -1,12 +1,15 @@
-const sl = @cImport(@cInclude("sl.h"));
+const c51 = @import("c51.zig");
+const d51 = @import("d51.zig");
+const logo = @import("logo.zig");
 
-extern fn my_mvaddstr(y: i32, x: i32, str: [*:0]const u8) i32;
+export fn add_C51(x: i32, namelist: [*][*:0]const u8, count: i32) i32 {
+    return c51.add_C51(x, namelist[0..@as(usize, @intCast(count))]);
+}
 
-export fn add_man(y: i32, x: i32) void {
-    const man = [2][2][*:0]const u8{ [_][*:0]const u8{ "Help!", "" }, [_][*:0]const u8{ "\\O/", "(O)" } };
-    for (man, 0..) |line, i| {
-        if (my_mvaddstr(y + @as(i32, @intCast(i)), x, line[@as(usize, @intCast(@mod(@divTrunc(sl.LOGOLENGTH + x, 12), 2)))]) != 0) {
-            break;
-        }
-    }
+export fn add_D51(x: i32, namelist: [*][*:0]const u8, count: i32) i32 {
+    return d51.add_D51(x, namelist[0..@as(usize, @intCast(count))]);
+}
+
+export fn add_sl(x: i32, namelist: [*][*:0]const u8, count: i32) i32 {
+    return logo.add_logo(x, namelist[0..@as(usize, @intCast(count))]);
 }

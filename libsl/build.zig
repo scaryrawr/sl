@@ -11,8 +11,5 @@ pub fn build(b: *std.Build) void {
         .ReleaseFast, .ReleaseSmall => {},
     }
 
-    libsl.addIncludePath(b.path("."));
-    libsl.addCSourceFile(.{ .file = b.path("sl.c") });
-
     b.installArtifact(libsl);
 }
