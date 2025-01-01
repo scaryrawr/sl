@@ -1,10 +1,10 @@
 const shared = @import("shared.zig");
-
+const std = @import("std");
 const add_man = @import("add_man.zig").add_man;
 const add_smoke = @import("add_smoke.zig").add_smoke;
+const format_car = @import("format_car.zig").format_car;
 
 const mvaddstr = shared.mvaddstr;
-const print_car = shared.print_car;
 
 pub const WindowOffsets = struct { height: i32, offsets: []const i32 };
 pub const TrainOffsets = struct { funnel: i32, engine_windows: WindowOffsets, car_windows: WindowOffsets, car_text_width: u32 };
@@ -15,6 +15,9 @@ pub fn add_train(x: i32, comptime animations: usize, comptime height: usize, eng
     const count = namelist.len;
     const engine_length = @as(i32, @intCast(engine[0][0].len));
     const front_length = engine_length + @as(i32, @intCast(coal[0].len));
+
+    const allocator = std.heap.page_allocator;
+
     if (x < -(front_length + (if (count > 0) @as(i32, @intCast(count)) * car_length else 0))) {
         return -1;
     }
@@ -48,9 +51,13 @@ pub fn add_train(x: i32, comptime animations: usize, comptime height: usize, eng
                     break;
                 }
 
-                var carName: [256:0]u8 = undefined;
-                _ = print_car(&carName, carName.len, car[ui], namelist[uj], offsets.car_text_width);
-                _ = mvaddstr(((y + i) + (shared.FLY * (j + 1))) + dy, (x + engine_length - 1) + (car_length * (j + 1)), &carName);
+                const car_name = format_car(allocator, car[ui], namelist[uj][0..std.mem.len(namelist[uj])], offsets.car_text_width) catch {
+                    return -1;
+                };
+
+                errdefer allocator.free(car_name);
+                _ = mvaddstr(((y + i) + (shared.FLY * (j + 1))) + dy, (x + engine_length - 1) + (car_length * (j + 1)), &car_name[0]);
+                allocator.free(car_name);
             }
         }
     }

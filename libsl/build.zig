@@ -5,6 +5,9 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const libsl = b.addStaticLibrary(.{ .name = "sl", .target = target, .optimize = optimize, .root_source_file = b.path("src/sl.zig"), .pic = true });
+    const zg = b.dependency("zg", .{});
+    libsl.root_module.addImport("DisplayWidth", zg.module("DisplayWidth"));
+    libsl.root_module.addImport("grapheme", zg.module("grapheme"));
 
     switch (optimize) {
         .Debug, .ReleaseSafe => libsl.bundle_compiler_rt = true,
