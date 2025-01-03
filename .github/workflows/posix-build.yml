@@ -13,26 +13,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install zig
-        run: |
-          if [ -f /home/linuxbrew/.linuxbrew/bin/brew ]; then
-            eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          fi
-          brew install zig
-
       - name: Build Debug
-        run: |
-          if [ -f /home/linuxbrew/.linuxbrew/bin/brew ]; then
-            eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          fi
-          cargo build
+        run: cargo build
 
       - name: Build Release
-        run: |
-          if [ -f /home/linuxbrew/.linuxbrew/bin/brew ]; then
-            eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          fi
-          cargo build --release
+        run: cargo build --release
 
       - name: Test
         run: |

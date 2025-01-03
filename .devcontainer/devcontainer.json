@@ -13,14 +13,9 @@
         "github.vscode-github-actions",
         "rust-lang.rust-analyzer",
         "fill-labs.dependi",
-        "vadimcn.vscode-lldb",
-        "ziglang.vscode-zig"
+        "vadimcn.vscode-lldb"
       ]
     }
-  },
-  "containerEnv": {
-    "VCPKG_FORCE_SYSTEM_BINARIES": "1",
-    "VCPKG_ROOT": "/home/vscode/.local/share/vcpkg"
   },
   "onCreateCommand": "${containerWorkspaceFolder}/.devcontainer/onCreateCommand.sh",
   "containerUser": "vscode",
