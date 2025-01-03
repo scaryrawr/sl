@@ -1,8 +1,8 @@
-const add_train = @import("add_train.zig").add_train;
+use super::add_train::{add_train, TrainOffsets, WindowOffsets};
 
-pub fn add_C51(x: i32, namelist: [][*:0]const u8) i32 {
-    const engine = [6][12][:0]const u8{
-        [12][:0]const u8{
+pub fn add_c51(x: i32, names: &[&str]) -> Result<(), std::io::Error> {
+    const ENGINE: [[&str; 12]; 6] = [
+        [
             "        ___                                            ",
             "       _|_|_  _     __       __             ___________",
             "    D__/   \\_(_)___|  |__H__|  |_____I_Ii_()|_________|",
@@ -15,8 +15,8 @@ pub fn add_C51(x: i32, namelist: [][*:0]const u8) i32 {
             "/~\\____|___|/~\\_|  O=======O=======O   |__|+-/~\\_|     ",
             "\\_/         \\_/  \\____/  \\____/  \\____/      \\_/       ",
             "                                                       ",
-        },
-        [12][:0]const u8{
+        ],
+        [
             "        ___                                            ",
             "       _|_|_  _     __       __             ___________",
             "    D__/   \\_(_)___|  |__H__|  |_____I_Ii_()|_________|",
@@ -29,8 +29,8 @@ pub fn add_C51(x: i32, namelist: [][*:0]const u8) i32 {
             "/~\\____|___|/~\\_|      ||      ||      |__|+-/~\\_|     ",
             "\\_/         \\_/  \\____/  \\____/  \\____/      \\_/       ",
             "                                                       ",
-        },
-        [12][:0]const u8{
+        ],
+        [
             "        ___                                            ",
             "       _|_|_  _     __       __             ___________",
             "    D__/   \\_(_)___|  |__H__|  |_____I_Ii_()|_________|",
@@ -43,8 +43,8 @@ pub fn add_C51(x: i32, namelist: [][*:0]const u8) i32 {
             "/~\\____|___|/~\\_|      ||      ||      |__|+-/~\\_|     ",
             "\\_/         \\_/  \\____/  \\____/  \\____/      \\_/       ",
             "                                                       ",
-        },
-        [12][:0]const u8{
+        ],
+        [
             "        ___                                            ",
             "       _|_|_  _     __       __             ___________",
             "    D__/   \\_(_)___|  |__H__|  |_____I_Ii_()|_________|",
@@ -57,8 +57,8 @@ pub fn add_C51(x: i32, namelist: [][*:0]const u8) i32 {
             "/~\\____|___|/~\\_|      ||      ||      |__|+-/~\\_|     ",
             "\\_/         \\_/  \\____/  \\____/  \\____/      \\_/       ",
             "                                                       ",
-        },
-        [12][:0]const u8{
+        ],
+        [
             "        ___                                            ",
             "       _|_|_  _     __       __             ___________",
             "    D__/   \\_(_)___|  |__H__|  |_____I_Ii_()|_________|",
@@ -71,8 +71,8 @@ pub fn add_C51(x: i32, namelist: [][*:0]const u8) i32 {
             "/~\\____|___|/~\\_|    O=======O=======O |__|+-/~\\_|     ",
             "\\_/         \\_/  \\____/  \\____/  \\____/      \\_/       ",
             "                                                       ",
-        },
-        [12][:0]const u8{
+        ],
+        [
             "        ___                                            ",
             "       _|_|_  _     __       __             ___________",
             "    D__/   \\_(_)___|  |__H__|  |_____I_Ii_()|_________|",
@@ -85,9 +85,10 @@ pub fn add_C51(x: i32, namelist: [][*:0]const u8) i32 {
             "/~\\____|___|/~\\_|   O=======O=======O  |__|+-/~\\_|     ",
             "\\_/         \\_/  \\____/  \\____/  \\____/      \\_/       ",
             "                                                       ",
-        },
-    };
-    const coal = [12][:0]const u8{
+        ],
+    ];
+
+    const COAL: [&str; 12] = [
         "                              ",
         "                              ",
         "                              ",
@@ -100,9 +101,9 @@ pub fn add_C51(x: i32, namelist: [][*:0]const u8) i32 {
         "   |_D__D__D_|  |_D__D__D_|   ",
         "    \\_/   \\_/    \\_/   \\_/    ",
         "                              ",
-    };
+    ];
 
-    const car = [12][:0]const u8{
+    const CAR: [&str; 12] = [
         "                              ",
         "  __________________________  ",
         "  |   ___  ___  ___  ___   |   ",
@@ -115,7 +116,20 @@ pub fn add_C51(x: i32, namelist: [][*:0]const u8) i32 {
         "   |_D__D__D_|  |_D__D__D_|   ",
         "    \\_/   \\_/    \\_/   \\_/  ",
         "                              ",
+    ];
+
+    const OFFSETS: TrainOffsets<2, 4> = TrainOffsets {
+        funnel: 7,
+        engine_windows: WindowOffsets {
+            height: 3,
+            window_positions: [45, 49],
+        },
+        car_windows: WindowOffsets {
+            height: 2,
+            window_positions: [4, 9, 14, 19],
+        },
+        car_text_width: 22,
     };
 
-    return add_train(x, engine.len, engine[0].len, engine, coal, car, .{ .car_text_width = 22, .engine_windows = .{ .height = 3, .offsets = &.{ 45, 49 } }, .car_windows = .{ .height = 2, .offsets = &.{ 4, 9, 14, 19 } }, .funnel = 7 }, namelist);
+    add_train(x, &ENGINE, &COAL, &CAR, OFFSETS, names)
 }

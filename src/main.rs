@@ -5,7 +5,7 @@ use crossterm::event::{read, Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::terminal::{Clear, ClearType};
 use crossterm::{cursor, terminal, ExecutableCommand, QueueableCommand};
 use filedescriptor::{Error, FileDescriptor};
-use sl::{print_c51, print_d51, print_sl, COLS, LINES};
+use sl::{add_c51, add_d51, add_logo, COLS, LINES};
 use std::fs;
 use std::io::{stdin, stdout, BufRead, BufReader, IsTerminal, Stdin, Write};
 use std::sync::mpsc::Receiver;
@@ -25,12 +25,12 @@ fn main() -> Result<(), Error> {
 
     update_size()?;
 
-    let print_train = if args.logo {
-        print_sl
+    let add_train = if args.logo {
+        add_logo
     } else if args.c51 {
-        print_c51
+        add_c51
     } else {
-        print_d51
+        add_d51
     };
 
     if args.accident {
@@ -56,7 +56,7 @@ fn main() -> Result<(), Error> {
             Err(_) => {}
         }
 
-        if print_train(x, &names.iter().map(String::as_ref).collect::<Vec<&str>>()) != 0 {
+        if add_train(x, &names.iter().map(String::as_ref).collect::<Vec<&str>>()).is_err() {
             break;
         }
 

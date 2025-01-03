@@ -1,8 +1,8 @@
-const add_train = @import("add_train.zig").add_train;
+use super::add_train::{add_train, TrainOffsets, WindowOffsets};
 
-pub fn add_logo(x: i32, namelist: [][*:0]const u8) i32 {
-    const engine = [6][7][:0]const u8{
-        [7][:0]const u8{
+pub fn add_logo(x: i32, names: &[&str]) -> Result<(), std::io::Error> {
+    const ENGINE: [[&str; 7]; 6] = [
+        [
             "     ++      +------ ",
             "     ||      |+-+ |  ",
             "   /---------|| | |  ",
@@ -10,8 +10,8 @@ pub fn add_logo(x: i32, namelist: [][*:0]const u8) i32 {
             " _|--O========O~\\-+  ",
             "//// \\_/      \\_/    ",
             "                     ",
-        },
-        [7][:0]const u8{
+        ],
+        [
             "     ++      +------ ",
             "     ||      |+-+ |  ",
             "   /---------|| | |  ",
@@ -19,8 +19,8 @@ pub fn add_logo(x: i32, namelist: [][*:0]const u8) i32 {
             " _|--/O========O\\-+  ",
             "//// \\_/      \\_/    ",
             "                     ",
-        },
-        [7][:0]const u8{
+        ],
+        [
             "     ++      +------ ",
             "     ||      |+-+ |  ",
             "   /---------|| | |  ",
@@ -28,8 +28,8 @@ pub fn add_logo(x: i32, namelist: [][*:0]const u8) i32 {
             " _|--/~O========O-+  ",
             "//// \\_/      \\_/    ",
             "                     ",
-        },
-        [7][:0]const u8{
+        ],
+        [
             "     ++      +------ ",
             "     ||      |+-+ |  ",
             "   /---------|| | |  ",
@@ -37,8 +37,8 @@ pub fn add_logo(x: i32, namelist: [][*:0]const u8) i32 {
             " _|--/~\\------/~\\-+  ",
             "//// \\_O========O    ",
             "                     ",
-        },
-        [7][:0]const u8{
+        ],
+        [
             "     ++      +------ ",
             "     ||      |+-+ |  ",
             "   /---------|| | |  ",
@@ -46,8 +46,8 @@ pub fn add_logo(x: i32, namelist: [][*:0]const u8) i32 {
             " _|--/~\\------/~\\-+  ",
             "//// \\O========O/    ",
             "                     ",
-        },
-        [7][:0]const u8{
+        ],
+        [
             "     ++      +------ ",
             "     ||      |+-+ |  ",
             "   /---------|| | |  ",
@@ -55,9 +55,9 @@ pub fn add_logo(x: i32, namelist: [][*:0]const u8) i32 {
             " _|--/~\\------/~\\-+  ",
             "//// O========O_/    ",
             "                     ",
-        },
-    };
-    const coal = [7][:0]const u8{
+        ],
+    ];
+    const COAL: [&str; 7] = [
         "____                 ",
         "|   \\@@@@@@@@@@@     ",
         "|    \\@@@@@@@@@@@@@_ ",
@@ -65,9 +65,9 @@ pub fn add_logo(x: i32, namelist: [][*:0]const u8) i32 {
         "|__________________| ",
         "   (O)       (O)     ",
         "                     ",
-    };
+    ];
 
-    const car = [7][:0]const u8{
+    const CAR: [&str; 7] = [
         " ____________________ ",
         " |  ___ ___ ___ ___ | ",
         " |  |_| |_| |_| |_| | ",
@@ -75,7 +75,20 @@ pub fn add_logo(x: i32, namelist: [][*:0]const u8) i32 {
         "_|__________________| ",
         "    (O)        (O)    ",
         "                      ",
+    ];
+
+    const OFFSETS: TrainOffsets<1, 4> = TrainOffsets {
+        funnel: 4,
+        engine_windows: WindowOffsets {
+            height: 1,
+            window_positions: [14],
+        },
+        car_windows: WindowOffsets {
+            height: 1,
+            window_positions: [3, 7, 11, 15],
+        },
+        car_text_width: 16,
     };
 
-    return add_train(x, engine.len, engine[0].len, engine, coal, car, .{ .car_text_width = 16, .engine_windows = .{ .height = 1, .offsets = &.{14} }, .car_windows = .{ .height = 1, .offsets = &.{ 3, 7, 11, 15 } }, .funnel = 4 }, namelist);
+    add_train(x, &ENGINE, &COAL, &CAR, OFFSETS, names)
 }

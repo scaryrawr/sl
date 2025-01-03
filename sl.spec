@@ -9,7 +9,6 @@ VCS:        {{{ git_dir_vcs }}}
 
 Source:    {{{ git_dir_pack }}}
 
-BuildRequires:  zig
 BuildRequires:  cargo
 BuildRequires:  rust
 

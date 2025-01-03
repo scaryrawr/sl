@@ -1,7 +1,7 @@
-use std::ffi::c_char;
-use std::io::Error;
-use std::vec;
-use std::{ffi::CStr, io::stdout};
+use std::{
+    io::{stdout, Error},
+    vec,
+};
 
 use crossterm::{cursor, style::Print, QueueableCommand};
 use unicode_segmentation::UnicodeSegmentation;
@@ -9,16 +9,10 @@ use unicode_segmentation::UnicodeSegmentation;
 use super::unicode_width::UnicodeWidthStr;
 use super::{COLS, LINES};
 
-const OK: i32 = 0;
-const ERR: i32 = -1;
-
 pub fn mvaddstr(y: i32, x: i32, str: &str) -> Result<(), Error> {
     // Vertically off screen
     if y < 0 || y > unsafe { LINES } || x > unsafe { COLS } {
-        return Err(Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "Out of bounds",
-        ));
+        return Ok(());
     }
 
     // The number of characters is the expected width to take up, but that is possibly incorrect, so we need
@@ -30,10 +24,7 @@ pub fn mvaddstr(y: i32, x: i32, str: &str) -> Result<(), Error> {
 
     // Everything is off screen to the left
     if end_position < 0 {
-        return Err(Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "Out of bounds",
-        ));
+        return Ok(());
     }
 
     let mut x = x;
@@ -81,10 +72,8 @@ pub fn mvaddstr(y: i32, x: i32, str: &str) -> Result<(), Error> {
         }) {
             clusters.splice(position..(clusters.len()), std::iter::empty());
         } else {
-            return Err(Error::new(
-                std::io::ErrorKind::InvalidInput,
-                "Out of bounds",
-            ));
+            // Unable to fit on screen.
+            return Ok(());
         }
     }
 
@@ -95,17 +84,4 @@ pub fn mvaddstr(y: i32, x: i32, str: &str) -> Result<(), Error> {
     stdout.queue(Print(buffer))?;
 
     Ok(())
-}
-
-pub type PCSTR = *const c_char;
-
-#[no_mangle]
-pub extern "C" fn my_mvaddstr(y: i32, x: i32, str: PCSTR) -> i32 {
-    return match unsafe { CStr::from_ptr(str).to_str() } {
-        Ok(s) => match mvaddstr(y, x, s) {
-            Ok(_) => OK,
-            Err(_) => ERR,
-        },
-        Err(_) => ERR,
-    };
 }
