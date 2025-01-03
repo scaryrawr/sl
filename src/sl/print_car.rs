@@ -1,11 +1,10 @@
 use super::unicode_width::UnicodeWidthStr;
 use std::{
     collections::HashMap,
+    io::Error,
     sync::{LazyLock, Mutex},
 };
 use unicode_segmentation::UnicodeSegmentation;
-
-const OK: i32 = 0;
 
 static CACHE: LazyLock<Mutex<HashMap<String, String>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -18,49 +17,43 @@ fn cached_car(key: &str) -> Option<String> {
 }
 
 pub fn print_car(
-    buffer: *mut u8,
-    buffer_len: u32,
+    buffer: &mut [u8],
     format: &str,
     text: &str,
-    text_display_width: u32,
-) -> i32 {
+    text_display_width: usize,
+) -> Result<(), Error> {
     // No format string, just copy text
     if !format.contains("{}") {
-        let copy_len = std::cmp::min(format.len(), buffer_len as usize - 1);
-        unsafe {
-            std::ptr::copy_nonoverlapping(format.as_ptr(), buffer, copy_len);
-            *buffer.add(copy_len) = 0;
-        }
-        return OK;
+        let copy_len = std::cmp::min(format.len(), buffer.len() - 1);
+        buffer[0..copy_len].copy_from_slice(format.as_bytes());
+        buffer[copy_len] = 0;
+        return Ok(());
     }
 
     let cache_key = format.replace("{}", text);
     let formatted_text = match cached_car(&cache_key) {
         Some(s) => s,
         None => {
-            let formatted_text = car_text(buffer_len, text_display_width, format, text);
+            let formatted_text = car_text(buffer.len(), text_display_width, format, text);
             match CACHE.lock() {
                 Ok(mut cache) => {
                     cache.insert(cache_key, formatted_text.clone());
                 }
                 Err(_) => {}
             }
+
             formatted_text
         }
     };
 
-    let copy_len = std::cmp::min(formatted_text.len(), buffer_len as usize - 1);
-    unsafe {
-        std::ptr::copy_nonoverlapping(formatted_text.as_ptr(), buffer, copy_len);
-        *buffer.add(copy_len) = 0;
-    }
+    let copy_len = std::cmp::min(formatted_text.len(), buffer.len() - 1);
+    buffer[0..copy_len].copy_from_slice(formatted_text.as_bytes());
+    buffer[copy_len] = 0;
 
-    return OK;
+    Ok(())
 }
 
-fn car_text(buffer_len: u32, text_display_width: u32, format: &str, text: &str) -> String {
-    let text_display_width = text_display_width as usize;
-
+fn car_text(buffer_len: usize, text_display_width: usize, format: &str, text: &str) -> String {
     let mut text_clusters: Vec<&str> = text.graphemes(true).collect();
     let mut working_text = text.to_string();
     let format_width = format.len() - 2;

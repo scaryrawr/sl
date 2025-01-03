@@ -22,7 +22,7 @@ pub struct TrainOffsets<const ENGINE_WINDOWS: usize, const CAR_WINDOWS: usize> {
     pub funnel: i32,
     pub engine_windows: WindowOffsets<ENGINE_WINDOWS>,
     pub car_windows: WindowOffsets<CAR_WINDOWS>,
-    pub car_text_width: u32,
+    pub car_text_width: usize,
 }
 
 pub fn add_train<
@@ -81,18 +81,17 @@ pub fn add_train<
             }
 
             let mut car_name: [u8; 256] = [0; 256];
-            _ = print_car(
-                car_name.as_mut_ptr(),
-                car_name.len().try_into().unwrap(),
+            print_car(
+                car_name.as_mut(),
                 car[ui],
                 namelist[uj],
                 offsets.car_text_width,
-            );
-            _ = mvaddstr(
+            )?;
+            mvaddstr(
                 ((y + i) + (unsafe { FLY } * (j + 1))) + dy,
                 (x + engine_length - 1) + (car_length * (j + 1)),
                 str::from_utf8(&car_name).unwrap(),
-            );
+            )?;
         }
     }
 
