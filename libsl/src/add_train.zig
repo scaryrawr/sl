@@ -1,7 +1,5 @@
 const shared = @import("shared.zig");
 
-const add_smoke = @import("add_smoke.zig").add_smoke;
-
 const mvaddstr = shared.mvaddstr;
 const print_car = shared.print_car;
 
@@ -9,6 +7,7 @@ pub const WindowOffsets = struct { height: i32, offsets: []const i32 };
 pub const TrainOffsets = struct { funnel: i32, engine_windows: WindowOffsets, car_windows: WindowOffsets, car_text_width: u32 };
 
 extern fn add_man(y: i32, x: i32) void;
+extern fn add_smoke(y: i32, x: i32) void;
 
 pub fn add_train(x: i32, comptime animations: usize, comptime height: usize, engine: [animations][height][:0]const u8, coal: [height][:0]const u8, car: [height][:0]const u8, offsets: TrainOffsets, namelist: [][*:0]const u8) i32 {
     const car_length = @as(i32, @intCast(car[0].len)) - 1;
