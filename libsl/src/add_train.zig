@@ -1,6 +1,5 @@
 const shared = @import("shared.zig");
 
-const add_man = @import("add_man.zig").add_man;
 const add_smoke = @import("add_smoke.zig").add_smoke;
 
 const mvaddstr = shared.mvaddstr;
@@ -8,6 +7,8 @@ const print_car = shared.print_car;
 
 pub const WindowOffsets = struct { height: i32, offsets: []const i32 };
 pub const TrainOffsets = struct { funnel: i32, engine_windows: WindowOffsets, car_windows: WindowOffsets, car_text_width: u32 };
+
+extern fn add_man(y: i32, x: i32) void;
 
 pub fn add_train(x: i32, comptime animations: usize, comptime height: usize, engine: [animations][height][:0]const u8, coal: [height][:0]const u8, car: [height][:0]const u8, offsets: TrainOffsets, namelist: [][*:0]const u8) i32 {
     const car_length = @as(i32, @intCast(car[0].len)) - 1;
@@ -38,20 +39,19 @@ pub fn add_train(x: i32, comptime animations: usize, comptime height: usize, eng
             _ = mvaddstr(y + i, x, engine[@as(usize, @intCast(@mod(x + front_length, @as(i32, @intCast(engine.len)))))][ui]);
             _ = mvaddstr((y + i) + dy, x + engine_length - 1, coal[ui]);
         }
-        {
-            for (0..count) |uj| {
-                const j = @as(i32, @intCast(uj));
-                const pos = (front_length + x) + (car_length * (j + 1));
-                if (pos < 0) {
-                    continue;
-                } else if (pos > (shared.COLS + front_length)) {
-                    break;
-                }
 
-                var carName: [256:0]u8 = undefined;
-                _ = print_car(&carName, carName.len, car[ui], namelist[uj], offsets.car_text_width);
-                _ = mvaddstr(((y + i) + (shared.FLY * (j + 1))) + dy, (x + engine_length - 1) + (car_length * (j + 1)), &carName);
+        for (0..count) |uj| {
+            const j = @as(i32, @intCast(uj));
+            const pos = (front_length + x) + (car_length * (j + 1));
+            if (pos < 0) {
+                continue;
+            } else if (pos > (shared.COLS + front_length)) {
+                break;
             }
+
+            var carName: [256:0]u8 = undefined;
+            _ = print_car(&carName, carName.len, car[ui], namelist[uj], offsets.car_text_width);
+            _ = mvaddstr(((y + i) + (shared.FLY * (j + 1))) + dy, (x + engine_length - 1) + (car_length * (j + 1)), &carName);
         }
     }
 
