@@ -1,6 +1,5 @@
 use super::mvaddstr::mvaddstr;
 
-#[no_mangle]
 pub fn add_man(y: i32, x: i32) {
     const MAN: [[&str; 2]; 2] = [["", "Help!"], ["(O)", "\\O/"]];
     MAN.iter().enumerate().for_each(|(i, row)| {

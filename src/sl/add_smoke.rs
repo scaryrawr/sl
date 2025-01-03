@@ -1,6 +1,6 @@
 use super::mvaddstr::mvaddstr;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 struct Smokes {
     y: i32,
     x: i32,
@@ -24,7 +24,6 @@ static SMOKES: LazyLock<Mutex<[Smokes; 1000]>> = LazyLock::new(|| {
 
 static SUM: LazyLock<Mutex<usize>> = LazyLock::new(|| Mutex::new(0));
 
-#[no_mangle]
 pub fn add_smoke(y: i32, x: i32) {
     const SMOKE: [[&str; 16]; 2] = [
         [

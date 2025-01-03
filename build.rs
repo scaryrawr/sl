@@ -6,13 +6,6 @@ use clap_complete::{generate_to, Shell};
 include!("src/cli.rs");
 
 fn main() -> Result<(), Error> {
-    println!("cargo:rerun-if-changed=libsl/build.zig");
-    println!("cargo:rerun-if-changed=libsl/src");
-
-    let dst = zig::build("libsl");
-
-    println!("cargo:rustc-link-search=native={}", dst.display());
-
     let completion_dir = match env::var_os("COMPLETION_DIR") {
         None => return Ok(()),
         Some(completion_dir) => completion_dir,

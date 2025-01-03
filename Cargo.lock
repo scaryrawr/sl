@@ -350,7 +350,6 @@ dependencies = [
  "filedescriptor",
  "unicode-display-width",
  "unicode-segmentation",
- "zig",
 ]
 
 [[package]]
@@ -532,8 +531,3 @@ name = "windows_x86_64_msvc"
 version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
-
-[[package]]
-name = "zig"
-version = "0.1.0"
-source = "git+https://github.com/scaryrawr/zig-rs#2e408153e098727fac62a682b5b9f2d71fc3ee5a"

@@ -1,15 +1,11 @@
 use super::unicode_width::UnicodeWidthStr;
 use std::{
     collections::HashMap,
-    ffi::{c_char, CStr},
     sync::{LazyLock, Mutex},
 };
 use unicode_segmentation::UnicodeSegmentation;
 
-type PCSTR = *const c_char;
-
 const OK: i32 = 0;
-const ERR: i32 = -1;
 
 static CACHE: LazyLock<Mutex<HashMap<String, String>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -21,33 +17,22 @@ fn cached_car(key: &str) -> Option<String> {
     }
 }
 
-#[no_mangle]
-extern "C" fn print_car(
-    buffer: *mut c_char,
+pub fn print_car(
+    buffer: *mut u8,
     buffer_len: u32,
-    format: PCSTR,
-    text: PCSTR,
+    format: &str,
+    text: &str,
     text_display_width: u32,
 ) -> i32 {
-    let format = match unsafe { CStr::from_ptr(format) }.to_str() {
-        Ok(s) => s,
-        Err(_) => return ERR,
-    };
-
     // No format string, just copy text
     if !format.contains("{}") {
         let copy_len = std::cmp::min(format.len(), buffer_len as usize - 1);
         unsafe {
-            std::ptr::copy_nonoverlapping(format.as_ptr(), buffer as *mut u8, copy_len);
+            std::ptr::copy_nonoverlapping(format.as_ptr(), buffer, copy_len);
             *buffer.add(copy_len) = 0;
         }
         return OK;
     }
-
-    let text = match unsafe { CStr::from_ptr(text) }.to_str() {
-        Ok(s) => s,
-        Err(_) => return ERR,
-    };
 
     let cache_key = format.replace("{}", text);
     let formatted_text = match cached_car(&cache_key) {
@@ -66,7 +51,7 @@ extern "C" fn print_car(
 
     let copy_len = std::cmp::min(formatted_text.len(), buffer_len as usize - 1);
     unsafe {
-        std::ptr::copy_nonoverlapping(formatted_text.as_ptr(), buffer as *mut u8, copy_len);
+        std::ptr::copy_nonoverlapping(formatted_text.as_ptr(), buffer, copy_len);
         *buffer.add(copy_len) = 0;
     }
 
