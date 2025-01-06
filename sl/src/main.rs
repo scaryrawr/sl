@@ -5,13 +5,12 @@ use crossterm::event::{read, Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::terminal::{Clear, ClearType};
 use crossterm::{cursor, terminal, ExecutableCommand, QueueableCommand};
 use filedescriptor::{Error, FileDescriptor};
-use sl::{add_c51, add_d51, add_logo, COLS, LINES};
+use libsl::{add_c51, add_d51, add_logo, COLS, LINES};
 use std::fs;
 use std::io::{stdin, stdout, BufRead, BufReader, IsTerminal, Stdin, Write};
 use std::sync::mpsc::Receiver;
 
 mod cli;
-mod sl;
 
 fn main() -> Result<(), Error> {
     let args = CliOptions::parse();
@@ -35,13 +34,13 @@ fn main() -> Result<(), Error> {
 
     if args.accident {
         unsafe {
-            sl::ACCIDENT = 1;
+            libsl::ACCIDENT = 1;
         }
     }
 
     if args.fly {
         unsafe {
-            sl::FLY = 1;
+            libsl::FLY = 1;
         }
     }
 
