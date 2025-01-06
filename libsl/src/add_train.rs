@@ -1,6 +1,4 @@
-use std::io::Error;
-use std::io::ErrorKind;
-use std::str;
+use crate::Display;
 
 use super::add_man::add_man;
 use super::add_smoke::add_smoke;
@@ -10,6 +8,7 @@ use super::ACCIDENT;
 use super::COLS;
 use super::FLY;
 use super::LINES;
+use core::str;
 
 #[derive(Debug)]
 pub struct WindowOffsets<const COUNT: usize> {
@@ -25,6 +24,10 @@ pub struct TrainOffsets<const ENGINE_WINDOWS: usize, const CAR_WINDOWS: usize> {
     pub car_text_width: usize,
 }
 
+pub enum Error {
+    Offscreen,
+}
+
 pub fn add_train<
     const ANIMATIONS: usize,
     const HEIGHT: usize,
@@ -37,6 +40,7 @@ pub fn add_train<
     car: &[&str; HEIGHT],
     offsets: TrainOffsets<ENGINE_WINDOWS, CAR_WINDOWS>,
     namelist: &[&str],
+    display: &Display,
 ) -> Result<(), Error> {
     let car_length: i32 = (car[0].len() - 1).try_into().unwrap();
     let frames: i32 = (ANIMATIONS + 1).try_into().unwrap();
@@ -44,7 +48,7 @@ pub fn add_train<
     let engine_length: i32 = engine[0][0].len().try_into().unwrap();
     let front_length: i32 = engine_length + coal[0].len() as i32;
     if x < -(front_length + (if count > 0 { count * car_length } else { 0 })) {
-        return Err(Error::new(ErrorKind::Other, "Train is off screen"));
+        return Err(Error::Offscreen);
     }
 
     let engine_height: i32 = engine.len().try_into().unwrap();
@@ -54,7 +58,7 @@ pub fn add_train<
         y = (((x / frames) + unsafe { LINES }) - unsafe { COLS } / frames) - engine_height;
         // Try to estimate when the train is off screen enough.
         if y < -(engine_height * unsafe { COLS } / unsafe { LINES }) {
-            return Err(Error::new(ErrorKind::Other, "Train is off screen"));
+            return Err(Error::Offscreen);
         }
 
         dy = 1;
@@ -63,12 +67,18 @@ pub fn add_train<
     for ui in 0..HEIGHT {
         let i: i32 = ui.try_into().unwrap();
         if (front_length + x) > 0 {
-            _ = mvaddstr(
+            mvaddstr(
                 y + i,
                 x,
                 engine[((x + front_length) % engine.len() as i32) as usize][ui],
+                display.add_str,
             );
-            _ = mvaddstr((y + i) + dy, x + engine_length - 1, coal[ui]);
+            mvaddstr(
+                (y + i) + dy,
+                x + engine_length - 1,
+                coal[ui],
+                display.add_str,
+            );
         }
 
         for j in 0..count {
@@ -86,12 +96,13 @@ pub fn add_train<
                 car[ui],
                 namelist[uj],
                 offsets.car_text_width,
-            )?;
+            );
             mvaddstr(
                 ((y + i) + (unsafe { FLY } * (j + 1))) + dy,
                 (x + engine_length - 1) + (car_length * (j + 1)),
                 str::from_utf8(&car_name).unwrap(),
-            )?;
+                display.add_str,
+            );
         }
     }
 
@@ -101,7 +112,7 @@ pub fn add_train<
             .window_positions
             .iter()
             .for_each(|offset| {
-                add_man(y + offsets.engine_windows.height, x + offset);
+                add_man(y + offsets.engine_windows.height, x + offset, display);
             });
 
         for uj in 0..count {
@@ -121,12 +132,13 @@ pub fn add_train<
                     add_man(
                         (y + offsets.car_windows.height) + (unsafe { FLY } * (j + 2)),
                         ((x + front_length) + offset) + (car_length * j),
+                        display,
                     );
                 });
         }
     }
 
-    add_smoke(y - 1, x + offsets.funnel);
+    add_smoke(y - 1, x + offsets.funnel, display);
 
     Ok(())
 }

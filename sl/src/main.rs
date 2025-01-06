@@ -47,6 +47,15 @@ fn main() -> Result<(), Error> {
     let mut x = unsafe { COLS - 1 };
     stdout.queue(Clear(ClearType::All))?;
     let mut names: Vec<String> = vec![];
+
+    let display = libsl::Display {
+        add_str: |y, x, s| {
+            let mut stdout = std::io::stdout();
+            stdout.queue(cursor::MoveTo(x as u16, y as u16)).unwrap();
+            stdout.write_all(s.as_bytes()).unwrap();
+        },
+    };
+
     loop {
         match names_receiver.try_recv() {
             Ok(name) => {
@@ -55,7 +64,13 @@ fn main() -> Result<(), Error> {
             Err(_) => {}
         }
 
-        if add_train(x, &names.iter().map(String::as_ref).collect::<Vec<&str>>()).is_err() {
+        if add_train(
+            x,
+            &names.iter().map(String::as_ref).collect::<Vec<&str>>(),
+            &display,
+        )
+        .is_err()
+        {
             break;
         }
 

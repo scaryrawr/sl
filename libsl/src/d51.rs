@@ -1,6 +1,9 @@
-use super::add_train::{add_train, TrainOffsets, WindowOffsets};
+use crate::{
+    add_train::{add_train, Error, TrainOffsets, WindowOffsets},
+    Display,
+};
 
-pub fn add_d51(x: i32, names: &[&str]) -> Result<(), std::io::Error> {
+pub fn add_d51(x: i32, names: &[&str], display: &Display) -> Result<(), Error> {
     const ENGINE: [[&str; 11]; 6] = [
         [
             "      ====        ________                ___________ ",
@@ -123,5 +126,5 @@ pub fn add_d51(x: i32, names: &[&str]) -> Result<(), std::io::Error> {
         car_text_width: 22,
     };
 
-    add_train(x, &ENGINE, &COAL, &CAR, OFFSETS, names)
+    add_train(x, &ENGINE, &COAL, &CAR, OFFSETS, names, display)
 }

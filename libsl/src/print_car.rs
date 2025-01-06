@@ -1,94 +1,56 @@
+use core::{cmp::min, str};
+
 use super::unicode_width::UnicodeWidthStr;
-use std::{
-    collections::HashMap,
-    io::Error,
-    sync::{LazyLock, Mutex},
-};
 use unicode_segmentation::UnicodeSegmentation;
 
-static CACHE: LazyLock<Mutex<HashMap<String, String>>> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
-
-fn cached_car(key: &str) -> Option<String> {
-    match CACHE.lock() {
-        Ok(cache) => cache.get(key).cloned(),
-        Err(_) => None,
-    }
-}
-
-pub fn print_car(
-    buffer: &mut [u8],
-    format: &str,
-    text: &str,
-    text_display_width: usize,
-) -> Result<(), Error> {
+pub fn print_car(buffer: &mut [u8], format: &str, text: &str, text_display_width: usize) {
     // No format string, just copy text
     if !format.contains("{}") {
-        let copy_len = std::cmp::min(format.len(), buffer.len() - 1);
+        let copy_len = min(format.len(), buffer.len() - 1);
         buffer[0..copy_len].copy_from_slice(format.as_bytes());
         buffer[copy_len] = 0;
-        return Ok(());
+        return;
     }
 
-    let cache_key = format.replace("{}", text);
-    let formatted_text = match cached_car(&cache_key) {
-        Some(s) => s,
-        None => {
-            let formatted_text = car_text(buffer.len(), text_display_width, format, text);
-            match CACHE.lock() {
-                Ok(mut cache) => {
-                    cache.insert(cache_key, formatted_text.clone());
-                }
-                Err(_) => {}
-            }
+    // Copy the format string up to the first {}
+    let mut format_iter = format.split("{}");
+    let first = format_iter.next().unwrap();
+    let mut end_pos = min(first.len(), buffer.len() - 1);
+    buffer[0..end_pos].copy_from_slice(first.as_bytes());
 
-            formatted_text
-        }
-    };
+    // Copy the car text
+    let car_text = car_text(buffer.len() - (format.len() - 2), text_display_width, text);
+    let start_pos = end_pos;
+    end_pos = start_pos + car_text.len();
+    buffer[start_pos..end_pos].copy_from_slice(car_text.as_bytes());
 
-    let copy_len = std::cmp::min(formatted_text.len(), buffer.len() - 1);
-    buffer[0..copy_len].copy_from_slice(formatted_text.as_bytes());
-    buffer[copy_len] = 0;
+    // Add spaces for missing width if car_text is less than text_display_width
+    if car_text.width() < text_display_width {
+        let start_pos = end_pos;
+        end_pos = start_pos + text_display_width - car_text.width();
+        buffer[start_pos..end_pos].copy_from_slice(" ".repeat(end_pos - start_pos).as_bytes());
+    }
 
-    Ok(())
+    // Copy the rest of the format string
+    let last = format_iter.next().unwrap();
+    let start_pos = end_pos;
+    end_pos = start_pos + last.len();
+    buffer[start_pos..end_pos].copy_from_slice(last.as_bytes());
+    buffer[end_pos] = 0;
 }
 
-fn car_text(buffer_len: usize, text_display_width: usize, format: &str, text: &str) -> String {
-    let mut text_clusters: Vec<&str> = text.graphemes(true).collect();
-    let mut working_text = text.to_string();
-    let format_width = format.len() - 2;
+fn car_text<'a>(buffer_len: usize, text_display_width: usize, text: &'a str) -> &'a str {
+    let mut working_text = text;
 
     // We need to remove clusters until we will fit in the buffer
-    if working_text.width() > text_display_width
-        || working_text.len() + (text_display_width - working_text.width()) + format_width
-            > buffer_len as usize
-    {
-        if let Some(start) = (0..text_clusters.len()).rev().find_map(|i| {
-            let front_width = text_clusters[0..i].iter().map(|c| c.width()).sum::<usize>();
-            if front_width < text_display_width {
-                let front_len = text_clusters[0..i].iter().map(|c| c.len()).sum::<usize>();
-                let extra_spaces = text_display_width - front_width;
-                if front_len + extra_spaces + format_width < buffer_len as usize {
-                    return Some(i);
-                }
+    if working_text.width() > text_display_width || working_text.len() > buffer_len {
+        for c in text.graphemes(true).rev() {
+            working_text = &working_text[0..working_text.len() - c.len()];
+            if !(working_text.len() > buffer_len || working_text.width() > text_display_width) {
+                break;
             }
-
-            None
-        }) {
-            text_clusters.splice(start.., std::iter::empty());
         }
-
-        working_text = text_clusters.join("");
     }
 
-    let spaces = if working_text.width() < text_display_width {
-        text_display_width - working_text.width()
-    } else {
-        0
-    };
-
-    working_text += " ".repeat(spaces).as_str();
-
-    let format = format.replace("{}", working_text.as_str());
-    format
+    working_text
 }

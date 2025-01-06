@@ -1,3 +1,5 @@
+use crate::Display;
+
 use super::mvaddstr::mvaddstr;
 
 #[derive(Copy, Clone, Debug)]
@@ -8,23 +10,16 @@ struct Smokes {
     kind: usize,
 }
 
-use std::sync::LazyLock;
-use std::sync::Mutex;
+static mut SMOKES: [Smokes; 1000] = [Smokes {
+    y: 0,
+    x: 0,
+    ptrn: 0,
+    kind: 0,
+}; 1000];
 
-static SMOKES: LazyLock<Mutex<[Smokes; 1000]>> = LazyLock::new(|| {
-    Mutex::new(
-        [Smokes {
-            y: 0,
-            x: 0,
-            ptrn: 0,
-            kind: 0,
-        }; 1000],
-    )
-});
+static mut SUM: usize = 0;
 
-static SUM: LazyLock<Mutex<usize>> = LazyLock::new(|| Mutex::new(0));
-
-pub fn add_smoke(y: i32, x: i32) {
+pub fn add_smoke(y: i32, x: i32, display: &Display) {
     const SMOKE: [[&str; 16]; 2] = [
         [
             "(   )", "(    )", "(    )", "(   )", "(  )", "(  )", "( )", "( )", "()", "()", "O",
@@ -44,28 +39,33 @@ pub fn add_smoke(y: i32, x: i32) {
     const DX: [i32; 16] = [-2, -1, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3];
 
     if x % 4 == 0 {
-        let mut smokes = SMOKES.lock().unwrap();
-        let mut sum = SUM.lock().unwrap();
+        unsafe {
+            if SUM < SMOKES.len() {
+                for i in 0..SUM {
+                    _ = mvaddstr(
+                        SMOKES[i].y,
+                        SMOKES[i].x,
+                        ERASER[SMOKES[i].ptrn],
+                        display.add_str,
+                    );
+                    SMOKES[i].y -= DY[SMOKES[i].ptrn];
+                    SMOKES[i].x += DX[SMOKES[i].ptrn];
+                    SMOKES[i].ptrn += if SMOKES[i].ptrn < 15 { 1 } else { 0 };
+                    _ = mvaddstr(
+                        SMOKES[i].y,
+                        SMOKES[i].x,
+                        SMOKE[SMOKES[i].kind][SMOKES[i].ptrn],
+                        display.add_str,
+                    );
+                }
 
-        if *sum < smokes.len() {
-            for i in 0..*sum {
-                _ = mvaddstr(smokes[i].y, smokes[i].x, ERASER[smokes[i].ptrn]);
-                smokes[i].y -= DY[smokes[i].ptrn];
-                smokes[i].x += DX[smokes[i].ptrn];
-                smokes[i].ptrn += if smokes[i].ptrn < 15 { 1 } else { 0 };
-                _ = mvaddstr(
-                    smokes[i].y,
-                    smokes[i].x,
-                    SMOKE[smokes[i].kind][smokes[i].ptrn],
-                );
+                _ = mvaddstr(y, x, SMOKE[SUM % 2][0], display.add_str);
+                SMOKES[SUM].y = y;
+                SMOKES[SUM].x = x;
+                SMOKES[SUM].ptrn = 0;
+                SMOKES[SUM].kind = SUM % 2;
+                SUM += 1;
             }
-
-            _ = mvaddstr(y, x, SMOKE[*sum % 2][0]);
-            smokes[*sum].y = y;
-            smokes[*sum].x = x;
-            smokes[*sum].ptrn = 0;
-            smokes[*sum].kind = *sum % 2;
-            *sum += 1;
         }
     }
 }
