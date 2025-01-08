@@ -2,7 +2,11 @@ use crate::{add_train::Error, Display};
 
 use super::add_train::{add_train, TrainOffsets, WindowOffsets};
 
-pub fn add_c51<TStr: AsRef<str>>(x: i32, names: &[TStr], display: &Display) -> Result<(), Error> {
+pub fn add_c51<TStr: AsRef<str>, FAddStr: Fn(i32, i32, &str)>(
+    x: i32,
+    names: &[TStr],
+    display: &Display<FAddStr>,
+) -> Result<(), Error> {
     const ENGINE: [[&str; 12]; 6] = [
         [
             "        ___                                            ",

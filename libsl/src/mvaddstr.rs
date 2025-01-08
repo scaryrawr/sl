@@ -6,7 +6,12 @@ use crate::Display;
 
 use super::unicode_width::UnicodeWidthStr;
 
-pub fn mvaddstr(y: i32, x: i32, line: &str, display: &Display) {
+pub fn mvaddstr<FAddStr: Fn(i32, i32, &str)>(
+    y: i32,
+    x: i32,
+    line: &str,
+    display: &Display<FAddStr>,
+) {
     // Vertically off screen
     if y < 0 || y > display.lines || x > display.cols {
         return;

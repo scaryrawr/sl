@@ -13,8 +13,8 @@ mod unicode_width;
 pub static mut ACCIDENT: i32 = 0;
 pub static mut FLY: i32 = 0;
 
-pub struct Display {
-    pub add_str: fn(i32, i32, &str),
+pub struct Display<FAddStr: Fn(i32, i32, &str)> {
+    pub add_str: FAddStr,
     pub cols: i32,
     pub lines: i32,
 }

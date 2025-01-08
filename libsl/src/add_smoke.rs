@@ -19,7 +19,7 @@ static mut SMOKES: [Smokes; 1000] = [Smokes {
 
 static mut SUM: usize = 0;
 
-pub fn add_smoke(y: i32, x: i32, display: &Display) {
+pub fn add_smoke<FAddStr: Fn(i32, i32, &str)>(y: i32, x: i32, display: &Display<FAddStr>) {
     const SMOKE: [[&str; 16]; 2] = [
         [
             "(   )", "(    )", "(    )", "(   )", "(  )", "(  )", "( )", "( )", "()", "()", "O",

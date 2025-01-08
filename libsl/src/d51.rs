@@ -3,7 +3,11 @@ use crate::{
     Display,
 };
 
-pub fn add_d51<TStr: AsRef<str>>(x: i32, names: &[TStr], display: &Display) -> Result<(), Error> {
+pub fn add_d51<TStr: AsRef<str>, FAddStr: Fn(i32, i32, &str)>(
+    x: i32,
+    names: &[TStr],
+    display: &Display<FAddStr>,
+) -> Result<(), Error> {
     const ENGINE: [[&str; 11]; 6] = [
         [
             "      ====        ________                ___________ ",

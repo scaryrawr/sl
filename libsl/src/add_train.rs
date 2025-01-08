@@ -32,6 +32,7 @@ pub fn add_train<
     const ENGINE_WINDOWS: usize,
     const CAR_WINDOWS: usize,
     TStr: AsRef<str>,
+    FAddStr: Fn(i32, i32, &str),
 >(
     x: i32,
     engine: &[[&str; HEIGHT]; ANIMATIONS],
@@ -39,7 +40,7 @@ pub fn add_train<
     car: &[&str; HEIGHT],
     offsets: TrainOffsets<ENGINE_WINDOWS, CAR_WINDOWS>,
     names: &[TStr],
-    display: &Display,
+    display: &Display<FAddStr>,
 ) -> Result<(), Error> {
     let car_length: i32 = (car[0].len() - 1).try_into().unwrap();
     let frames: i32 = (ANIMATIONS + 1).try_into().unwrap();
