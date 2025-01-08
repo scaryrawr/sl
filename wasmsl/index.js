@@ -12,20 +12,28 @@ const runWasm = async () => {
 
   let display = sl.display_new(120, 40, (y, x, str) => {
     let row = terminal.children[y];
-    str = str.replace(" ", "\xa0");
     row.textContent =
       row.textContent.substring(0, x) +
       str +
-      row.textContent.substring(x + str.length, row.textContent.length);
-    row.textContent += "\xa0".repeat(120 - row.textContent.length);
+      row.textContent.substring(x + str.length);
   });
 
-  let x = 120;
-  let id = setInterval(() => {
-    if (!sl.add_c51(--x, ["hello", "world"], ["hello", "world"], display)) {
-      clearInterval(id);
+  const clear = () => {
+    for (const row of terminal.children) {
+      row.textContent = "\xa0".repeat(120);
     }
-  }, 70);
+  };
+
+  let x = 120;
+  let train_index = 0;
+  const trains = [sl.add_c51, sl.add_d51, sl.add_logo];
+  setInterval(() => {
+    if (!trains[train_index](--x, ["hello", "world"], display)) {
+      clear();
+      x = 120;
+      train_index = (train_index + 1) % trains.length;
+    }
+  }, 60);
 };
 
 const terminal = document.getElementById("terminal");
