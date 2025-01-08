@@ -66,13 +66,7 @@ fn main() -> Result<(), Error> {
             Err(_) => {}
         }
 
-        if add_train(
-            x,
-            &names.iter().map(String::as_ref).collect::<Vec<&str>>(),
-            &display,
-        )
-        .is_err()
-        {
+        if add_train(x, &names, &display).is_err() {
             break;
         }
 
@@ -86,11 +80,11 @@ fn main() -> Result<(), Error> {
                     modifiers: KeyModifiers::CONTROL,
                     ..
                 }) => break,
-                Event::Resize(cols, lines) => unsafe {
+                Event::Resize(cols, lines) => {
                     stdout.queue(Clear(ClearType::All))?;
                     display.cols = cols as i32;
                     display.lines = lines as i32;
-                },
+                }
                 _ => {}
             }
         }

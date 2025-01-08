@@ -31,18 +31,19 @@ pub fn add_train<
     const HEIGHT: usize,
     const ENGINE_WINDOWS: usize,
     const CAR_WINDOWS: usize,
+    TStr: AsRef<str>,
 >(
     x: i32,
     engine: &[[&str; HEIGHT]; ANIMATIONS],
     coal: &[&str; HEIGHT],
     car: &[&str; HEIGHT],
     offsets: TrainOffsets<ENGINE_WINDOWS, CAR_WINDOWS>,
-    namelist: &[&str],
+    names: &[TStr],
     display: &Display,
 ) -> Result<(), Error> {
     let car_length: i32 = (car[0].len() - 1).try_into().unwrap();
     let frames: i32 = (ANIMATIONS + 1).try_into().unwrap();
-    let count: i32 = namelist.len().try_into().unwrap();
+    let count: i32 = names.len().try_into().unwrap();
     let engine_length: i32 = engine[0][0].len().try_into().unwrap();
     let front_length: i32 = engine_length + coal[0].len() as i32;
     if x < -(front_length + (if count > 0 { count * car_length } else { 0 })) {
@@ -87,7 +88,7 @@ pub fn add_train<
             print_car(
                 car_name.as_mut(),
                 car[ui],
-                namelist[uj],
+                names[uj].as_ref(),
                 offsets.car_text_width,
             );
             mvaddstr(

@@ -3,7 +3,7 @@ use crate::{
     Display,
 };
 
-pub fn add_d51(x: i32, names: &[&str], display: &Display) -> Result<(), Error> {
+pub fn add_d51<TStr: AsRef<str>>(x: i32, names: &[TStr], display: &Display) -> Result<(), Error> {
     const ENGINE: [[&str; 11]; 6] = [
         [
             "      ====        ________                ___________ ",
