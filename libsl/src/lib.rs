@@ -10,13 +10,13 @@ mod mvaddstr;
 mod print_car;
 mod unicode_width;
 
-pub static mut COLS: i32 = 0;
-pub static mut LINES: i32 = 0;
 pub static mut ACCIDENT: i32 = 0;
 pub static mut FLY: i32 = 0;
 
 pub struct Display {
     pub add_str: fn(i32, i32, &str),
+    pub cols: i32,
+    pub lines: i32,
 }
 
 pub use c51::add_c51;

@@ -3,6 +3,13 @@ name = "libsl"
 version = "0.1.0"
 edition = "2021"
 
+[profile.release]
+strip = true
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+
 [dependencies]
 crossterm = "0.28.1"
 unicode-display-width = "0.3.0"

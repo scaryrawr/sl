@@ -5,9 +5,7 @@ use super::add_smoke::add_smoke;
 use super::mvaddstr::mvaddstr;
 use super::print_car::print_car;
 use super::ACCIDENT;
-use super::COLS;
 use super::FLY;
-use super::LINES;
 use core::str;
 
 #[derive(Debug)]
@@ -52,12 +50,12 @@ pub fn add_train<
     }
 
     let engine_height: i32 = engine.len().try_into().unwrap();
-    let mut y = unsafe { LINES } / 2 - engine_height / 2;
+    let mut y = display.lines / 2 - engine_height / 2;
     let mut dy = 0;
     if (unsafe { FLY } == 1) {
-        y = (((x / frames) + unsafe { LINES }) - unsafe { COLS } / frames) - engine_height;
+        y = (((x / frames) + display.lines) - display.cols / frames) - engine_height;
         // Try to estimate when the train is off screen enough.
-        if y < -(engine_height * unsafe { COLS } / unsafe { LINES }) {
+        if y < -(engine_height * display.cols / display.lines) {
             return Err(Error::Offscreen);
         }
 
@@ -71,14 +69,9 @@ pub fn add_train<
                 y + i,
                 x,
                 engine[((x + front_length) % engine.len() as i32) as usize][ui],
-                display.add_str,
+                &display,
             );
-            mvaddstr(
-                (y + i) + dy,
-                x + engine_length - 1,
-                coal[ui],
-                display.add_str,
-            );
+            mvaddstr((y + i) + dy, x + engine_length - 1, coal[ui], &display);
         }
 
         for j in 0..count {
@@ -86,7 +79,7 @@ pub fn add_train<
             let pos = (front_length + x) + (car_length * (j + 1));
             if pos < 0 {
                 continue;
-            } else if pos > (unsafe { COLS } + front_length) {
+            } else if pos > (display.cols + front_length) {
                 break;
             }
 
@@ -101,7 +94,7 @@ pub fn add_train<
                 ((y + i) + (unsafe { FLY } * (j + 1))) + dy,
                 (x + engine_length - 1) + (car_length * (j + 1)),
                 str::from_utf8(&car_name).unwrap(),
-                display.add_str,
+                &display,
             );
         }
     }
@@ -120,7 +113,7 @@ pub fn add_train<
             let pos = (front_length + x) + (car_length * (j + 1));
             if pos < 0 {
                 continue;
-            } else if pos > (unsafe { COLS } + front_length) {
+            } else if pos > (display.cols + front_length) {
                 break;
             }
 

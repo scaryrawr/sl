@@ -42,12 +42,7 @@ pub fn add_smoke(y: i32, x: i32, display: &Display) {
         unsafe {
             if SUM < SMOKES.len() {
                 for i in 0..SUM {
-                    _ = mvaddstr(
-                        SMOKES[i].y,
-                        SMOKES[i].x,
-                        ERASER[SMOKES[i].ptrn],
-                        display.add_str,
-                    );
+                    _ = mvaddstr(SMOKES[i].y, SMOKES[i].x, ERASER[SMOKES[i].ptrn], &display);
                     SMOKES[i].y -= DY[SMOKES[i].ptrn];
                     SMOKES[i].x += DX[SMOKES[i].ptrn];
                     SMOKES[i].ptrn += if SMOKES[i].ptrn < 15 { 1 } else { 0 };
@@ -55,11 +50,11 @@ pub fn add_smoke(y: i32, x: i32, display: &Display) {
                         SMOKES[i].y,
                         SMOKES[i].x,
                         SMOKE[SMOKES[i].kind][SMOKES[i].ptrn],
-                        display.add_str,
+                        &display,
                     );
                 }
 
-                _ = mvaddstr(y, x, SMOKE[SUM % 2][0], display.add_str);
+                _ = mvaddstr(y, x, SMOKE[SUM % 2][0], &display);
                 SMOKES[SUM].y = y;
                 SMOKES[SUM].x = x;
                 SMOKES[SUM].ptrn = 0;
