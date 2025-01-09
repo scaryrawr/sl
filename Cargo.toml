@@ -1,2 +1,2 @@
 [workspace]
-members = ["libsl", "sl", "wasmsl"]
+members = ["libraries/libsl", "apps/sl", "libraries/websl"]

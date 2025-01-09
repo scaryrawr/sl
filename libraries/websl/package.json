@@ -1,0 +1,21 @@
+{
+  "name": "websl",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "web bindings for libsl",
+  "main": "pkg/wasmsl.js",
+  "types": "pkg/wasmsl.d.ts",
+  "author": "Mike Wallio",
+  "license": "MIT",
+  "files": [
+    "pkg/wasmsl_bg.wasm",
+    "pkg/wasmsl.js",
+    "pkg/wasmsl.d.ts"
+  ],
+  "sideEffects": [
+    "./pkg/snippets/*"
+  ],
+  "scripts": {
+    "build": "wasm-pack build --target web"
+  }
+}

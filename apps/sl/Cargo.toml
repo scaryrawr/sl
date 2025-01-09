@@ -15,7 +15,7 @@ panic = "abort"
 clap = { version = "4.5.23", features = ["derive"] }
 crossterm = { version = "0.28.1", features = ["libc", "use-dev-tty"] }
 filedescriptor = "0.8.2"
-libsl = { version = "0.1.0", path = "../libsl" }
+libsl = { version = "0.1.0", path = "../../libraries/libsl" }
 unicode-display-width = "0.3.0"
 unicode-segmentation = "1.12.0"
 

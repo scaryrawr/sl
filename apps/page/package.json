@@ -1,0 +1,10 @@
+{
+  "name": "page",
+  "version": "1.0.0",
+  "description": "Demo page of sl",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "websl": "workspace:^"
+  }
+}
