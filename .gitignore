@@ -143,3 +143,4 @@ dist
 
 lib/
 dist/
+.rollup.cache/

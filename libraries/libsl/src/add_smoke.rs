@@ -1,3 +1,5 @@
+use core::cmp::min;
+
 use crate::Display;
 
 use super::mvaddstr::mvaddstr;
@@ -16,8 +18,6 @@ static mut SMOKES: [Smokes; 1000] = [Smokes {
     ptrn: 0,
     kind: 0,
 }; 1000];
-
-static mut SUM: usize = 0;
 
 pub fn add_smoke<FAddStr: Fn(i32, i32, &str)>(y: i32, x: i32, display: &Display<FAddStr>) {
     const SMOKE: [[&str; 16]; 2] = [
@@ -40,27 +40,25 @@ pub fn add_smoke<FAddStr: Fn(i32, i32, &str)>(y: i32, x: i32, display: &Display<
 
     if x % 4 == 0 {
         unsafe {
-            if SUM < SMOKES.len() {
-                for i in 0..SUM {
-                    _ = mvaddstr(SMOKES[i].y, SMOKES[i].x, ERASER[SMOKES[i].ptrn], &display);
-                    SMOKES[i].y -= DY[SMOKES[i].ptrn];
-                    SMOKES[i].x += DX[SMOKES[i].ptrn];
-                    SMOKES[i].ptrn += if SMOKES[i].ptrn < 15 { 1 } else { 0 };
-                    _ = mvaddstr(
-                        SMOKES[i].y,
-                        SMOKES[i].x,
-                        SMOKE[SMOKES[i].kind][SMOKES[i].ptrn],
-                        &display,
-                    );
-                }
-
-                _ = mvaddstr(y, x, SMOKE[SUM % 2][0], &display);
-                SMOKES[SUM].y = y;
-                SMOKES[SUM].x = x;
-                SMOKES[SUM].ptrn = 0;
-                SMOKES[SUM].kind = SUM % 2;
-                SUM += 1;
+            let sum = (((display.cols - (min(x, display.cols))) / 4) % display.cols) as usize;
+            for i in 0..sum {
+                _ = mvaddstr(SMOKES[i].y, SMOKES[i].x, ERASER[SMOKES[i].ptrn], &display);
+                SMOKES[i].y -= DY[SMOKES[i].ptrn];
+                SMOKES[i].x += DX[SMOKES[i].ptrn];
+                SMOKES[i].ptrn += if SMOKES[i].ptrn < 15 { 1 } else { 0 };
+                _ = mvaddstr(
+                    SMOKES[i].y,
+                    SMOKES[i].x,
+                    SMOKE[SMOKES[i].kind][SMOKES[i].ptrn],
+                    &display,
+                );
             }
+
+            _ = mvaddstr(y, x, SMOKE[sum % 2][0], &display);
+            SMOKES[sum].y = y;
+            SMOKES[sum].x = x;
+            SMOKES[sum].ptrn = 0;
+            SMOKES[sum].kind = sum % 2;
         }
     }
 }

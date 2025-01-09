@@ -19,24 +19,18 @@
   "author": "Mike Wallio",
   "main": "index.js",
   "workspaces": [
-    "apps/*",
-    "libraries/*"
+    "libraries/*",
+    "apps/*"
   ],
   "scripts": {
-    "build": "lage build",
-    "bundle": "lage bundle",
-    "lint": "lage lint",
+    "build": "yarn workspaces run build",
     "pretty": "prettier \"{.,**}.{tsx,ts,js,less,json,md,yaml}\" --write",
-    "test": "lage test",
-    "watch": "lage watch"
+    "test": "yarn workspaces run test"
   },
   "devDependencies": {
-    "@swc/core": "^1.10.6",
-    "lage": "^2.12.6",
     "prettier": "^3.4.2",
     "prettier-plugin-organize-imports": "^4.1.0",
-    "prettier-plugin-packagejson": "^2.5.6",
-    "typescript": "^5.7.3"
+    "prettier-plugin-packagejson": "^2.5.6"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
