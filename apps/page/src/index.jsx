@@ -1,3 +1,7 @@
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import Terminal from './components/terminal.jsx';
+
 const runWasm = async () => {
   const sl = await import('websl');
   // Instantiate our wasm module
@@ -9,14 +13,6 @@ const runWasm = async () => {
     return;
   }
 
-  let display = new sl.Display(120, 40, (y, x, str) => {
-    let row = terminal?.children[y];
-    if (!row || !row.textContent) {
-      return;
-    }
-    row.textContent = row.textContent.substring(0, x) + str + row.textContent.substring(x + str.length);
-  });
-
   let options = new sl.Options(true, false);
 
   const clear = () => {
@@ -24,7 +20,7 @@ const runWasm = async () => {
       return;
     }
     for (const row of Array.from(terminal.children)) {
-      row.textContent = '\xa0'.repeat(120);
+      row.textContent = '\xa0'.repeat(terminal.children[0].textContent.length);
     }
   };
 
@@ -32,6 +28,14 @@ const runWasm = async () => {
   let train_index = 0;
   const trains = [sl.add_c51, sl.add_d51, sl.add_logo];
   setInterval(() => {
+    let display = new sl.Display(terminal.children[0].textContent.length, terminal.children.length, (y, x, str) => {
+      let row = terminal?.children[y];
+      if (!row || !row.textContent) {
+        return;
+      }
+      row.textContent = row.textContent.substring(0, x) + str + row.textContent.substring(x + str.length);
+    });
+    
     if (!trains[train_index](--x, ['hello', 'world'], display, options)) {
       clear();
       x = 120;
@@ -40,13 +44,5 @@ const runWasm = async () => {
   }, 60);
 };
 
-const terminal = document.getElementById('terminal');
-if (terminal) {
-  for (let i = 0; i < 40; i++) {
-    let row = document.createElement('div');
-    row.textContent = '\xa0'.repeat(120);
-    terminal.appendChild(row);
-  }
-}
-
 runWasm();
+createRoot(document.getElementById('root')).render(<Terminal title="SL" />);
