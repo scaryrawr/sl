@@ -21,6 +21,8 @@ jobs:
     uses: ./.github/workflows/posix-build.yml
   build-windows:
     uses: ./.github/workflows/win-build.yml
+  build-pages:
+    uses: ./.github/workflows/site.yml
 
   release:
     name: Release
