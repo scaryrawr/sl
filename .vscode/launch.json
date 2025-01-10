@@ -6,19 +6,13 @@
       "request": "launch",
       "name": "Debug executable 'sl'",
       "cargo": {
-        "args": [
-          "build",
-          "--bin=sl",
-          "--package=sl"
-        ],
+        "args": ["build", "--bin=sl", "--package=sl"],
         "filter": {
           "name": "sl",
           "kind": "bin"
         }
       },
-      "args": [
-        "-a"
-      ],
+      "args": ["-a"],
       "cwd": "${workspaceFolder}"
     },
     {
@@ -26,12 +20,7 @@
       "request": "launch",
       "name": "Debug unit tests in executable 'sl'",
       "cargo": {
-        "args": [
-          "test",
-          "--no-run",
-          "--bin=sl",
-          "--package=sl"
-        ],
+        "args": ["test", "--no-run", "--bin=sl", "--package=sl"],
         "filter": {
           "name": "sl",
           "kind": "bin"
