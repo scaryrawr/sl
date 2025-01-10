@@ -1,4 +1,4 @@
-name: SL Build
+name: SL Pages
 
 on:
   push:
