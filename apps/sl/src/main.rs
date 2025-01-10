@@ -12,6 +12,27 @@ use std::sync::mpsc::Receiver;
 
 mod cli;
 
+struct TerminalDisplay {
+    cols: i32,
+    lines: i32,
+}
+
+impl libsl::Display for TerminalDisplay {
+    fn add_str(&self, y: i32, x: i32, s: &str) {
+        let mut stdout = std::io::stdout();
+        stdout.queue(cursor::MoveTo(x as u16, y as u16)).unwrap();
+        stdout.write_all(s.as_bytes()).unwrap();
+    }
+
+    fn cols(&self) -> i32 {
+        self.cols
+    }
+
+    fn lines(&self) -> i32 {
+        self.lines
+    }
+}
+
 fn main() -> Result<(), Error> {
     let args = CliOptions::parse();
     let stdin = stdin();
@@ -46,12 +67,7 @@ fn main() -> Result<(), Error> {
     let mut names: Vec<String> = vec![];
 
     let size = terminal::size()?;
-    let mut display = libsl::Display {
-        add_str: |y, x, s| {
-            let mut stdout = std::io::stdout();
-            stdout.queue(cursor::MoveTo(x as u16, y as u16)).unwrap();
-            stdout.write_all(s.as_bytes()).unwrap();
-        },
+    let mut display = TerminalDisplay {
         cols: size.0 as i32,
         lines: size.1 as i32,
     };

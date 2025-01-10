@@ -13,10 +13,10 @@ mod unicode_width;
 pub static mut ACCIDENT: i32 = 0;
 pub static mut FLY: i32 = 0;
 
-pub struct Display<FAddStr: Fn(i32, i32, &str)> {
-    pub add_str: FAddStr,
-    pub cols: i32,
-    pub lines: i32,
+pub trait Display {
+    fn add_str(&self, line: i32, column: i32, value: &str);
+    fn cols(&self) -> i32;
+    fn lines(&self) -> i32;
 }
 
 pub use c51::add_c51;

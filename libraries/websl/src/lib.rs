@@ -28,6 +28,29 @@ impl Display {
 pub fn set_panic_hook() {
     utils::set_panic_hook();
 }
+impl libsl::Display for Display {
+    fn add_str(&self, y: i32, x: i32, s: &str) {
+        let mut buffer = s.to_string();
+        buffer = buffer.replace(" ", "\u{00A0}");
+
+        self.add_str
+            .call3(
+                &JsValue::NULL,
+                &JsValue::from(y),
+                &JsValue::from(x),
+                &JsString::from_str(&buffer).unwrap(),
+            )
+            .unwrap();
+    }
+
+    fn cols(&self) -> i32 {
+        self.cols
+    }
+
+    fn lines(&self) -> i32 {
+        self.lines
+    }
+}
 
 #[wasm_bindgen]
 pub fn add_d51(x: i32, names: &Array, display: &Display) -> bool {
@@ -37,24 +60,7 @@ pub fn add_d51(x: i32, names: &Array, display: &Display) -> bool {
             .iter()
             .map(|x| x.as_string().unwrap())
             .collect::<Vec<String>>(),
-        &libsl::Display {
-            add_str: |x: i32, y: i32, text: &str| {
-                let mut buffer = text.to_string();
-                buffer = buffer.replace(" ", "\u{00A0}");
-
-                display
-                    .add_str
-                    .call3(
-                        &JsValue::NULL,
-                        &JsValue::from(x),
-                        &JsValue::from(y),
-                        &JsString::from_str(&buffer).unwrap(),
-                    )
-                    .unwrap();
-            },
-            cols: display.cols,
-            lines: display.lines,
-        },
+        display,
     ) {
         Ok(_) => true,
         Err(_) => false,
@@ -69,24 +75,7 @@ pub fn add_logo(x: i32, names: &Array, display: &Display) -> bool {
             .iter()
             .map(|x| x.as_string().unwrap())
             .collect::<Vec<String>>(),
-        &libsl::Display {
-            add_str: |x: i32, y: i32, text: &str| {
-                let mut buffer = text.to_string();
-                buffer = buffer.replace(" ", "\u{00A0}");
-
-                display
-                    .add_str
-                    .call3(
-                        &JsValue::NULL,
-                        &JsValue::from(x),
-                        &JsValue::from(y),
-                        &JsString::from_str(&buffer).unwrap(),
-                    )
-                    .unwrap();
-            },
-            cols: display.cols,
-            lines: display.lines,
-        },
+        display,
     ) {
         Ok(_) => true,
         Err(_) => false,
@@ -101,24 +90,7 @@ pub fn add_c51(x: i32, names: &Array, display: &Display) -> bool {
             .iter()
             .map(|x| x.as_string().unwrap())
             .collect::<Vec<String>>(),
-        &libsl::Display {
-            add_str: |x: i32, y: i32, text: &str| {
-                let mut buffer = text.to_string();
-                buffer = buffer.replace(" ", "\u{00A0}");
-
-                display
-                    .add_str
-                    .call3(
-                        &JsValue::NULL,
-                        &JsValue::from(x),
-                        &JsValue::from(y),
-                        &JsString::from_str(&buffer).unwrap(),
-                    )
-                    .unwrap();
-            },
-            cols: display.cols,
-            lines: display.lines,
-        },
+        display,
     ) {
         Ok(_) => true,
         Err(_) => false,

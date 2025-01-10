@@ -2,10 +2,10 @@ use crate::{add_train::Error, Display};
 
 use super::add_train::{add_train, TrainOffsets, WindowOffsets};
 
-pub fn add_logo<TStr: AsRef<str>, FAddStr: Fn(i32, i32, &str)>(
+pub fn add_logo<TStr: AsRef<str>, T: Display>(
     x: i32,
     names: &[TStr],
-    display: &Display<FAddStr>,
+    display: &T,
 ) -> Result<(), Error> {
     const ENGINE: [[&str; 7]; 6] = [
         [

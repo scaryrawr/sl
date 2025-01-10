@@ -3,10 +3,10 @@ use crate::{
     Display,
 };
 
-pub fn add_d51<TStr: AsRef<str>, FAddStr: Fn(i32, i32, &str)>(
+pub fn add_d51<TStr: AsRef<str>, T: Display>(
     x: i32,
     names: &[TStr],
-    display: &Display<FAddStr>,
+    display: &T,
 ) -> Result<(), Error> {
     const ENGINE: [[&str; 11]; 6] = [
         [

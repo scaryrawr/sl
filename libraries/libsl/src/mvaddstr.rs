@@ -6,14 +6,9 @@ use crate::Display;
 
 use super::unicode_width::UnicodeWidthStr;
 
-pub fn mvaddstr<FAddStr: Fn(i32, i32, &str)>(
-    y: i32,
-    x: i32,
-    line: &str,
-    display: &Display<FAddStr>,
-) {
+pub fn mvaddstr<T: Display>(y: i32, x: i32, line: &str, display: &T) {
     // Vertically off screen
-    if y < 0 || y > display.lines || x > display.cols {
+    if y < 0 || y > display.lines() || x > display.cols() {
         return;
     }
 
@@ -45,7 +40,7 @@ pub fn mvaddstr<FAddStr: Fn(i32, i32, &str)>(
     };
 
     // Remove everything that would be offscreen to the right
-    let mut past_end = end_position - display.cols;
+    let mut past_end = end_position - display.cols();
     if past_end > 0 {
         for c in line.graphemes(true).rev() {
             let c_width = c.width() as i32;
@@ -58,9 +53,9 @@ pub fn mvaddstr<FAddStr: Fn(i32, i32, &str)>(
     }
 
     for _ in 0..leading_spaces {
-        (display.add_str)(y, x, " ");
+        display.add_str(y, x, " ");
         x += 1;
     }
 
-    (display.add_str)(y, x, line);
+    display.add_str(y, x, line);
 }
