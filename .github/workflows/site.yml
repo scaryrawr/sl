@@ -11,9 +11,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install Dependencies
+        run: |
+          rustup target add wasm32-unknown-unknown
+          cargo install wasm-pack
+          yarn install
+
       - name: Build Site
         run: |
-          yarn install
           yarn workspaces run build
 
       - name: Upload static files as artifact
