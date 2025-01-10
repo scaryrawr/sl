@@ -1,0 +1,37 @@
+{
+  "name": "sl-repo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SL (Steam Locomotive) runs across your terminal when you type \"sl\" as you meant to type \"ls\". It's just a joke command.",
+  "keywords": [
+    "steam",
+    "locomotive",
+    "trains",
+    "sl",
+    "ls"
+  ],
+  "homepage": "https://github.com/scaryrawr/sl#readme",
+  "bugs": {
+    "url": "https://github.com/scaryrawr/sl/issues"
+  },
+  "repository": "git+https://github.com/scaryrawr/sl.git",
+  "license": "MIT",
+  "author": "Mike Wallio",
+  "main": "index.js",
+  "workspaces": [
+    "libraries/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "yarn workspaces run build",
+    "pretty": "prettier \"{.,**}.{tsx,ts,js,less,json,md,yaml}\" --write",
+    "test": "yarn workspaces run test"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "prettier-plugin-organize-imports": "^4.1.0",
+    "prettier-plugin-packagejson": "^2.5.6",
+    "typescript": "^5.7.3"
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+}

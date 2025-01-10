@@ -1,6 +1,13 @@
+use crate::{add_train::Error, Display, Options};
+
 use super::add_train::{add_train, TrainOffsets, WindowOffsets};
 
-pub fn add_logo(x: i32, names: &[&str]) -> Result<(), std::io::Error> {
+pub fn add_logo<T: AsRef<str>, U: Display, V: Options>(
+    x: i32,
+    names: &[T],
+    display: &U,
+    options: &V,
+) -> Result<(), Error> {
     const ENGINE: [[&str; 7]; 6] = [
         [
             "     ++      +------ ",
@@ -90,5 +97,5 @@ pub fn add_logo(x: i32, names: &[&str]) -> Result<(), std::io::Error> {
         car_text_width: 16,
     };
 
-    add_train(x, &ENGINE, &COAL, &CAR, OFFSETS, names)
+    add_train(x, &ENGINE, &COAL, &CAR, OFFSETS, names, display, options)
 }

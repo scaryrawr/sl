@@ -1,7 +1,6 @@
 # SL(1): Cure your bad habit of mistyping
 
-SL (Steam Locomotive) runs across your terminal when you type "sl" as
-you meant to type "ls". It's just a joke command.
+SL (Steam Locomotive) runs across your terminal when you type "sl" as you meant to type "ls". It's just a joke command.
 
 Copyright 1993,1998,2014 Toyoda Masashi (<mtoyoda@acm.org>)
 
@@ -30,7 +29,8 @@ SL supports piping contents into it for printing things to the train car.
 echo "Hello\nworld!" | sl
 ```
 
-You can also pipe long/slow (only so slow though, if the train finishes before it gets a new line things are boring) running processes into it:
+You can also pipe long/slow (only so slow though, if the train finishes before it gets a new line things are boring)
+running processes into it:
 
 ```sh
 # Print package names as they are built as train cars!
@@ -58,7 +58,8 @@ sudo dnf install sl
 
 ### Windows
 
-Download the [latest release](https://github.com/scaryrawr/sl/releases/latest) or using winget (winget may be a few versions behind):
+Download the [latest release](https://github.com/scaryrawr/sl/releases/latest) or using winget (winget may be a few
+versions behind):
 
 ```pwsh
 winget install scaryrawr.sl

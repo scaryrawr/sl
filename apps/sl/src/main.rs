@@ -5,13 +5,43 @@ use crossterm::event::{read, Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::terminal::{Clear, ClearType};
 use crossterm::{cursor, terminal, ExecutableCommand, QueueableCommand};
 use filedescriptor::{Error, FileDescriptor};
-use sl::{add_c51, add_d51, add_logo, COLS, LINES};
+use libsl::{add_c51, add_d51, add_logo};
 use std::fs;
 use std::io::{stdin, stdout, BufRead, BufReader, IsTerminal, Stdin, Write};
 use std::sync::mpsc::Receiver;
 
 mod cli;
-mod sl;
+
+struct TerminalDisplay {
+    cols: i32,
+    lines: i32,
+}
+
+impl libsl::Display for TerminalDisplay {
+    fn add_str(&self, y: i32, x: i32, s: &str) {
+        let mut stdout = std::io::stdout();
+        stdout.queue(cursor::MoveTo(x as u16, y as u16)).unwrap();
+        stdout.write_all(s.as_bytes()).unwrap();
+    }
+
+    fn cols(&self) -> i32 {
+        self.cols
+    }
+
+    fn lines(&self) -> i32 {
+        self.lines
+    }
+}
+
+impl libsl::Options for CliOptions {
+    fn accident(&self) -> bool {
+        self.accident
+    }
+
+    fn fly(&self) -> bool {
+        self.fly
+    }
+}
 
 fn main() -> Result<(), Error> {
     let args = CliOptions::parse();
@@ -23,8 +53,6 @@ fn main() -> Result<(), Error> {
     let mut stdout = stdout();
     stdout.execute(cursor::Hide)?;
 
-    update_size()?;
-
     let add_train = if args.logo {
         add_logo
     } else if args.c51 {
@@ -33,21 +61,17 @@ fn main() -> Result<(), Error> {
         add_d51
     };
 
-    if args.accident {
-        unsafe {
-            sl::ACCIDENT = 1;
-        }
-    }
-
-    if args.fly {
-        unsafe {
-            sl::FLY = 1;
-        }
-    }
-
-    let mut x = unsafe { COLS - 1 };
     stdout.queue(Clear(ClearType::All))?;
     let mut names: Vec<String> = vec![];
+
+    let size = terminal::size()?;
+    let mut display = TerminalDisplay {
+        cols: size.0 as i32,
+        lines: size.1 as i32,
+    };
+
+    let mut x = display.cols - 1;
+
     loop {
         match names_receiver.try_recv() {
             Ok(name) => {
@@ -56,7 +80,7 @@ fn main() -> Result<(), Error> {
             Err(_) => {}
         }
 
-        if add_train(x, &names.iter().map(String::as_ref).collect::<Vec<&str>>()).is_err() {
+        if add_train(x, &names, &display, &args).is_err() {
             break;
         }
 
@@ -70,11 +94,11 @@ fn main() -> Result<(), Error> {
                     modifiers: KeyModifiers::CONTROL,
                     ..
                 }) => break,
-                Event::Resize(cols, lines) => unsafe {
+                Event::Resize(cols, lines) => {
                     stdout.queue(Clear(ClearType::All))?;
-                    COLS = cols as i32;
-                    LINES = lines as i32;
-                },
+                    display.cols = cols as i32;
+                    display.lines = lines as i32;
+                }
                 _ => {}
             }
         }
@@ -114,14 +138,4 @@ fn cars_receiver(args: &CliOptions, stdin: Stdin) -> Result<Receiver<String>, Er
     };
 
     Ok(receiver)
-}
-
-fn update_size() -> Result<(), Error> {
-    let (cols, lines) = terminal::size()?;
-    unsafe {
-        COLS = cols as i32;
-        LINES = lines as i32;
-    }
-
-    Ok(())
 }

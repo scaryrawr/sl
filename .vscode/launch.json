@@ -1,44 +1,40 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug executable 'sl'",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--bin=sl",
-                    "--package=sl",
-                ],
-                "filter": {
-                    "name": "sl",
-                    "kind": "bin"
-                }
-            },
-            "args": [
-                "-a"
-            ],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in executable 'sl'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--bin=sl",
-                    "--package=sl"
-                ],
-                "filter": {
-                    "name": "sl",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable 'sl'",
+      "cargo": {
+        "args": ["build", "--bin=sl", "--package=sl"],
+        "filter": {
+          "name": "sl",
+          "kind": "bin"
         }
-    ]
+      },
+      "args": ["-a"],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in executable 'sl'",
+      "cargo": {
+        "args": ["test", "--no-run", "--bin=sl", "--package=sl"],
+        "filter": {
+          "name": "sl",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "msedge",
+      "name": "SL Page",
+      "request": "launch",
+      "url": "http://127.0.0.1:3000/apps/page/lib/index.html",
+      "preLaunchTask": "npm: build - apps/page"
+    }
+  ]
 }

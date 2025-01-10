@@ -27,15 +27,15 @@ SL (Steam Locomotive) runs across your terminal when you type "sl" as you meant 
 {{{ git_dir_setup_macro }}}
 
 %build
-COMPLETION_DIR="completions" cargo build --release
+COMPLETION_DIR="$(pwd)/completions" cargo build --release
 
 %install
-install -Dpm 0755 target/release/sl %{buildroot}%{_bindir}/sl
-install -Dpm 0644 completions/sl.1 %{buildroot}%{_mandir}/man1/sl.1
-install -Dpm 0644 sl.1.ja %{buildroot}%{_mandir}/man1/sl.1.ja
-install -Dpm 0644 completions/sl.bash -t %{buildroot}%{bash_completions_dir}
-install -Dpm 0644 completions/sl.fish -t %{buildroot}%{fish_completions_dir}
-install -Dpm 0644 completions/_sl -t     %{buildroot}%{zsh_completions_dir}
+install -Dpm 0755 target/release/sl     %{buildroot}%{_bindir}/sl
+install -Dpm 0644 completions/sl.1      %{buildroot}%{_mandir}/man1/sl.1
+install -Dpm 0644 sl.1.ja               %{buildroot}%{_mandir}/man1/sl.1.ja
+install -Dpm 0644 completions/sl.bash   %{buildroot}%{bash_completions_dir}
+install -Dpm 0644 completions/sl.fish   %{buildroot}%{fish_completions_dir}
+install -Dpm 0644 completions/_sl       %{buildroot}%{zsh_completions_dir}
 
 %changelog
 {{{ git_dir_changelog }}}
