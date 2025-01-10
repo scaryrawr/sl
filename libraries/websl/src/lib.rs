@@ -24,10 +24,6 @@ impl Display {
     }
 }
 
-#[wasm_bindgen]
-pub fn set_panic_hook() {
-    utils::set_panic_hook();
-}
 impl libsl::Display for Display {
     fn add_str(&self, y: i32, x: i32, s: &str) {
         let mut buffer = s.to_string();
@@ -53,7 +49,36 @@ impl libsl::Display for Display {
 }
 
 #[wasm_bindgen]
-pub fn add_d51(x: i32, names: &Array, display: &Display) -> bool {
+pub struct Options {
+    accident: bool,
+    fly: bool,
+}
+
+#[wasm_bindgen]
+impl Options {
+    #[wasm_bindgen(constructor)]
+    pub fn new(accident: bool, fly: bool) -> Options {
+        Options { accident, fly }
+    }
+}
+
+impl libsl::Options for Options {
+    fn accident(&self) -> bool {
+        self.accident
+    }
+
+    fn fly(&self) -> bool {
+        self.fly
+    }
+}
+
+#[wasm_bindgen]
+pub fn set_panic_hook() {
+    utils::set_panic_hook();
+}
+
+#[wasm_bindgen]
+pub fn add_d51(x: i32, names: &Array, display: &Display, options: &Options) -> bool {
     match libsl::add_d51(
         x,
         &names
@@ -61,6 +86,7 @@ pub fn add_d51(x: i32, names: &Array, display: &Display) -> bool {
             .map(|x| x.as_string().unwrap())
             .collect::<Vec<String>>(),
         display,
+        options,
     ) {
         Ok(_) => true,
         Err(_) => false,
@@ -68,7 +94,7 @@ pub fn add_d51(x: i32, names: &Array, display: &Display) -> bool {
 }
 
 #[wasm_bindgen]
-pub fn add_logo(x: i32, names: &Array, display: &Display) -> bool {
+pub fn add_logo(x: i32, names: &Array, display: &Display, options: &Options) -> bool {
     match libsl::add_logo(
         x,
         &names
@@ -76,6 +102,7 @@ pub fn add_logo(x: i32, names: &Array, display: &Display) -> bool {
             .map(|x| x.as_string().unwrap())
             .collect::<Vec<String>>(),
         display,
+        options,
     ) {
         Ok(_) => true,
         Err(_) => false,
@@ -83,7 +110,7 @@ pub fn add_logo(x: i32, names: &Array, display: &Display) -> bool {
 }
 
 #[wasm_bindgen]
-pub fn add_c51(x: i32, names: &Array, display: &Display) -> bool {
+pub fn add_c51(x: i32, names: &Array, display: &Display, options: &Options) -> bool {
     match libsl::add_c51(
         x,
         &names
@@ -91,6 +118,7 @@ pub fn add_c51(x: i32, names: &Array, display: &Display) -> bool {
             .map(|x| x.as_string().unwrap())
             .collect::<Vec<String>>(),
         display,
+        options,
     ) {
         Ok(_) => true,
         Err(_) => false,

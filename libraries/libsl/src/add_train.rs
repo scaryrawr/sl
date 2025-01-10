@@ -1,11 +1,10 @@
 use crate::Display;
+use crate::Options;
 
 use super::add_man::add_man;
 use super::add_smoke::add_smoke;
 use super::mvaddstr::mvaddstr;
 use super::print_car::print_car;
-use super::ACCIDENT;
-use super::FLY;
 use core::str;
 
 #[derive(Debug)]
@@ -31,22 +30,25 @@ pub fn add_train<
     const HEIGHT: usize,
     const ENGINE_WINDOWS: usize,
     const CAR_WINDOWS: usize,
-    TStr: AsRef<str>,
-    T: Display,
+    T: AsRef<str>,
+    U: Display,
+    V: Options,
 >(
     x: i32,
     engine: &[[&str; HEIGHT]; ANIMATIONS],
     coal: &[&str; HEIGHT],
     car: &[&str; HEIGHT],
     offsets: TrainOffsets<ENGINE_WINDOWS, CAR_WINDOWS>,
-    names: &[TStr],
-    display: &T,
+    names: &[T],
+    display: &U,
+    options: &V,
 ) -> Result<(), Error> {
     let car_length: i32 = (car[0].len() - 1).try_into().unwrap();
     let frames: i32 = (ANIMATIONS + 1).try_into().unwrap();
     let count: i32 = names.len().try_into().unwrap();
     let engine_length: i32 = engine[0][0].len().try_into().unwrap();
     let front_length: i32 = engine_length + coal[0].len() as i32;
+    let fly_factor = if options.fly() { 1 } else { 0 };
     if x < -(front_length + (if count > 0 { count * car_length } else { 0 })) {
         return Err(Error::Offscreen);
     }
@@ -54,7 +56,7 @@ pub fn add_train<
     let engine_height: i32 = engine.len().try_into().unwrap();
     let mut y = display.lines() / 2 - engine_height / 2;
     let mut dy = 0;
-    if (unsafe { FLY } == 1) {
+    if options.fly() {
         y = (((x / frames) + display.lines()) - display.cols() / frames) - engine_height;
         // Try to estimate when the train is off screen enough.
         if y < -(engine_height * display.cols() / display.lines()) {
@@ -93,7 +95,7 @@ pub fn add_train<
                 offsets.car_text_width,
             );
             mvaddstr(
-                ((y + i) + (unsafe { FLY } * (j + 1))) + dy,
+                ((y + i) + (fly_factor * (j + 1))) + dy,
                 (x + engine_length - 1) + (car_length * (j + 1)),
                 str::from_utf8(&car_name).unwrap(),
                 display,
@@ -101,7 +103,7 @@ pub fn add_train<
         }
     }
 
-    if (unsafe { ACCIDENT } == 1) {
+    if options.accident() {
         offsets
             .engine_windows
             .window_positions
@@ -125,7 +127,7 @@ pub fn add_train<
                 .iter()
                 .for_each(|offset| {
                     add_man(
-                        (y + offsets.car_windows.height) + (unsafe { FLY } * (j + 2)),
+                        (y + offsets.car_windows.height) + (fly_factor * (j + 2)),
                         ((x + front_length) + offset) + (car_length * j),
                         display,
                     );

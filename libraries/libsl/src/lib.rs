@@ -10,8 +10,10 @@ mod mvaddstr;
 mod print_car;
 mod unicode_width;
 
-pub static mut ACCIDENT: i32 = 0;
-pub static mut FLY: i32 = 0;
+pub trait Options {
+    fn accident(&self) -> bool;
+    fn fly(&self) -> bool;
+}
 
 pub trait Display {
     fn add_str(&self, line: i32, column: i32, value: &str);

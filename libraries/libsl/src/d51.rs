@@ -1,12 +1,13 @@
 use crate::{
     add_train::{add_train, Error, TrainOffsets, WindowOffsets},
-    Display,
+    Display, Options,
 };
 
-pub fn add_d51<TStr: AsRef<str>, T: Display>(
+pub fn add_d51<T: AsRef<str>, U: Display, V: Options>(
     x: i32,
-    names: &[TStr],
-    display: &T,
+    names: &[T],
+    display: &U,
+    options: &V,
 ) -> Result<(), Error> {
     const ENGINE: [[&str; 11]; 6] = [
         [
@@ -130,5 +131,5 @@ pub fn add_d51<TStr: AsRef<str>, T: Display>(
         car_text_width: 22,
     };
 
-    add_train(x, &ENGINE, &COAL, &CAR, OFFSETS, names, display)
+    add_train(x, &ENGINE, &COAL, &CAR, OFFSETS, names, display, options)
 }

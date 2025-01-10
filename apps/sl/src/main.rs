@@ -33,6 +33,16 @@ impl libsl::Display for TerminalDisplay {
     }
 }
 
+impl libsl::Options for CliOptions {
+    fn accident(&self) -> bool {
+        self.accident
+    }
+
+    fn fly(&self) -> bool {
+        self.fly
+    }
+}
+
 fn main() -> Result<(), Error> {
     let args = CliOptions::parse();
     let stdin = stdin();
@@ -50,18 +60,6 @@ fn main() -> Result<(), Error> {
     } else {
         add_d51
     };
-
-    if args.accident {
-        unsafe {
-            libsl::ACCIDENT = 1;
-        }
-    }
-
-    if args.fly {
-        unsafe {
-            libsl::FLY = 1;
-        }
-    }
 
     stdout.queue(Clear(ClearType::All))?;
     let mut names: Vec<String> = vec![];
@@ -82,7 +80,7 @@ fn main() -> Result<(), Error> {
             Err(_) => {}
         }
 
-        if add_train(x, &names, &display).is_err() {
+        if add_train(x, &names, &display, &args).is_err() {
             break;
         }
 

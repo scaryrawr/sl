@@ -17,6 +17,8 @@ const runWasm = async () => {
     row.textContent = row.textContent.substring(0, x) + str + row.textContent.substring(x + str.length);
   });
 
+  let options = new sl.Options(true, false);
+
   const clear = () => {
     if (!terminal) {
       return;
@@ -30,7 +32,7 @@ const runWasm = async () => {
   let train_index = 0;
   const trains = [sl.add_c51, sl.add_d51, sl.add_logo];
   setInterval(() => {
-    if (!trains[train_index](--x, ['hello', 'world'], display)) {
+    if (!trains[train_index](--x, ['hello', 'world'], display, options)) {
       clear();
       x = 120;
       train_index = (train_index + 1) % trains.length;
