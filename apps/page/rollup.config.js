@@ -13,7 +13,8 @@ const config = {
   output: {
     dir: 'lib',
     format: 'esm',
-    sourcemap: true
+    sourcemap: true,
+    compact: true
   },
   plugins: [
     wasm(),
