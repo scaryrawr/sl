@@ -7,7 +7,7 @@ const TrainType = {
   LOGO: 'logo'
 };
 
-const SlTerminal = ({ title, accident, fly, trainType, messages }) => {
+const SlTerminal = ({ title, accident, fly, trainType, messages, smoke }) => {
   const terminalRef = useRef(null);
 
   useEffect(() => {
@@ -20,7 +20,7 @@ const SlTerminal = ({ title, accident, fly, trainType, messages }) => {
         return;
       }
 
-      const options = new sl.Options(accident, fly);
+      const options = new sl.Options(accident, fly, smoke);
       const trains = {
         [TrainType.C51]: sl.add_c51,
         [TrainType.D51]: sl.add_d51,

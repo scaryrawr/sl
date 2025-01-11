@@ -41,6 +41,10 @@ impl libsl::Options for CliOptions {
     fn fly(&self) -> bool {
         self.fly
     }
+
+    fn smoke(&self) -> bool {
+        true
+    }
 }
 
 fn main() -> Result<(), Error> {

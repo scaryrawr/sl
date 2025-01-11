@@ -135,7 +135,9 @@ pub fn add_train<
         }
     }
 
-    add_smoke(y - 1, x + offsets.funnel, display);
+    if options.smoke() {
+        add_smoke(y - 1, x + offsets.funnel, display);
+    }
 
     Ok(())
 }
