@@ -14,11 +14,26 @@ const slPromise = import('websl').then((module) => {
 
 const SlTerminal = ({ title, accident, fly, trainType, messages, smoke }) => {
   const terminalRef = useRef(null);
+  const xRef = useRef(null);
 
   useEffect(() => {
+    let intervalId;
+    let disposed = false;
+    const terminal = terminalRef.current;
+
+    const clear = () => {
+      if (!terminal) {
+        return;
+      }
+      for (const row of Array.from(terminal.children)) {
+        row.textContent = '\xa0'.repeat(terminal.children[0].textContent.length);
+      }
+    };
+
     const runWasm = async () => {
       const sl = await slPromise;
-      const terminal = terminalRef.current;
+      if (disposed) return;
+
       if (!terminal) {
         return;
       }
@@ -30,17 +45,11 @@ const SlTerminal = ({ title, accident, fly, trainType, messages, smoke }) => {
         [TrainType.LOGO]: sl.add_logo
       };
 
-      const clear = () => {
-        if (!terminal) {
-          return;
-        }
-        for (const row of Array.from(terminal.children)) {
-          row.textContent = '\xa0'.repeat(terminal.children[0].textContent.length);
-        }
-      };
+      if (xRef.current === null) {
+        xRef.current = terminal.children[0].textContent.length;
+      }
 
-      let x = terminal.children[0].textContent.length;
-      setInterval(() => {
+      intervalId = setInterval(() => {
         let cols = terminal.children[0].textContent.length;
         let rows = terminal.children.length;
         let display = new sl.Display(cols, rows, (y, x, str) => {
@@ -51,15 +60,21 @@ const SlTerminal = ({ title, accident, fly, trainType, messages, smoke }) => {
           row.textContent = row.textContent.substring(0, x) + str + row.textContent.substring(x + str.length);
         });
 
-        if (!trains[trainType](--x, messages, display, options)) {
+        if (!trains[trainType](--xRef.current, messages, display, options)) {
           clear();
-          x = cols;
+          xRef.current = cols;
         }
       }, 60);
     };
 
     runWasm();
-  }, [accident, fly, trainType, messages]);
+
+    return () => {
+      disposed = true;
+      clearInterval(intervalId);
+      clear();
+    };
+  }, [accident, fly, trainType, messages, smoke]);
 
   return <Terminal title={title} terminalRef={terminalRef} />;
 };

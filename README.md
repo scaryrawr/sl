@@ -37,6 +37,22 @@ running processes into it:
 cargo build 2>&1 | awk -F' ' '/Compiling/ {print $2}' | sl
 ```
 
+## Embed
+
+You can embed the SL terminal in your own pages using query parameters:
+
+```txt
+https://scaryrawr.github.io/sl/#embed?accident=true&fly=false&smoke=true&trainType=d51&messages=["hello","world"]
+```
+
+Supported query parameters:
+
+- `accident`: true or false
+- `fly`: true or false
+- `smoke`: true or false
+- `trainType`: d51, c51, or logo
+- `messages`: URL encoded JSON array of messages
+
 ## Installation
 
 ### macOS and x64 Linux

@@ -71,14 +71,14 @@ const styles = {
   window: {
     border: '1px solid black',
     borderRadius: '5px',
-    width: '80%',
-    maxHeight: '80vh', // Ensure the window does not exceed 80% of the viewport height
+    width: '100%',
+    maxHeight: '100vh',
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
-    position: 'relative', // Changed from 'fixed' to 'relative'
-    margin: '20px auto', // Center the window within its container
-    backgroundColor: '#fff' // Optional: Add a background color to the window
+    position: 'relative',
+    margin: '20px auto',
+    backgroundColor: '#fff'
   },
   titleBar: {
     backgroundColor: '#333',
