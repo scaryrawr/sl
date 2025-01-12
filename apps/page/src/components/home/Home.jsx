@@ -14,7 +14,7 @@ const Home = () => {
   const [messages, setMessages] = useState(['hello', 'world']);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
       <h1>Welcome to the SL Project</h1>
       <p>
         SL (Steam Locomotive) runs across your terminal when you type "sl" as you meant to type "ls". It's just a joke

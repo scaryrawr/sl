@@ -60,6 +60,11 @@ const SlTerminal = ({ title, accident, fly, trainType, messages, smoke }) => {
           row.textContent = row.textContent.substring(0, x) + str + row.textContent.substring(x + str.length);
         });
 
+        if (xRef.current > cols) {
+          clear();
+          xRef.current = cols;
+        }
+
         if (!trains[trainType](--xRef.current, messages, display, options)) {
           clear();
           xRef.current = cols;
