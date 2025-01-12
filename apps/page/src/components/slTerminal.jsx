@@ -7,14 +7,17 @@ const TrainType = {
   LOGO: 'logo'
 };
 
+const slPromise = import('websl').then((module) => {
+  module.set_panic_hook();
+  return module;
+});
+
 const SlTerminal = ({ title, accident, fly, trainType, messages, smoke }) => {
   const terminalRef = useRef(null);
 
   useEffect(() => {
     const runWasm = async () => {
-      const sl = await import('websl');
-      sl.set_panic_hook();
-
+      const sl = await slPromise;
       const terminal = terminalRef.current;
       if (!terminal) {
         return;
