@@ -52,13 +52,18 @@ impl libsl::Display for Display {
 pub struct Options {
     accident: bool,
     fly: bool,
+    smoke: bool,
 }
 
 #[wasm_bindgen]
 impl Options {
     #[wasm_bindgen(constructor)]
-    pub fn new(accident: bool, fly: bool) -> Options {
-        Options { accident, fly }
+    pub fn new(accident: bool, fly: bool, smoke: bool) -> Options {
+        Options {
+            accident,
+            fly,
+            smoke,
+        }
     }
 }
 
@@ -69,6 +74,10 @@ impl libsl::Options for Options {
 
     fn fly(&self) -> bool {
         self.fly
+    }
+
+    fn smoke(&self) -> bool {
+        self.smoke
     }
 }
 

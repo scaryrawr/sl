@@ -13,6 +13,7 @@ mod unicode_width;
 pub trait Options {
     fn accident(&self) -> bool;
     fn fly(&self) -> bool;
+    fn smoke(&self) -> bool;
 }
 
 pub trait Display {
