@@ -8,9 +8,20 @@ const EmbedPage = () => {
   const smoke = searchParams.get('smoke') !== 'false';
   const trainType = searchParams.get('trainType') || TrainType.D51;
   const messages = JSON.parse(decodeURIComponent(searchParams.get('messages') || '[]'));
+  const fontColor = searchParams.get('fontColor') || '#0f0';
+  const backgroundColor = searchParams.get('backgroundColor') || '#000';
 
   return (
-    <SlTerminal title="SL" accident={accident} fly={fly} smoke={smoke} trainType={trainType} messages={messages} />
+    <SlTerminal
+      title="SL"
+      accident={accident}
+      fly={fly}
+      smoke={smoke}
+      trainType={trainType}
+      messages={messages}
+      fontColor={fontColor}
+      backgroundColor={backgroundColor}
+    />
   );
 };
 
