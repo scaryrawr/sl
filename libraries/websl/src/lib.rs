@@ -26,15 +26,12 @@ impl Display {
 
 impl libsl::Display for Display {
     fn add_str(&self, y: i32, x: i32, s: &str) {
-        let mut buffer = s.to_string();
-        buffer = buffer.replace(" ", "\u{00A0}");
-
         self.add_str
             .call3(
                 &JsValue::NULL,
                 &JsValue::from(y),
                 &JsValue::from(x),
-                &JsString::from_str(&buffer).unwrap(),
+                &JsString::from_str(s).unwrap(),
             )
             .unwrap();
     }
