@@ -1,7 +1,18 @@
+use super::add_train::{add_train, TrainOffsets, WindowOffsets};
 use crate::{add_train::Error, Display, Options};
 
-use super::add_train::{add_train, TrainOffsets, WindowOffsets};
-
+/// Adds a logo to the display.
+///
+/// # Arguments
+///
+/// * `x` - The x-coordinate where the logo should be added.
+/// * `names` - A slice of strings representing the names to be displayed.
+/// * `display` - The display where the logo will be added.
+/// * `options` - Options for customizing the train.
+///
+/// # Returns
+///
+/// * `Result<(), Error>` - Returns `Ok(())` if successful, otherwise returns an `Error`.
 pub fn add_logo<T: AsRef<str>, U: Display, V: Options>(
     x: i32,
     names: &[T],
