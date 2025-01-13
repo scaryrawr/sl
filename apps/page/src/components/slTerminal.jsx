@@ -57,7 +57,10 @@ const SlTerminal = ({ title, accident, fly, trainType, messages, smoke }) => {
           if (!row || !row.textContent) {
             return;
           }
-          row.textContent = row.textContent.substring(0, x) + str + row.textContent.substring(x + str.length);
+
+          let newText = row.textContent.substring(0, x) + str + row.textContent.substring(x + str.length);
+          newText += '\xa0'.repeat(cols - newText.length);
+          row.textContent = newText.substring(0, row.textContent.length);
         });
 
         if (xRef.current > cols) {

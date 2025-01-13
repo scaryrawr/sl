@@ -13,6 +13,6 @@
     "pkg/websl.d.ts"
   ],
   "scripts": {
-    "build": "wasm-pack build --target web"
+    "build": "wasm-pack build --target web --release"
   }
 }
