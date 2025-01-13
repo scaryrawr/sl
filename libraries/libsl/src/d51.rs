@@ -3,6 +3,18 @@ use crate::{
     Display, Options,
 };
 
+/// Adds a D51 train to the display.
+///
+/// # Arguments
+///
+/// * `x` - The x-coordinate where the train should be added.
+/// * `names` - A slice of strings representing the names to be displayed.
+/// * `display` - The display where the train will be added.
+/// * `options` - Options for customizing the train.
+///
+/// # Returns
+///
+/// * `Result<(), Error>` - Returns `Ok(())` if successful, otherwise returns an `Error`.
 pub fn add_d51<T: AsRef<str>, U: Display, V: Options>(
     x: i32,
     names: &[T],
