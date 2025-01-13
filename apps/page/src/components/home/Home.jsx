@@ -12,6 +12,8 @@ const Home = () => {
   const [smoke, setSmoke] = useState(true);
   const [trainType, setTrainType] = useState(TrainType.D51);
   const [messages, setMessages] = useState(['hello', 'world']);
+  const [fontColor, setFontColor] = useState('#0f0');
+  const [backgroundColor, setBackgroundColor] = useState('#000');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -37,8 +39,21 @@ const Home = () => {
           setTrainType={setTrainType}
           messages={messages}
           setMessages={setMessages}
+          fontColor={fontColor}
+          setFontColor={setFontColor}
+          backgroundColor={backgroundColor}
+          setBackgroundColor={setBackgroundColor}
         />
-        <SlTerminal title="SL" accident={accident} fly={fly} smoke={smoke} trainType={trainType} messages={messages} />
+        <SlTerminal
+          title="SL"
+          accident={accident}
+          fly={fly}
+          smoke={smoke}
+          trainType={trainType}
+          messages={messages}
+          fontColor={fontColor}
+          backgroundColor={backgroundColor}
+        />
       </div>
       <Usage />
       <Piping />

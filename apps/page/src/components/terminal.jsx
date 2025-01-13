@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-const Terminal = ({ title, terminalRef: externalRef }) => {
+const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgroundColor = '#000' }) => {
   const internalRef = useRef(null);
   const terminalRef = externalRef || internalRef;
   const [dimensions, setDimensions] = useState({ rows: 40, cols: 120 });
@@ -62,7 +62,7 @@ const Terminal = ({ title, terminalRef: externalRef }) => {
           <button style={styles.button}>×</button>
         </div>
       </div>
-      <div ref={terminalRef} style={styles.terminal}></div>
+      <div ref={terminalRef} style={{ ...styles.terminal, color: fontColor, backgroundColor: backgroundColor }}></div>
     </div>
   );
 };
@@ -110,8 +110,6 @@ const styles = {
     whiteSpace: 'pre',
     flex: 1,
     padding: '10px',
-    backgroundColor: '#000',
-    color: '#0f0',
     overflow: 'auto',
     maxHeight: 'calc(80vh - 50px)' // Adjust max height to fit within the window
   }

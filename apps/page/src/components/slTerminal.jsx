@@ -12,7 +12,7 @@ const slPromise = import('websl').then((module) => {
   return module;
 });
 
-const SlTerminal = ({ title, accident, fly, trainType, messages, smoke }) => {
+const SlTerminal = ({ title, accident, fly, trainType, messages, smoke, fontColor, backgroundColor }) => {
   const terminalRef = useRef(null);
   const xRef = useRef(null);
 
@@ -84,7 +84,7 @@ const SlTerminal = ({ title, accident, fly, trainType, messages, smoke }) => {
     };
   }, [accident, fly, trainType, messages, smoke]);
 
-  return <Terminal title={title} terminalRef={terminalRef} />;
+  return <Terminal title={title} terminalRef={terminalRef} fontColor={fontColor} backgroundColor={backgroundColor} />;
 };
 
 export { TrainType };

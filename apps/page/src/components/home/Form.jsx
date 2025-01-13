@@ -10,7 +10,11 @@ const Form = ({
   trainType,
   setTrainType,
   messages,
-  setMessages
+  setMessages,
+  fontColor,
+  setFontColor,
+  backgroundColor,
+  setBackgroundColor
 }) => {
   const handleMessagesChange = (e) => {
     setMessages(e.target.value.split('\n'));
@@ -41,6 +45,14 @@ const Form = ({
       <label>
         Messages
         <textarea rows="3" value={messages.join('\n')} onChange={(e) => handleMessagesChange(e)} />
+      </label>
+      <label>
+        Font Color
+        <input type="color" value={fontColor} onChange={(e) => setFontColor(e.target.value)} />
+      </label>
+      <label>
+        Background Color
+        <input type="color" value={backgroundColor} onChange={(e) => setBackgroundColor(e.target.value)} />
       </label>
     </div>
   );
