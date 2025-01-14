@@ -27,7 +27,7 @@ SL (Steam Locomotive) runs across your terminal when you type "sl" as you meant 
 {{{ git_dir_setup_macro }}}
 
 %build
-COMPLETION_DIR="$(pwd)/completions" cargo build --release
+COMPLETION_DIR=$(pwd)/completions cargo build --release
 
 %install
 install -Dpm 0755 target/release/sl     %{buildroot}%{_bindir}/sl
