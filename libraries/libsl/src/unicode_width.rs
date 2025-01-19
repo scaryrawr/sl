@@ -1,11 +1,11 @@
-use core::str;
+#[cfg(feature = "std")]
+mod std_width;
 
-pub trait UnicodeWidthStr {
-    fn width(&self) -> usize;
-}
+#[cfg(not(feature = "std"))]
+mod no_std_width;
 
-impl UnicodeWidthStr for str {
-    fn width(&self) -> usize {
-        unicode_display_width::width(self) as usize
-    }
-}
+#[cfg(feature = "std")]
+pub use std_width::UnicodeWidthStr;
+
+#[cfg(not(feature = "std"))]
+pub use no_std_width::UnicodeWidthStr;
