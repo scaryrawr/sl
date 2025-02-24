@@ -12,13 +12,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
+      - name: Cache Cargo Registry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
       - name: Build Debug
         run: cargo build
-
       - name: Build Release
         run: cargo build --release
-
       - name: Test
         run: |
           ./target/debug/sl -h

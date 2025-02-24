@@ -10,7 +10,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
+      - name: Cache Cargo Registry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ubuntu-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
       - name: Build and Test
         uses: devcontainers/ci@v0.3
         with:

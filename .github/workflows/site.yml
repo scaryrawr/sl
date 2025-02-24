@@ -11,6 +11,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Cache Yarn
+        uses: actions/cache@v3
+        with:
+          path: |
+            **/node_modules
+            yarn.lock
+          key: yarn-${{ hashFiles('**/yarn.lock') }}
+
       - name: Install Dependencies
         run: |
           rustup target add wasm32-unknown-unknown
