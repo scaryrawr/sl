@@ -99,11 +99,14 @@ const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgro
     }
   }, [dimensions]);
 
-  const terminalStyle = {
-    ...styles.terminal,
-    color: fontColor,
-    backgroundColor: backgroundColor
-  };
+  const terminalStyle = useMemo(
+    () => ({
+      ...styles.terminal,
+      color: fontColor,
+      backgroundColor: backgroundColor
+    }),
+    [fontColor, backgroundColor]
+  );
 
   return (
     <div style={styles.window}>
