@@ -23,14 +23,22 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "yarn workspaces run build",
+    "build": "turbo run build",
+    "build:libsl": "cargo build --manifest-path libraries/libsl/Cargo.toml --release",
+    "build:websl:rust": "wasm-pack build libraries/websl --target web --release",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
     "pretty": "prettier \"{.,**}.{tsx,ts,js,less,json,md,yaml}\" --write",
-    "test": "yarn workspaces run test"
+    "start": "turbo run start",
+    "test": "turbo run test",
+    "test:libsl": "cargo test --manifest-path libraries/libsl/Cargo.toml",
+    "test:websl:rust": "wasm-pack test --headless --firefox libraries/websl"
   },
   "devDependencies": {
     "prettier": "^3.4.2",
     "prettier-plugin-organize-imports": "^4.1.0",
     "prettier-plugin-packagejson": "^2.5.6",
+    "turbo": "^2.5.4",
     "typescript": "^5.7.3"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
