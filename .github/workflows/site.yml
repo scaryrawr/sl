@@ -17,7 +17,11 @@ jobs:
           path: |
             **/node_modules
             yarn.lock
-          key: yarn-${{ hashFiles('**/yarn.lock') }}
+            .turbo
+          key: yarn-turbo-${{ hashFiles('**/yarn.lock') }}-${{ hashFiles('turbo.json') }}
+          restore-keys: |
+            yarn-turbo-${{ hashFiles('**/yarn.lock') }}-
+            yarn-turbo-
 
       - name: Install Dependencies
         run: |
@@ -27,7 +31,7 @@ jobs:
 
       - name: Build Site
         run: |
-          yarn workspaces run build
+          yarn build
 
       - name: Upload static files as artifact
         id: deployment
