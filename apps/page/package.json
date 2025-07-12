@@ -7,6 +7,8 @@
   "main": "index.js",
   "scripts": {
     "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "lint": "prettier \"src/**/*.{js,jsx,ts,tsx,json,md}\" --check",
     "start": "http-server ./lib/",
     "watch": "rollup -c -w"
   },
