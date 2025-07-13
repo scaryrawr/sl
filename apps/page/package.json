@@ -6,10 +6,12 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
+    "analyze": "ANALYZE_BUNDLE=1 rollup -c",
     "build": "rollup -c",
     "dev": "rollup -c -w",
     "lint": "prettier \"src/**/*.{js,jsx,ts,tsx,json,md}\" --check",
-    "start": "http-server ./lib/"
+    "start": "http-server ./lib/",
+    "test": "echo 'No tests for this package'"
   },
   "dependencies": {
     "react": "^19.0.0",
@@ -21,10 +23,12 @@
     "@rollup/plugin-commonjs": "^28.0.2",
     "@rollup/plugin-node-resolve": "^16.0.0",
     "@rollup/plugin-replace": "^6.0.2",
+    "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-wasm": "^6.2.2",
     "http-server": "^14.1.1",
     "rollup": "^4.30.1",
     "rollup-plugin-copy": "^3.5.0",
+    "rollup-plugin-visualizer": "^6.0.3",
     "typescript": "^5.7.3"
   }
 }
