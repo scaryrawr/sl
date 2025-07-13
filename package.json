@@ -23,6 +23,7 @@
     "apps/*"
   ],
   "scripts": {
+    "analyze": "yarn workspace page analyze",
     "build": "turbo run build",
     "build:libsl": "cargo build --manifest-path libraries/libsl/Cargo.toml --release",
     "build:websl:rust": "wasm-pack build libraries/websl --target web --release",

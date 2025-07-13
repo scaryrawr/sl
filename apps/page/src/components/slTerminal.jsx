@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import Terminal from './terminal.jsx';
 
 const TrainType = {
@@ -12,31 +12,30 @@ const slPromise = import('websl').then((module) => {
   return module;
 });
 
-const SlTerminal = ({ title, accident, fly, trainType, messages, smoke, fontColor, backgroundColor }) => {
+const useSlAnimation = (props) => {
+  const { accident, fly, trainType, messages, smoke } = props;
   const terminalRef = useRef(null);
   const xRef = useRef(null);
+
+  const clear = useCallback(() => {
+    const terminal = terminalRef.current;
+    if (!terminal) return;
+
+    for (const row of Array.from(terminal.children)) {
+      row.textContent = '\xa0'.repeat(terminal.children[0].textContent.length);
+    }
+  }, []);
 
   useEffect(() => {
     let intervalId;
     let disposed = false;
-    const terminal = terminalRef.current;
-
-    const clear = () => {
-      if (!terminal) {
-        return;
-      }
-      for (const row of Array.from(terminal.children)) {
-        row.textContent = '\xa0'.repeat(terminal.children[0].textContent.length);
-      }
-    };
 
     const runWasm = async () => {
       const sl = await slPromise;
       if (disposed) return;
 
-      if (!terminal) {
-        return;
-      }
+      const terminal = terminalRef.current;
+      if (!terminal) return;
 
       const options = new sl.Options(accident, fly, smoke);
       const trains = {
@@ -54,9 +53,7 @@ const SlTerminal = ({ title, accident, fly, trainType, messages, smoke, fontColo
         let rows = terminal.children.length;
         let display = new sl.Display(cols, rows, (y, x, str) => {
           let row = terminal?.children[y];
-          if (!row || !row.textContent) {
-            return;
-          }
+          if (!row || !row.textContent) return;
 
           let newText = row.textContent.substring(0, x) + str + row.textContent.substring(x + str.length);
           newText += '\xa0'.repeat(cols - newText.length);
@@ -82,7 +79,13 @@ const SlTerminal = ({ title, accident, fly, trainType, messages, smoke, fontColo
       clearInterval(intervalId);
       clear();
     };
-  }, [accident, fly, trainType, messages, smoke]);
+  }, [accident, fly, trainType, messages, smoke, clear]);
+
+  return terminalRef;
+};
+
+const SlTerminal = ({ title, accident, fly, trainType, messages, smoke, fontColor, backgroundColor }) => {
+  const terminalRef = useSlAnimation({ accident, fly, trainType, messages, smoke });
 
   return <Terminal title={title} terminalRef={terminalRef} fontColor={fontColor} backgroundColor={backgroundColor} />;
 };

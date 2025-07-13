@@ -16,6 +16,7 @@
     "build": "wasm-pack build --target web --release",
     "dev": "cargo check",
     "lint": "prettier \"src/**/*.{js,jsx,ts,tsx,json,md}\" --check",
+    "start": "echo 'No start script for this package'",
     "test": "wasm-pack test --headless --firefox"
   }
 }
