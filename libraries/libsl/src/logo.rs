@@ -1,5 +1,5 @@
 use super::add_train::{add_train, TrainOffsets, WindowOffsets};
-use crate::{add_train::Error, Display, Options};
+use crate::{add_train::Error, Options};
 
 /// Adds a logo to the display.
 ///
@@ -13,10 +13,9 @@ use crate::{add_train::Error, Display, Options};
 /// # Returns
 ///
 /// * `Result<(), Error>` - Returns `Ok(())` if successful, otherwise returns an `Error`.
-pub fn add_logo<T: AsRef<str>, U: Display, V: Options>(
+pub fn add_logo<T: AsRef<str>, V: Options>(
     x: i32,
     names: &[T],
-    display: &U,
     options: &V,
 ) -> Result<(), Error> {
     const ENGINE: [[&str; 7]; 6] = [
@@ -108,5 +107,5 @@ pub fn add_logo<T: AsRef<str>, U: Display, V: Options>(
         car_text_width: 16,
     };
 
-    add_train(x, &ENGINE, &COAL, &CAR, OFFSETS, names, display, options)
+    add_train(x, &ENGINE, &COAL, &CAR, OFFSETS, names, options)
 }

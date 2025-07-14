@@ -39,9 +39,9 @@ const useSlAnimation = (props) => {
 
       const options = new sl.Options(accident, fly, smoke);
       const trains = {
-        [TrainType.C51]: sl.add_c51,
-        [TrainType.D51]: sl.add_d51,
-        [TrainType.LOGO]: sl.add_logo
+        [TrainType.C51]: (x, names, cols, rows, addStrFunc, options) => sl.add_c51(x, names, cols, rows, addStrFunc, options),
+        [TrainType.D51]: (x, names, cols, rows, addStrFunc, options) => sl.add_d51(x, names, cols, rows, addStrFunc, options),
+        [TrainType.LOGO]: (x, names, cols, rows, addStrFunc, options) => sl.add_logo(x, names, cols, rows, addStrFunc, options)
       };
 
       if (xRef.current === null) {
@@ -51,21 +51,21 @@ const useSlAnimation = (props) => {
       intervalId = setInterval(() => {
         let cols = terminal.children[0].textContent.length;
         let rows = terminal.children.length;
-        let display = new sl.Display(cols, rows, (y, x, str) => {
+        let addStrFunc = (y, x, str) => {
           let row = terminal?.children[y];
           if (!row || !row.textContent) return;
 
           let newText = row.textContent.substring(0, x) + str + row.textContent.substring(x + str.length);
           newText += '\xa0'.repeat(cols - newText.length);
           row.textContent = newText.substring(0, row.textContent.length);
-        });
+        };
 
         if (xRef.current > cols) {
           clear();
           xRef.current = cols;
         }
 
-        if (!trains[trainType](--xRef.current, messages, display, options)) {
+        if (!trains[trainType](--xRef.current, messages, cols, rows, addStrFunc, options)) {
           clear();
           xRef.current = cols;
         }

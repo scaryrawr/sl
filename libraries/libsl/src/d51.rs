@@ -1,6 +1,6 @@
 use crate::{
     add_train::{add_train, Error, TrainOffsets, WindowOffsets},
-    Display, Options,
+    Options,
 };
 
 /// Adds a D51 train to the display.
@@ -15,10 +15,9 @@ use crate::{
 /// # Returns
 ///
 /// * `Result<(), Error>` - Returns `Ok(())` if successful, otherwise returns an `Error`.
-pub fn add_d51<T: AsRef<str>, U: Display, V: Options>(
+pub fn add_d51<T: AsRef<str>, V: Options>(
     x: i32,
     names: &[T],
-    display: &U,
     options: &V,
 ) -> Result<(), Error> {
     const ENGINE: [[&str; 11]; 6] = [
@@ -143,5 +142,5 @@ pub fn add_d51<T: AsRef<str>, U: Display, V: Options>(
         car_text_width: 22,
     };
 
-    add_train(x, &ENGINE, &COAL, &CAR, OFFSETS, names, display, options)
+    add_train(x, &ENGINE, &COAL, &CAR, OFFSETS, names, options)
 }

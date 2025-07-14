@@ -2,13 +2,13 @@ use core::str;
 
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::Display;
+use crate::{add_str, cols, lines};
 
 use super::unicode_width::UnicodeWidthStr;
 
-pub fn mvaddstr<T: Display>(y: i32, x: i32, line: &str, display: &T) {
+pub fn mvaddstr(y: i32, x: i32, line: &str) {
     // Vertically off screen
-    if y < 0 || y > display.lines() || x > display.cols() {
+    if y < 0 || y > unsafe { lines() } || x > unsafe { cols() } {
         return;
     }
 
@@ -40,7 +40,7 @@ pub fn mvaddstr<T: Display>(y: i32, x: i32, line: &str, display: &T) {
     };
 
     // Remove everything that would be offscreen to the right
-    let mut past_end = end_position - display.cols();
+    let mut past_end = end_position - unsafe { cols() };
     if past_end > 0 {
         for c in line.graphemes(true).rev() {
             let c_width = c.width() as i32;
@@ -53,9 +53,13 @@ pub fn mvaddstr<T: Display>(y: i32, x: i32, line: &str, display: &T) {
     }
 
     for _ in 0..leading_spaces {
-        display.add_str(y, x, " ");
+        unsafe {
+            add_str(y, x, " ".as_ptr(), 1);
+        }
         x += 1;
     }
 
-    display.add_str(y, x, line);
+    unsafe {
+        add_str(y, x, line.as_ptr(), line.len());
+    }
 }

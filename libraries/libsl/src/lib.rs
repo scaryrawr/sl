@@ -20,8 +20,7 @@ pub trait Options {
     fn smoke(&self) -> bool;
 }
 
-/// A trait representing a display.
-pub trait Display {
+extern "C" {
     /// Adds a string to the display at the specified line and column.
     ///
     /// # Arguments
@@ -29,11 +28,11 @@ pub trait Display {
     /// * `line` - The line number where the string should be added.
     /// * `column` - The column number where the string should be added.
     /// * `value` - The string to be added.
-    fn add_str(&self, line: i32, column: i32, value: &str);
+    fn add_str(line: i32, column: i32, value: *const u8, len: usize);
     /// Returns the number of columns in the display.
-    fn cols(&self) -> i32;
+    fn cols() -> i32;
     /// Returns the number of lines in the display.
-    fn lines(&self) -> i32;
+    fn lines() -> i32;
 }
 
 pub use c51::add_c51;

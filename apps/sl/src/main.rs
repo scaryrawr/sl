@@ -9,28 +9,31 @@ use libsl::{add_c51, add_d51, add_logo};
 use std::fs;
 use std::io::{stdin, stdout, BufRead, BufReader, IsTerminal, Stdin, Write};
 use std::sync::mpsc::Receiver;
+use std::sync::Mutex;
 
 mod cli;
 
-struct TerminalDisplay {
-    cols: i32,
-    lines: i32,
+static TERMINAL_COLS: Mutex<i32> = Mutex::new(0);
+static TERMINAL_LINES: Mutex<i32> = Mutex::new(0);
+
+#[no_mangle]
+pub extern "C" fn add_str(line: i32, column: i32, value: *const u8, len: usize) {
+    let s = unsafe { std::slice::from_raw_parts(value, len) };
+    let string = std::str::from_utf8(s).unwrap();
+    
+    let mut stdout = std::io::stdout();
+    stdout.queue(cursor::MoveTo(column as u16, line as u16)).unwrap();
+    stdout.write_all(string.as_bytes()).unwrap();
 }
 
-impl libsl::Display for TerminalDisplay {
-    fn add_str(&self, y: i32, x: i32, s: &str) {
-        let mut stdout = std::io::stdout();
-        stdout.queue(cursor::MoveTo(x as u16, y as u16)).unwrap();
-        stdout.write_all(s.as_bytes()).unwrap();
-    }
+#[no_mangle]
+pub extern "C" fn cols() -> i32 {
+    *TERMINAL_COLS.lock().unwrap()
+}
 
-    fn cols(&self) -> i32 {
-        self.cols
-    }
-
-    fn lines(&self) -> i32 {
-        self.lines
-    }
+#[no_mangle]
+pub extern "C" fn lines() -> i32 {
+    *TERMINAL_LINES.lock().unwrap()
 }
 
 impl libsl::Options for CliOptions {
@@ -45,6 +48,11 @@ impl libsl::Options for CliOptions {
     fn smoke(&self) -> bool {
         true
     }
+}
+
+fn set_terminal_size(cols: i32, lines: i32) {
+    *TERMINAL_COLS.lock().unwrap() = cols;
+    *TERMINAL_LINES.lock().unwrap() = lines;
 }
 
 fn main() -> Result<(), Error> {
@@ -69,12 +77,9 @@ fn main() -> Result<(), Error> {
     let mut names: Vec<String> = vec![];
 
     let size = terminal::size()?;
-    let mut display = TerminalDisplay {
-        cols: size.0 as i32,
-        lines: size.1 as i32,
-    };
+    set_terminal_size(size.0 as i32, size.1 as i32);
 
-    let mut x = display.cols - 1;
+    let mut x = cols() - 1;
 
     loop {
         match names_receiver.try_recv() {
@@ -84,7 +89,7 @@ fn main() -> Result<(), Error> {
             Err(_) => {}
         }
 
-        if add_train(x, &names, &display, &args).is_err() {
+        if add_train(x, &names, &args).is_err() {
             break;
         }
 
@@ -100,8 +105,7 @@ fn main() -> Result<(), Error> {
                 }) => break,
                 Event::Resize(cols, lines) => {
                     stdout.queue(Clear(ClearType::All))?;
-                    display.cols = cols as i32;
-                    display.lines = lines as i32;
+                    set_terminal_size(cols as i32, lines as i32);
                 }
                 _ => {}
             }
