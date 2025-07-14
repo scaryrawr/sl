@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, Suspense, lazy } from 'react';
+import { osName } from 'react-device-detect';
 
 const styles = {
   window: {
@@ -48,7 +49,42 @@ const styles = {
   }
 };
 
+const MacWindowChrome = lazy(() => import('./MacWindowChrome.jsx'));
+const WindowsWindowChrome = lazy(() => import('./WindowsWindowChrome.jsx'));
+const LinuxWindowChrome = lazy(() => import('./LinuxWindowChrome.jsx'));
+
+function detectColorScheme() {
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  return 'light';
+}
+
 const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgroundColor = '#000' }) => {
+  const [colorScheme, setColorScheme] = useState(detectColorScheme());
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      const mql = window.matchMedia('(prefers-color-scheme: dark)');
+      const handler = (e) => setColorScheme(e.matches ? 'dark' : 'light');
+      mql.addEventListener ? mql.addEventListener('change', handler) : mql.addListener(handler);
+      return () => {
+        mql.removeEventListener ? mql.removeEventListener('change', handler) : mql.removeListener(handler);
+      };
+    }
+  }, []);
+
+  let ChromeComponent;
+  if (osName === 'Mac OS') {
+    ChromeComponent = MacWindowChrome;
+  } else if (osName === 'Windows') {
+    ChromeComponent = WindowsWindowChrome;
+  } else if (osName === 'Linux') {
+    ChromeComponent = LinuxWindowChrome;
+  } else {
+    ChromeComponent = MacWindowChrome; // fallback
+  }
+
   const internalRef = useRef(null);
   const terminalRef = externalRef || internalRef;
   const [dimensions, setDimensions] = useState({ rows: 40, cols: 120 });
@@ -109,17 +145,11 @@ const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgro
   );
 
   return (
-    <div style={styles.window}>
-      <div style={styles.titleBar}>
-        <span style={styles.title}>{title}</span>
-        <div style={styles.buttons}>
-          <button style={styles.button}>_</button>
-          <button style={styles.button}>□</button>
-          <button style={styles.button}>×</button>
-        </div>
-      </div>
-      <div ref={terminalRef} style={terminalStyle}></div>
-    </div>
+    <Suspense fallback={<div>Loading terminal window...</div>}>
+      <ChromeComponent title={title} colorScheme={colorScheme}>
+        <div ref={terminalRef} style={terminalStyle}></div>
+      </ChromeComponent>
+    </Suspense>
   );
 };
 
