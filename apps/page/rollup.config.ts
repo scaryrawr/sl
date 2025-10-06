@@ -2,16 +2,14 @@ import commonjs from '@rollup/plugin-commonjs';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
 import terser from '@rollup/plugin-terser';
+import typescript from '@rollup/plugin-typescript';
 import { wasm } from '@rollup/plugin-wasm';
+import type { RollupOptions } from 'rollup';
 import copy from 'rollup-plugin-copy';
 import { visualizer } from 'rollup-plugin-visualizer';
 
-/**
- * @type {import('rollup').RollupOptions}
- */
-const config = {
-  input: 'src/index.jsx',
-  jsx: 'react-jsx',
+const config: RollupOptions = {
+  input: 'src/index.tsx',
   output: {
     dir: 'lib',
     format: 'esm',
@@ -20,6 +18,9 @@ const config = {
   },
   plugins: [
     wasm(),
+    typescript({
+      tsconfig: './tsconfig.json'
+    }),
     nodeResolve(),
     commonjs(),
     replace({

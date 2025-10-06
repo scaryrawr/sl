@@ -5,7 +5,7 @@
     "./pkg/snippets/*"
   ],
   "type": "module",
-  "main": "index.js",
+  "main": "index.ts",
   "types": "pkg/websl.d.ts",
   "files": [
     "pkg/websl_bg.wasm",

@@ -1,12 +1,13 @@
 import { useReducer } from 'react';
-import SlTerminal, { TrainType } from '../slTerminal.jsx';
-import Embed from './Embed.jsx';
-import Form from './Form.jsx';
-import Installation from './Installation.jsx';
-import Piping from './Piping.jsx';
-import Usage from './Usage.jsx';
+import { SlAction, SlState, TrainType } from '../../types';
+import SlTerminal from '../slTerminal';
+import Embed from './Embed';
+import Form from './Form';
+import Installation from './Installation';
+import Piping from './Piping';
+import Usage from './Usage';
 
-const initialState = {
+const initialState: SlState = {
   accident: true,
   fly: false,
   smoke: true,
@@ -16,7 +17,7 @@ const initialState = {
   backgroundColor: '#000'
 };
 
-const slReducer = (state, action) => {
+const slReducer = (state: SlState, action: SlAction): SlState => {
   switch (action.type) {
     case 'SET_ACCIDENT':
       return { ...state, accident: action.payload };

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { CSSProperties, RefObject, useEffect, useMemo, useRef, useState } from 'react';
 
 const styles = {
   window: {
@@ -12,7 +12,7 @@ const styles = {
     position: 'relative',
     margin: '20px auto',
     backgroundColor: '#fff'
-  },
+  } as CSSProperties,
   titleBar: {
     backgroundColor: '#333',
     color: '#fff',
@@ -21,14 +21,14 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center'
-  },
+  } as CSSProperties,
   title: {
     fontWeight: 'bold'
-  },
+  } as CSSProperties,
   buttons: {
     display: 'flex',
     gap: '5px'
-  },
+  } as CSSProperties,
   button: {
     backgroundColor: '#555',
     color: '#fff',
@@ -37,7 +37,7 @@ const styles = {
     width: '20px',
     height: '20px',
     cursor: 'pointer'
-  },
+  } as CSSProperties,
   terminal: {
     fontFamily: 'monospace',
     whiteSpace: 'pre',
@@ -45,11 +45,18 @@ const styles = {
     padding: '10px',
     overflow: 'auto',
     maxHeight: 'calc(80vh - 50px)'
-  }
+  } as CSSProperties
 };
 
-const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgroundColor = '#000' }) => {
-  const internalRef = useRef(null);
+interface TerminalProps {
+  title: string;
+  terminalRef?: RefObject<HTMLDivElement>;
+  fontColor?: string;
+  backgroundColor?: string;
+}
+
+const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgroundColor = '#000' }: TerminalProps) => {
+  const internalRef = useRef<HTMLDivElement>(null);
   const terminalRef = externalRef || internalRef;
   const [dimensions, setDimensions] = useState({ rows: 40, cols: 120 });
 
@@ -78,26 +85,28 @@ const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgro
     };
 
     const resizeObserver = new ResizeObserver(updateDimensions);
-    resizeObserver.observe(terminal);
+    if (terminal) {
+      resizeObserver.observe(terminal);
+    }
 
     updateDimensions();
 
     return () => {
       resizeObserver.disconnect();
     };
-  }, []);
+  }, [terminalRef]);
 
   useEffect(() => {
     const terminal = terminalRef.current;
     if (terminal) {
       terminal.innerHTML = '';
       for (let i = 0; i < dimensions.rows; i++) {
-        let row = document.createElement('div');
+        const row = document.createElement('div');
         row.textContent = '\xa0'.repeat(dimensions.cols);
         terminal.appendChild(row);
       }
     }
-  }, [dimensions]);
+  }, [dimensions, terminalRef]);
 
   const terminalStyle = useMemo(
     () => ({

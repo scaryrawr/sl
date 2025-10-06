@@ -1,51 +1,56 @@
-import { useCallback } from 'react';
-import { TrainType } from '../slTerminal.jsx';
+import { Dispatch, useCallback } from 'react';
+import { SlAction, SlState, TrainType } from '../../types';
 
-const Form = ({ state, dispatch }) => {
+interface FormProps {
+  state: SlState;
+  dispatch: Dispatch<SlAction>;
+}
+
+const Form = ({ state, dispatch }: FormProps) => {
   const handleAccidentChange = useCallback(
-    (e) => {
+    (e: React.ChangeEvent<HTMLInputElement>) => {
       dispatch({ type: 'SET_ACCIDENT', payload: e.target.checked });
     },
     [dispatch]
   );
 
   const handleFlyChange = useCallback(
-    (e) => {
+    (e: React.ChangeEvent<HTMLInputElement>) => {
       dispatch({ type: 'SET_FLY', payload: e.target.checked });
     },
     [dispatch]
   );
 
   const handleSmokeChange = useCallback(
-    (e) => {
+    (e: React.ChangeEvent<HTMLInputElement>) => {
       dispatch({ type: 'SET_SMOKE', payload: e.target.checked });
     },
     [dispatch]
   );
 
   const handleTrainTypeChange = useCallback(
-    (e) => {
-      dispatch({ type: 'SET_TRAIN_TYPE', payload: e.target.value });
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      dispatch({ type: 'SET_TRAIN_TYPE', payload: e.target.value as typeof TrainType[keyof typeof TrainType] });
     },
     [dispatch]
   );
 
   const handleMessagesChange = useCallback(
-    (e) => {
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       dispatch({ type: 'SET_MESSAGES', payload: e.target.value.split('\n') });
     },
     [dispatch]
   );
 
   const handleFontColorChange = useCallback(
-    (e) => {
+    (e: React.ChangeEvent<HTMLInputElement>) => {
       dispatch({ type: 'SET_FONT_COLOR', payload: e.target.value });
     },
     [dispatch]
   );
 
   const handleBackgroundColorChange = useCallback(
-    (e) => {
+    (e: React.ChangeEvent<HTMLInputElement>) => {
       dispatch({ type: 'SET_BACKGROUND_COLOR', payload: e.target.value });
     },
     [dispatch]
@@ -75,7 +80,7 @@ const Form = ({ state, dispatch }) => {
       </label>
       <label>
         Messages
-        <textarea rows="3" value={state.messages.join('\n')} onChange={handleMessagesChange} />
+        <textarea rows={3} value={state.messages.join('\n')} onChange={handleMessagesChange} />
       </label>
       <label>
         Font Color

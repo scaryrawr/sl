@@ -1,7 +1,8 @@
 import { useSearchParams } from 'react-router-dom';
-import SlTerminal, { TrainType } from '../slTerminal.jsx';
+import { TrainType, TrainTypeValue } from '../../types';
+import SlTerminal from '../slTerminal';
 
-const parseMessages = (messagesParam) => {
+const parseMessages = (messagesParam: string | null): string[] => {
   try {
     return JSON.parse(decodeURIComponent(messagesParam || '[]'));
   } catch (error) {
@@ -15,7 +16,7 @@ const EmbedPage = () => {
   const accident = searchParams.get('accident') === 'true';
   const fly = searchParams.get('fly') === 'true';
   const smoke = searchParams.get('smoke') !== 'false';
-  const trainType = searchParams.get('trainType') || TrainType.D51;
+  const trainType = (searchParams.get('trainType') || TrainType.D51) as TrainTypeValue;
   const messages = parseMessages(searchParams.get('messages'));
   const fontColor = searchParams.get('fontColor') || '#0f0';
   const backgroundColor = searchParams.get('backgroundColor') || '#000';
