@@ -5,7 +5,10 @@
     "ghcr.io/devcontainers/features/common-utils:2": {
       "username": "vscode"
     },
-    "ghcr.io/devcontainers/features/node:1": {}
+    "ghcr.io/devcontainers/features/rust:1": {},
+    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/scaryrawr/dev-feats/zig:1": {},
+    "ghcr.io/scaryrawr/dev-feats/bun:1": {}
   },
   "customizations": {
     "vscode": {
@@ -18,7 +21,6 @@
       ]
     }
   },
-  "onCreateCommand": "${containerWorkspaceFolder}/.devcontainer/onCreateCommand.sh",
-  "containerUser": "vscode",
-  "remoteUser": "vscode"
+  "remoteUser": "vscode",
+  "onCreateCommand": "${containerWorkspaceFolder}/.devcontainer/onCreateCommand.sh"
 }
