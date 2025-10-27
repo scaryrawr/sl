@@ -1,5 +1,5 @@
 {
-  "name": "sl",
+  "name": "sl (Fedora)",
   "image": "fedora:latest",
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
@@ -25,5 +25,5 @@
     }
   },
   "remoteUser": "vscode",
-  "onCreateCommand": "${containerWorkspaceFolder}/.devcontainer/onCreateCommand.sh"
+  "onCreateCommand": "${containerWorkspaceFolder}/.devcontainer/fedora/onCreateCommand.sh"
 }

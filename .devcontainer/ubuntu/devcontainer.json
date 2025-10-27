@@ -1,0 +1,27 @@
+{
+  "name": "sl (Ubuntu)",
+  "image": "ubuntu:latest",
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "username": "vscode"
+    },
+    "ghcr.io/devcontainers/features/rust:1": {},
+    "ghcr.io/devcontainers/features/node:1": {}
+  },
+  "containerEnv": {
+    "CARGO_HOME": "/home/vscode/.cargo"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools-extension-pack",
+        "github.vscode-github-actions",
+        "rust-lang.rust-analyzer",
+        "fill-labs.dependi",
+        "vadimcn.vscode-lldb"
+      ]
+    }
+  },
+  "remoteUser": "vscode",
+  "onCreateCommand": "${containerWorkspaceFolder}/.devcontainer/ubuntu/onCreateCommand.sh"
+}
