@@ -17,12 +17,11 @@ This repository provides multiple devcontainer configurations to support differe
 
 ### Ubuntu
 - **Location**: `.devcontainer/ubuntu/`
-- **Base Image**: `ubuntu:latest`
+- **Base Image**: `mcr.microsoft.com/devcontainers/base:noble`
 - **Features**:
   - Common Utils (with vscode user)
   - Rust
   - Node.js
-- **Additional Packages**: build-essential, pkg-config, curl, wget, git, gh
 
 ## Usage
 
