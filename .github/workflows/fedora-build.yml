@@ -18,6 +18,7 @@ jobs:
       - name: Build and Test
         uses: devcontainers/ci@v0.3
         with:
+          configFile: .devcontainer/fedora/devcontainer.json
           runCmd: |
             mkdir ~/rpkg-build
             rpkg install --outdir ~/rpkg-build
