@@ -1,0 +1,37 @@
+name: Ubuntu Build SL
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Cache Cargo Registry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ubuntu-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install cargo-deb
+        run: cargo install cargo-deb
+      - name: Build Release
+        run: COMPLETION_DIR="$(pwd)/completions" cargo build --release
+      - name: Build .deb Package
+        id: deb_build
+        run: |
+          COMPLETION_DIR="$(pwd)/completions" cargo deb --manifest-path=apps/sl/Cargo.toml --no-build
+          DEB_FILE=$(ls target/debian/sl_*.deb)
+          echo "deb_file=${DEB_FILE}" >> $GITHUB_OUTPUT
+          echo "deb_name=$(basename ${DEB_FILE})" >> $GITHUB_OUTPUT
+      - name: Test .deb Package
+        run: |
+          dpkg -I ${{ steps.deb_build.outputs.deb_file }}
+          dpkg -c ${{ steps.deb_build.outputs.deb_file }}
+      - name: Upload .deb Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.deb_build.outputs.deb_name }}
+          path: ${{ steps.deb_build.outputs.deb_file }}
