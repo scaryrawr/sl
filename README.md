@@ -72,6 +72,14 @@ sudo dnf copr enable scaryrawr/sl
 sudo dnf install sl
 ```
 
+### Ubuntu and Debian-based Linux
+
+Download the [latest release](https://github.com/scaryrawr/sl/releases/latest) `.deb` package and install:
+
+```sh
+sudo dpkg -i sl_*_amd64.deb
+```
+
 ### Windows
 
 Download the [latest release](https://github.com/scaryrawr/sl/releases/latest) or using winget (winget may be a few
