@@ -40,7 +40,7 @@ jobs:
         id: deb_build
         run: |
           cargo deb --manifest-path=apps/sl/Cargo.toml --target=${{ matrix.target }} --no-build
-          DEB_FILE=$(ls target/debian/sl_*.deb)
+          DEB_FILE=$(ls target/${{ matrix.target }}/debian/sl_*.deb)
           echo "deb_file=${DEB_FILE}" >> $GITHUB_OUTPUT
           echo "deb_name=$(basename ${DEB_FILE})" >> $GITHUB_OUTPUT
       - name: Test .deb Package
