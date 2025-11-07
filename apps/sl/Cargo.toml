@@ -35,7 +35,7 @@ priority = "optional"
 assets = [
     ["../../target/release/sl", "usr/bin/", "755"],
     ["../../completions/sl.1", "usr/share/man/man1/", "644"],
-    ["../../sl.1.ja", "usr/share/man/man1/", "644"],
+    ["../../sl.1.ja", "usr/share/man/ja/man1/sl.1", "644"],
     ["../../completions/sl.bash", "usr/share/bash-completion/completions/sl", "644"],
     ["../../completions/sl.fish", "usr/share/fish/vendor_completions.d/", "644"],
     ["../../completions/_sl", "usr/share/zsh/vendor-completions/", "644"],
