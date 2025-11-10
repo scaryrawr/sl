@@ -77,7 +77,9 @@ sudo dnf install sl
 Download the [latest release](https://github.com/scaryrawr/sl/releases/latest) `.deb` package and install:
 
 ```sh
-sudo dpkg -i sl_*_amd64.deb
+# Automatically detect architecture
+ARCH=$(dpkg --print-architecture)
+sudo dpkg -i sl_*_${ARCH}.deb
 ```
 
 ### Windows
