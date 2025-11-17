@@ -72,6 +72,16 @@ sudo dnf copr enable scaryrawr/sl
 sudo dnf install sl
 ```
 
+### Ubuntu and Debian-based Linux
+
+Download the [latest release](https://github.com/scaryrawr/sl/releases/latest) `.deb` package and install:
+
+```sh
+# Automatically detect architecture
+ARCH=$(dpkg --print-architecture)
+sudo dpkg -i sl_*_${ARCH}.deb
+```
+
 ### Windows
 
 Download the [latest release](https://github.com/scaryrawr/sl/releases/latest) or using winget (winget may be a few

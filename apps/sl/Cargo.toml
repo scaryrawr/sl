@@ -3,6 +3,7 @@ name = "sl"
 version = "6.1.5"
 edition = "2021"
 build = "build.rs"
+description = "SL (Steam Locomotive) cures your bad habit of mistyping"
 
 [profile.release]
 opt-level = 3
@@ -20,3 +21,22 @@ unicode-segmentation = "1.12.0"
 clap = { version = "4.5.23", features = ["derive"] }
 clap_complete = "4.5.40"
 clap_mangen = "0.2.24"
+
+[package.metadata.deb]
+maintainer = "Toyoda Masashi <mtoyoda@acm.org>"
+copyright = "1993,1998,2014 Toyoda Masashi <mtoyoda@acm.org>"
+license-file = ["../../LICENSE", "0"]
+extended-description = """
+SL (Steam Locomotive) runs across your terminal when you type "sl" as you meant to type "ls".
+It's just a joke command, and it is a highly advanced animation program for curing your bad habit of mistyping."""
+depends = "$auto"
+section = "utils"
+priority = "optional"
+assets = [
+    ["target/release/sl", "usr/bin/", "755"],
+    ["../../completions/sl.1", "usr/share/man/man1/", "644"],
+    ["../../sl.1.ja", "usr/share/man/ja/man1/sl.1", "644"],
+    ["../../completions/sl.bash", "usr/share/bash-completion/completions/sl", "644"],
+    ["../../completions/sl.fish", "usr/share/fish/vendor_completions.d/", "644"],
+    ["../../completions/_sl", "usr/share/zsh/vendor-completions/", "644"],
+]
