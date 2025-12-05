@@ -27,8 +27,10 @@ const useSlAnimation = (props) => {
   }, []);
 
   useEffect(() => {
-    let intervalId;
+    let animationFrameId;
     let disposed = false;
+    let lastFrameTime = 0;
+    const frameInterval = 60; // Target ~16.67 FPS (same as original 60ms interval)
 
     const runWasm = async () => {
       const sl = await slPromise;
@@ -48,35 +50,46 @@ const useSlAnimation = (props) => {
         xRef.current = terminal.children[0].textContent.length;
       }
 
-      intervalId = setInterval(() => {
-        let cols = terminal.children[0].textContent.length;
-        let rows = terminal.children.length;
-        let display = new sl.Display(cols, rows, (y, x, str) => {
-          let row = terminal?.children[y];
-          if (!row || !row.textContent) return;
+      const animate = (currentTime) => {
+        if (disposed) return;
 
-          let newText = row.textContent.substring(0, x) + str + row.textContent.substring(x + str.length);
-          newText += '\xa0'.repeat(cols - newText.length);
-          row.textContent = newText.substring(0, row.textContent.length);
-        });
+        // Throttle to maintain original animation speed
+        if (currentTime - lastFrameTime >= frameInterval) {
+          lastFrameTime = currentTime;
 
-        if (xRef.current > cols) {
-          clear();
-          xRef.current = cols;
+          let cols = terminal.children[0].textContent.length;
+          let rows = terminal.children.length;
+          let display = new sl.Display(cols, rows, (y, x, str) => {
+            let row = terminal?.children[y];
+            if (!row || !row.textContent) return;
+
+            let newText = row.textContent.substring(0, x) + str + row.textContent.substring(x + str.length);
+            newText += '\xa0'.repeat(cols - newText.length);
+            row.textContent = newText.substring(0, row.textContent.length);
+          });
+
+          if (xRef.current > cols) {
+            clear();
+            xRef.current = cols;
+          }
+
+          if (!trains[trainType](--xRef.current, messages, display, options)) {
+            clear();
+            xRef.current = cols;
+          }
         }
 
-        if (!trains[trainType](--xRef.current, messages, display, options)) {
-          clear();
-          xRef.current = cols;
-        }
-      }, 60);
+        animationFrameId = requestAnimationFrame(animate);
+      };
+
+      animationFrameId = requestAnimationFrame(animate);
     };
 
     runWasm();
 
     return () => {
       disposed = true;
-      clearInterval(intervalId);
+      cancelAnimationFrame(animationFrameId);
       clear();
     };
   }, [accident, fly, trainType, messages, smoke, clear]);
