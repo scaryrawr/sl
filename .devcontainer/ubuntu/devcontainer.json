@@ -15,7 +15,6 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "ms-vscode.cpptools-extension-pack",
         "github.vscode-github-actions",
         "rust-lang.rust-analyzer",
         "fill-labs.dependi",
@@ -23,5 +22,6 @@
       ]
     }
   },
-  "remoteUser": "vscode"
+  "remoteUser": "vscode",
+  "onCreateCommand": "${containerWorkspaceFolder}/.devcontainer/ubuntu/onCreateCommand.sh"
 }
