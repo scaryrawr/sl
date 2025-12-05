@@ -6,7 +6,7 @@ const EmbedPage = lazy(() => import('./embed/EmbedPage.jsx'));
 
 const App = () => (
   <Router>
-    <Suspense fallback={<div>Loading…</div>}>
+    <Suspense fallback={<div></div>}>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/embed" element={<EmbedPage />} />
