@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 
 // Approximate character dimensions for 16px monospace font
 const CHAR_WIDTH_ESTIMATE = 9.6;
