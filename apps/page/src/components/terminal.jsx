@@ -1,17 +1,22 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+
+// Approximate character dimensions for 16px monospace font
+const CHAR_WIDTH_ESTIMATE = 9.6;
+const CHAR_HEIGHT_ESTIMATE = 19;
 
 const styles = {
   window: {
     border: '1px solid black',
     borderRadius: '5px',
     width: '100%',
-    maxHeight: '100vh',
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
     position: 'relative',
     margin: '20px auto',
-    backgroundColor: '#fff'
+    backgroundColor: '#fff',
+    // Fixed height to prevent layout shift
+    height: 'calc(80vh - 40px)'
   },
   titleBar: {
     backgroundColor: '#333',
@@ -20,7 +25,8 @@ const styles = {
     textAlign: 'center',
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center'
+    alignItems: 'center',
+    flexShrink: 0
   },
   title: {
     fontWeight: 'bold'
@@ -43,61 +49,72 @@ const styles = {
     whiteSpace: 'pre',
     flex: 1,
     padding: '10px',
-    overflow: 'auto',
-    maxHeight: 'calc(80vh - 50px)'
+    overflow: 'hidden',
+    minHeight: 0 // Allow flex child to shrink
   }
 };
 
 const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgroundColor = '#000' }) => {
   const internalRef = useRef(null);
   const terminalRef = externalRef || internalRef;
-  const [dimensions, setDimensions] = useState({ rows: 40, cols: 120 });
+  const dimensionsRef = useRef(null);
+  const initializedRef = useRef(false);
 
-  useEffect(() => {
+  // Use useLayoutEffect to measure and build rows synchronously before paint
+  useLayoutEffect(() => {
     const terminal = terminalRef.current;
+    if (!terminal) return;
 
-    const updateDimensions = () => {
-      if (terminal) {
-        const tempElement = document.createElement('div');
-        tempElement.style.position = 'absolute';
-        tempElement.style.visibility = 'hidden';
-        tempElement.style.whiteSpace = 'pre';
-        tempElement.textContent = 'X';
-        terminal.appendChild(tempElement);
+    const measureAndUpdate = () => {
+      // Create temp element to measure actual character size
+      const tempElement = document.createElement('div');
+      tempElement.style.position = 'absolute';
+      tempElement.style.visibility = 'hidden';
+      tempElement.style.whiteSpace = 'pre';
+      tempElement.style.font = 'inherit';
+      tempElement.textContent = 'X';
+      terminal.appendChild(tempElement);
 
-        const charWidth = tempElement.getBoundingClientRect().width;
-        const lineHeight = tempElement.getBoundingClientRect().height;
+      const charWidth = tempElement.getBoundingClientRect().width || CHAR_WIDTH_ESTIMATE;
+      const lineHeight = tempElement.getBoundingClientRect().height || CHAR_HEIGHT_ESTIMATE;
 
-        terminal.removeChild(tempElement);
+      terminal.removeChild(tempElement);
 
-        const { clientWidth, clientHeight } = terminal;
-        const cols = Math.floor(clientWidth / charWidth);
-        const rows = Math.min(80, Math.floor(clientHeight / lineHeight));
-        setDimensions({ rows, cols });
+      const { clientWidth, clientHeight } = terminal;
+      const cols = Math.floor(clientWidth / charWidth);
+      const rows = Math.min(80, Math.floor(clientHeight / lineHeight));
+      
+      const prev = dimensionsRef.current;
+      // Only rebuild if dimensions actually changed
+      if (!prev || prev.rows !== rows || prev.cols !== cols) {
+        dimensionsRef.current = { rows, cols };
+        
+        // Build rows directly in the same synchronous block
+        terminal.innerHTML = '';
+        for (let i = 0; i < rows; i++) {
+          let row = document.createElement('div');
+          row.textContent = '\xa0'.repeat(cols);
+          terminal.appendChild(row);
+        }
       }
+      
+      initializedRef.current = true;
     };
 
-    const resizeObserver = new ResizeObserver(updateDimensions);
-    resizeObserver.observe(terminal);
+    measureAndUpdate();
 
-    updateDimensions();
+    const resizeObserver = new ResizeObserver(() => {
+      // Skip resize events during initial render
+      if (initializedRef.current) {
+        measureAndUpdate();
+      }
+    });
+    resizeObserver.observe(terminal);
 
     return () => {
       resizeObserver.disconnect();
     };
-  }, []);
-
-  useEffect(() => {
-    const terminal = terminalRef.current;
-    if (terminal) {
-      terminal.innerHTML = '';
-      for (let i = 0; i < dimensions.rows; i++) {
-        let row = document.createElement('div');
-        row.textContent = '\xa0'.repeat(dimensions.cols);
-        terminal.appendChild(row);
-      }
-    }
-  }, [dimensions]);
+  }, [terminalRef]);
 
   const terminalStyle = useMemo(
     () => ({
