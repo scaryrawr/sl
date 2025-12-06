@@ -75,7 +75,7 @@ const Form = ({ state, dispatch }) => {
       </label>
       <label>
         Messages
-        <textarea rows="3" value={state.messages.join('\n')} onChange={handleMessagesChange} />
+        <textarea rows={3} value={state.messages.join('\n')} onChange={handleMessagesChange} />
       </label>
       <label>
         Font Color

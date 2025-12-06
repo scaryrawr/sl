@@ -23,24 +23,34 @@
     "apps/*"
   ],
   "scripts": {
-    "analyze": "yarn workspace page analyze",
-    "build": "turbo run build",
+    "analyze": "bun run --cwd apps/page analyze",
+    "build": "bun run build:websl && bun run build:page",
     "build:libsl": "cargo build --manifest-path libraries/libsl/Cargo.toml --release",
+    "build:page": "bun run --cwd apps/page build",
+    "build:websl": "bun run --cwd libraries/websl build",
     "build:websl:rust": "wasm-pack build libraries/websl --target web --release",
-    "dev": "turbo run dev",
-    "lint": "turbo run lint",
+    "dev": "bun run dev:page",
+    "dev:page": "bun run --cwd apps/page dev",
+    "dev:websl": "bun run --cwd libraries/websl dev",
+    "lint": "bun run lint:websl && bun run lint:page",
+    "lint:page": "bun run --cwd apps/page lint",
+    "lint:websl": "bun run --cwd libraries/websl lint",
     "pretty": "prettier \"{.,**}.{tsx,ts,js,less,json,md,yaml}\" --write",
-    "start": "turbo run start",
-    "test": "turbo run test",
+    "start": "bun run start:page",
+    "start:page": "bun run --cwd apps/page start",
+    "typecheck": "bun run typecheck:page",
+    "typecheck:page": "bun run --cwd apps/page typecheck",
+    "test": "bun run test:websl && bun run test:page",
     "test:libsl": "cargo test --manifest-path libraries/libsl/Cargo.toml",
+    "test:page": "bun run --cwd apps/page test",
+    "test:websl": "bun run --cwd libraries/websl test",
     "test:websl:rust": "wasm-pack test --headless --firefox libraries/websl"
   },
   "devDependencies": {
-    "prettier": "^3.4.2",
-    "prettier-plugin-organize-imports": "^4.1.0",
-    "prettier-plugin-packagejson": "^2.5.6",
-    "turbo": "^2.5.4",
-    "typescript": "^5.7.3"
+    "prettier": "^3.7.4",
+    "prettier-plugin-organize-imports": "^4.3.0",
+    "prettier-plugin-packagejson": "^2.5.20",
+    "typescript": "^5.9.3"
   },
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+  "packageManager": "bun@1.3.3"
 }

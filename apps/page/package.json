@@ -10,6 +10,7 @@
     "build": "rollup -c",
     "dev": "rollup -c -w",
     "lint": "prettier \"src/**/*.{js,jsx,ts,tsx,json,md}\" --check",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
     "start": "http-server ./lib/",
     "test": "echo 'No tests for this package'"
   },
@@ -20,15 +21,18 @@
     "websl": "*"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^28.0.2",
-    "@rollup/plugin-node-resolve": "^16.0.0",
-    "@rollup/plugin-replace": "^6.0.2",
+    "@rollup/plugin-commonjs": "^29.0.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-replace": "^6.0.3",
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-wasm": "^6.2.2",
+    "@types/react": "^19.0.4",
+    "@types/react-dom": "^19.0.4",
     "http-server": "^14.1.1",
-    "rollup": "^4.30.1",
+    "rollup": "^4.53.3",
     "rollup-plugin-copy": "^3.5.0",
-    "rollup-plugin-visualizer": "^6.0.3",
-    "typescript": "^5.7.3"
-  }
+    "rollup-plugin-visualizer": "^6.0.5",
+    "typescript": "^5.9.3"
+  },
+  "packageManager": "bun@1.3.3"
 }
