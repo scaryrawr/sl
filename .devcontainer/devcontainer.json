@@ -1,12 +1,13 @@
 {
-  "name": "sl (Fedora)",
-  "image": "fedora:latest",
+  "name": "sl (Ubuntu)",
+  "image": "mcr.microsoft.com/devcontainers/base:noble",
   "features": {
-    "ghcr.io/devcontainers/features/common-utils:2": {
-      "username": "vscode"
-    },
+    "ghcr.io/devcontainers/features/common-utils:2": {},
     "ghcr.io/devcontainers/features/rust:1": {},
-    "ghcr.io/devcontainers/features/node:1": {}
+    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/scaryrawr/dev-feats/bun:1": {},
+    "ghcr.io/scaryrawr/dev-feats/zig:1": {}
   },
   "containerEnv": {
     "CARGO_HOME": "/home/vscode/.cargo"
@@ -22,5 +23,5 @@
     }
   },
   "remoteUser": "vscode",
-  "onCreateCommand": "${containerWorkspaceFolder}/.devcontainer/fedora/onCreateCommand.sh"
+  "onCreateCommand": "${containerWorkspaceFolder}/.devcontainer/ubuntu/onCreateCommand.sh"
 }
