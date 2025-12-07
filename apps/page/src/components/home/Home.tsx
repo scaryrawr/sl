@@ -63,8 +63,8 @@ const Home = () => {
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       <h1>Welcome to the SL Project</h1>
       <p>
-        SL (Steam Locomotive) runs across your terminal when you type "sl" as you meant to type "ls". It's just a joke
-        command.
+        SL (Steam Locomotive) runs across your terminal when you type &ldquo;sl&rdquo; as you meant to type
+        &ldquo;ls&rdquo;. It&rsquo;s just a joke command.
       </p>
       <p>
         Visit our <a href="https://github.com/scaryrawr/sl">GitHub repository</a> for more information.
@@ -92,5 +92,5 @@ const Home = () => {
   );
 };
 
-export type { State, Action };
+export type { Action, State };
 export default Home;

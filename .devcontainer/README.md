@@ -5,6 +5,7 @@ This repository provides multiple devcontainer configurations to support differe
 ## Available Configurations
 
 ### Fedora (Default)
+
 - **Location**: `.devcontainer/fedora/`
 - **Base Image**: `fedora:latest`
 - **Features**:
@@ -16,6 +17,7 @@ This repository provides multiple devcontainer configurations to support differe
 - **Additional Packages**: dnf-plugins-core, cargo, C development tools, RPM development tools, rpkg, gh
 
 ### Ubuntu
+
 - **Location**: `.devcontainer/ubuntu/`
 - **Base Image**: `mcr.microsoft.com/devcontainers/base:noble`
 - **Features**:
@@ -31,11 +33,13 @@ When opening this repository in VS Code with the Dev Containers extension:
 2. You'll be prompted to select which configuration to use
 3. Choose either "Fedora" or "Ubuntu" based on your preference
 
-Alternatively, you can specify the configuration in your VS Code settings or when running the "Dev Containers: Reopen in Container" command.
+Alternatively, you can specify the configuration in your VS Code settings or when running the "Dev Containers: Reopen in
+Container" command.
 
 ## VSCode Extensions
 
 Both configurations include the following VS Code extensions:
+
 - C/C++ Extension Pack
 - GitHub Actions
 - Rust Analyzer
@@ -45,4 +49,5 @@ Both configurations include the following VS Code extensions:
 ## Environment Variables
 
 Both configurations set:
+
 - `CARGO_HOME=/home/vscode/.cargo` - Custom cargo home directory
