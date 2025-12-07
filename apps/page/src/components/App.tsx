@@ -1,12 +1,12 @@
 import { Suspense, lazy } from 'react';
-import { Route, HashRouter as Router, Routes } from 'react-router-dom';
+import { HashRouter as Router, Route, Routes } from 'react-router-dom';
 
-const Home = lazy(() => import('./home/Home.jsx'));
-const EmbedPage = lazy(() => import('./embed/EmbedPage.jsx'));
+const Home = lazy(() => import('./home/Home'));
+const EmbedPage = lazy(() => import('./embed/EmbedPage'));
 
 const App = () => (
   <Router>
-    <Suspense fallback={<div></div>}>
+    <Suspense fallback={<div />}> 
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/embed" element={<EmbedPage />} />

@@ -1,12 +1,31 @@
 import { useReducer } from 'react';
-import SlTerminal, { TrainType } from '../slTerminal.jsx';
-import Embed from './Embed.jsx';
-import Form from './Form.jsx';
-import Installation from './Installation.jsx';
-import Piping from './Piping.jsx';
-import Usage from './Usage.jsx';
+import SlTerminal, { TrainType, type TrainTypeValue } from '../slTerminal';
+import Embed from './Embed';
+import Form from './Form';
+import Installation from './Installation';
+import Piping from './Piping';
+import Usage from './Usage';
 
-const initialState = {
+type State = {
+  accident: boolean;
+  fly: boolean;
+  smoke: boolean;
+  trainType: TrainTypeValue;
+  messages: string[];
+  fontColor: string;
+  backgroundColor: string;
+};
+
+type Action =
+  | { type: 'SET_ACCIDENT'; payload: boolean }
+  | { type: 'SET_FLY'; payload: boolean }
+  | { type: 'SET_SMOKE'; payload: boolean }
+  | { type: 'SET_TRAIN_TYPE'; payload: TrainTypeValue }
+  | { type: 'SET_MESSAGES'; payload: string[] }
+  | { type: 'SET_FONT_COLOR'; payload: string }
+  | { type: 'SET_BACKGROUND_COLOR'; payload: string };
+
+const initialState: State = {
   accident: true,
   fly: false,
   smoke: true,
@@ -16,7 +35,7 @@ const initialState = {
   backgroundColor: '#000'
 };
 
-const slReducer = (state, action) => {
+const slReducer = (state: State, action: Action): State => {
   switch (action.type) {
     case 'SET_ACCIDENT':
       return { ...state, accident: action.payload };
@@ -73,4 +92,5 @@ const Home = () => {
   );
 };
 
+export type { State, Action };
 export default Home;
