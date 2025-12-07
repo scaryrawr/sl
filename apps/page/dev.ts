@@ -1,4 +1,3 @@
-#!/usr/bin/env bun
 import { mkdir, copyFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -15,7 +14,7 @@ const build = Bun.spawn(
   [
     "bun",
     "build",
-    "./src/index.jsx",
+    "./src/index.tsx",
     "--outdir",
     "./lib",
     "--target=browser",

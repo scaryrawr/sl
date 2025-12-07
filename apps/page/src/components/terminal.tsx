@@ -1,10 +1,10 @@
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef, type MutableRefObject, type CSSProperties } from 'react';
 
 // Approximate character dimensions for 16px monospace font
 const CHAR_WIDTH_ESTIMATE = 9.6;
 const CHAR_HEIGHT_ESTIMATE = 19;
 
-const styles = /** @type {const} */ ({
+const styles = {
   window: {
     border: '1px solid black',
     borderRadius: '5px',
@@ -52,12 +52,19 @@ const styles = /** @type {const} */ ({
     overflow: 'hidden',
     minHeight: 0 // Allow flex child to shrink
   }
-});
+} satisfies Record<'window' | 'titleBar' | 'title' | 'buttons' | 'button' | 'terminal', CSSProperties>;
 
-const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgroundColor = '#000' }) => {
-  const internalRef = useRef(null);
-  const terminalRef = externalRef || internalRef;
-  const dimensionsRef = useRef(null);
+type TerminalProps = {
+  title: string;
+  terminalRef?: MutableRefObject<HTMLDivElement | null>;
+  fontColor?: string;
+  backgroundColor?: string;
+};
+
+const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgroundColor = '#000' }: TerminalProps) => {
+  const internalRef = useRef<HTMLDivElement | null>(null);
+  const terminalRef = externalRef ?? internalRef;
+  const dimensionsRef = useRef<{ rows: number; cols: number } | null>(null);
   const initializedRef = useRef(false);
 
   // Use useLayoutEffect to measure and build rows synchronously before paint
@@ -75,8 +82,9 @@ const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgro
       tempElement.textContent = 'X';
       terminal.appendChild(tempElement);
 
-      const charWidth = tempElement.getBoundingClientRect().width || CHAR_WIDTH_ESTIMATE;
-      const lineHeight = tempElement.getBoundingClientRect().height || CHAR_HEIGHT_ESTIMATE;
+      const rect = tempElement.getBoundingClientRect();
+      const charWidth = rect.width || CHAR_WIDTH_ESTIMATE;
+      const lineHeight = rect.height || CHAR_HEIGHT_ESTIMATE;
 
       terminal.removeChild(tempElement);
 
@@ -92,7 +100,7 @@ const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgro
         // Build rows directly in the same synchronous block
         terminal.innerHTML = '';
         for (let i = 0; i < rows; i++) {
-          let row = document.createElement('div');
+          const row = document.createElement('div');
           row.textContent = '\xa0'.repeat(cols);
           terminal.appendChild(row);
         }
@@ -120,7 +128,7 @@ const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgro
     () => ({
       ...styles.terminal,
       color: fontColor,
-      backgroundColor: backgroundColor
+      backgroundColor
     }),
     [fontColor, backgroundColor]
   );
