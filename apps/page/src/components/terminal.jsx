@@ -4,7 +4,7 @@ import { useLayoutEffect, useMemo, useRef } from 'react';
 const CHAR_WIDTH_ESTIMATE = 9.6;
 const CHAR_HEIGHT_ESTIMATE = 19;
 
-const styles = {
+const styles = /** @type {const} */ ({
   window: {
     border: '1px solid black',
     borderRadius: '5px',
@@ -52,7 +52,7 @@ const styles = {
     overflow: 'hidden',
     minHeight: 0 // Allow flex child to shrink
   }
-};
+});
 
 const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgroundColor = '#000' }) => {
   const internalRef = useRef(null);
@@ -83,12 +83,12 @@ const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgro
       const { clientWidth, clientHeight } = terminal;
       const cols = Math.floor(clientWidth / charWidth);
       const rows = Math.min(80, Math.floor(clientHeight / lineHeight));
-      
+
       const prev = dimensionsRef.current;
       // Only rebuild if dimensions actually changed
       if (!prev || prev.rows !== rows || prev.cols !== cols) {
         dimensionsRef.current = { rows, cols };
-        
+
         // Build rows directly in the same synchronous block
         terminal.innerHTML = '';
         for (let i = 0; i < rows; i++) {
@@ -97,7 +97,7 @@ const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgro
           terminal.appendChild(row);
         }
       }
-      
+
       initializedRef.current = true;
     };
 

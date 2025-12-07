@@ -6,11 +6,11 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "analyze": "ANALYZE_BUNDLE=1 rollup -c",
-    "build": "rollup -c",
-    "dev": "rollup -c -w",
+    "build": "bun build ./src/index.jsx --outdir ./lib --target=browser --sourcemap --minify --public-path ./ --define:process.env.NODE_ENV=\"production\" && cp index.html lib/",
+    "dev": "bun dev.js",
     "lint": "prettier \"src/**/*.{js,jsx,ts,tsx,json,md}\" --check",
-    "start": "http-server ./lib/",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "start": "bunx http-server ./lib/",
     "test": "echo 'No tests for this package'"
   },
   "dependencies": {
@@ -20,15 +20,9 @@
     "websl": "*"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^28.0.2",
-    "@rollup/plugin-node-resolve": "^16.0.0",
-    "@rollup/plugin-replace": "^6.0.2",
-    "@rollup/plugin-terser": "^0.4.4",
-    "@rollup/plugin-wasm": "^6.2.2",
-    "http-server": "^14.1.1",
-    "rollup": "^4.30.1",
-    "rollup-plugin-copy": "^3.5.0",
-    "rollup-plugin-visualizer": "^6.0.3",
-    "typescript": "^5.7.3"
-  }
+    "@types/react": "^19.0.4",
+    "@types/react-dom": "^19.0.4",
+    "typescript": "^5.9.3"
+  },
+  "packageManager": "bun@1.3.3"
 }
