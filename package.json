@@ -32,25 +32,33 @@
     "dev": "bun run dev:page",
     "dev:page": "bun run --cwd apps/page dev",
     "dev:websl": "bun run --cwd libraries/websl dev",
-    "lint": "bun run lint:websl && bun run lint:page",
-    "lint:page": "bun run --cwd apps/page lint",
-    "lint:websl": "bun run --cwd libraries/websl lint",
-    "pretty": "prettier \"{.,**}.{tsx,ts,js,less,json,md,yaml}\" --write",
+    "format": "prettier \"{.,**}.{tsx,ts,js,less,json,md,yaml}\" --write",
+    "format:websl": "bun run --cwd libraries/websl format",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "start": "bun run start:page",
     "start:page": "bun run --cwd apps/page start",
-    "typecheck": "bun run typecheck:page",
-    "typecheck:page": "bun run --cwd apps/page typecheck",
     "test": "bun run test:websl && bun run test:page",
     "test:libsl": "cargo test --manifest-path libraries/libsl/Cargo.toml",
     "test:page": "bun run --cwd apps/page test",
     "test:websl": "bun run --cwd libraries/websl test",
-    "test:websl:rust": "wasm-pack test --headless --firefox libraries/websl"
+    "test:websl:rust": "wasm-pack test --headless --firefox libraries/websl",
+    "typecheck": "bun run typecheck:page",
+    "typecheck:page": "bun run --cwd apps/page typecheck"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-unused-imports": "^4.3.0",
     "prettier": "^3.7.4",
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-packagejson": "^2.5.20",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.48.1"
   },
   "packageManager": "bun@1.3.3"
 }
