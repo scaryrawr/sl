@@ -7,7 +7,7 @@
   "main": "index.js",
   "scripts": {
     "build": "bun build ./src/index.jsx --outdir ./lib --target=browser --sourcemap --minify --public-path ./ --define:process.env.NODE_ENV=\"production\" && cp index.html lib/",
-    "dev": "bun build ./src/index.jsx --outdir ./lib --target=browser --sourcemap --watch --public-path ./ --define:process.env.NODE_ENV=\"development\"",
+    "dev": "bun dev.js",
     "lint": "prettier \"src/**/*.{js,jsx,ts,tsx,json,md}\" --check",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "start": "bunx http-server ./lib/",
