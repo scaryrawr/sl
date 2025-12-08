@@ -1,4 +1,3 @@
-import { useSearchParams } from 'react-router-dom';
 import SlTerminal, { TrainType, type TrainTypeValue } from '../slTerminal';
 
 const parseMessages = (messagesParam: string | null): string[] => {
@@ -11,7 +10,7 @@ const parseMessages = (messagesParam: string | null): string[] => {
 };
 
 const EmbedPage = () => {
-  const [searchParams] = useSearchParams();
+  const searchParams = new URLSearchParams(window.location.search);
   const accident = searchParams.get('accident') === 'true';
   const fly = searchParams.get('fly') === 'true';
   const smoke = searchParams.get('smoke') !== 'false';

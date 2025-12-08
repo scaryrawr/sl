@@ -1,4 +1,4 @@
-import { createRoot } from 'react-dom/client';
+import { render } from 'preact';
 import SlTerminal, { TrainType, type TrainTypeValue } from './components/slTerminal';
 
 const parseMessages = (messagesParam: string | null): string[] => {
@@ -39,4 +39,4 @@ if (!container) {
   throw new Error('Root container #root not found');
 }
 
-createRoot(container).render(<EmbedApp />);
+render(<EmbedApp />, container);

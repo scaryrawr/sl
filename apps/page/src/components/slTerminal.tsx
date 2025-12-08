@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'preact/hooks';
 import Terminal from './terminal';
 
 type TrainTypeValue = 'c51' | 'd51' | 'logo';

@@ -1,58 +1,59 @@
-import { useCallback } from 'react';
+import type { JSX } from 'preact';
+import { useCallback } from 'preact/hooks';
 import { TrainType, type TrainTypeValue } from '../slTerminal';
 import type { Action, State } from './Home';
 
 type FormProps = {
   state: State;
-  dispatch: React.Dispatch<Action>;
+  dispatch: (action: Action) => void;
 };
 
 const Form = ({ state, dispatch }: FormProps) => {
   const handleAccidentChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      dispatch({ type: 'SET_ACCIDENT', payload: e.target.checked });
+    (e: JSX.TargetedEvent<HTMLInputElement>) => {
+      dispatch({ type: 'SET_ACCIDENT', payload: e.currentTarget.checked });
     },
     [dispatch]
   );
 
   const handleFlyChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      dispatch({ type: 'SET_FLY', payload: e.target.checked });
+    (e: JSX.TargetedEvent<HTMLInputElement>) => {
+      dispatch({ type: 'SET_FLY', payload: e.currentTarget.checked });
     },
     [dispatch]
   );
 
   const handleSmokeChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      dispatch({ type: 'SET_SMOKE', payload: e.target.checked });
+    (e: JSX.TargetedEvent<HTMLInputElement>) => {
+      dispatch({ type: 'SET_SMOKE', payload: e.currentTarget.checked });
     },
     [dispatch]
   );
 
   const handleTrainTypeChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      dispatch({ type: 'SET_TRAIN_TYPE', payload: e.target.value as TrainTypeValue });
+    (e: JSX.TargetedEvent<HTMLSelectElement>) => {
+      dispatch({ type: 'SET_TRAIN_TYPE', payload: e.currentTarget.value as TrainTypeValue });
     },
     [dispatch]
   );
 
   const handleMessagesChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      dispatch({ type: 'SET_MESSAGES', payload: e.target.value.split('\n') });
+    (e: JSX.TargetedEvent<HTMLTextAreaElement>) => {
+      dispatch({ type: 'SET_MESSAGES', payload: e.currentTarget.value.split('\n') });
     },
     [dispatch]
   );
 
   const handleFontColorChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      dispatch({ type: 'SET_FONT_COLOR', payload: e.target.value });
+    (e: JSX.TargetedEvent<HTMLInputElement>) => {
+      dispatch({ type: 'SET_FONT_COLOR', payload: e.currentTarget.value });
     },
     [dispatch]
   );
 
   const handleBackgroundColorChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      dispatch({ type: 'SET_BACKGROUND_COLOR', payload: e.target.value });
+    (e: JSX.TargetedEvent<HTMLInputElement>) => {
+      dispatch({ type: 'SET_BACKGROUND_COLOR', payload: e.currentTarget.value });
     },
     [dispatch]
   );

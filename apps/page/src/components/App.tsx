@@ -1,18 +1,19 @@
-import { Suspense, lazy } from 'react';
-import { Route, HashRouter as Router, Routes } from 'react-router-dom';
+import type { ComponentType } from 'preact';
+import Router from 'preact-router';
+import { lazy, Suspense } from 'preact/compat';
 
-const Home = lazy(() => import('./home/Home'));
-const EmbedPage = lazy(() => import('./embed/EmbedPage'));
+type RouteProps = { path: string };
+
+const Home = lazy(() => import('./home/Home')) as ComponentType<RouteProps>;
+const EmbedPage = lazy(() => import('./embed/EmbedPage')) as ComponentType<RouteProps>;
 
 const App = () => (
-  <Router>
-    <Suspense fallback={<div />}>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/embed" element={<EmbedPage />} />
-      </Routes>
-    </Suspense>
-  </Router>
+  <Suspense fallback={<div />}>
+    <Router>
+      <Home path="/" />
+      <EmbedPage path="/embed" />
+    </Router>
+  </Suspense>
 );
 
 export default App;
