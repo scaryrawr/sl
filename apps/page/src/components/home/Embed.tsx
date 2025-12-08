@@ -4,7 +4,7 @@ const Embed = () => (
     <p>You can embed the SL terminal in your own pages using query parameters:</p>
     <pre>
       <code>
-        {`https://scaryrawr.github.io/sl/#embed?accident=true&fly=false&smoke=true&trainType=d51&messages=["hello","world"]`}
+        {`https://scaryrawr.github.io/sl/embed?accident=true&fly=false&smoke=true&trainType=d51&messages=["hello","world"]`}
       </code>
     </pre>
     <p>Supported query parameters:</p>
