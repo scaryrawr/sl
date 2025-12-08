@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SL Embed</title>
+  <!-- Preload critical resources -->
+  <link rel="modulepreload" href="./embed.js">
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fira+Mono:wght@400;700&display=swap" as="style">
+  <script type="module" src="./embed.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    /* Prevent layout shift - pre-style the root */
+    #root {
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root">
+  </div>
+</body>
+
+</html>
