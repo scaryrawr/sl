@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "preact": "^10.25.4",
-    "preact-router": "^4.1.2",
     "websl": "*"
   },
   "devDependencies": {
