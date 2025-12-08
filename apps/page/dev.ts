@@ -5,16 +5,20 @@ const root = path.dirname(new URL(import.meta.url).pathname);
 const libDir = path.join(root, 'lib');
 const indexSrc = path.join(root, 'index.html');
 const indexDest = path.join(libDir, 'index.html');
+const embedSrc = path.join(root, 'embed.html');
+const embedDest = path.join(libDir, 'embed.html');
 const PORT = process.env.PORT || '8080';
 
 await mkdir(libDir, { recursive: true });
 await copyFile(indexSrc, indexDest);
+await copyFile(embedSrc, embedDest);
 
 const build = Bun.spawn(
   [
     'bun',
     'build',
     './src/index.tsx',
+    './src/embed.tsx',
     '--outdir',
     './lib',
     '--target=browser',

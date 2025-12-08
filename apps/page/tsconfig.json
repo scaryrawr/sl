@@ -4,6 +4,7 @@
     "allowJs": true,
     "checkJs": true,
     "jsx": "react-jsx",
+    "jsxImportSource": "preact",
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "module": "ESNext",
     "moduleResolution": "Bundler",

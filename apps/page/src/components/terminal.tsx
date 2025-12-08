@@ -1,4 +1,5 @@
-import { useLayoutEffect, useMemo, useRef, type CSSProperties, type MutableRefObject } from 'react';
+import type { JSX, RefObject } from 'preact';
+import { useLayoutEffect, useMemo, useRef } from 'preact/hooks';
 
 // Approximate character dimensions for 16px monospace font
 const CHAR_WIDTH_ESTIMATE = 9.6;
@@ -52,11 +53,11 @@ const styles = {
     overflow: 'hidden',
     minHeight: 0 // Allow flex child to shrink
   }
-} satisfies Record<'window' | 'titleBar' | 'title' | 'buttons' | 'button' | 'terminal', CSSProperties>;
+} satisfies Record<'window' | 'titleBar' | 'title' | 'buttons' | 'button' | 'terminal', JSX.CSSProperties>;
 
 type TerminalProps = {
   title: string;
-  terminalRef?: MutableRefObject<HTMLDivElement | null>;
+  terminalRef?: RefObject<HTMLDivElement | null>;
   fontColor?: string;
   backgroundColor?: string;
 };
