@@ -4,6 +4,8 @@ import { useLayoutEffect, useMemo, useRef } from 'preact/hooks';
 // Approximate character dimensions for 16px monospace font
 const CHAR_WIDTH_ESTIMATE = 9.6;
 const CHAR_HEIGHT_ESTIMATE = 19;
+const LINE_HEIGHT_MULTIPLIER = 1.2;
+const CACHE_VERSION = 'v1';
 
 const styles = {
   window: {
@@ -51,7 +53,8 @@ const styles = {
     flex: 1,
     padding: '10px',
     overflow: 'hidden',
-    minHeight: 0 // Allow flex child to shrink
+    minHeight: 0, // Allow flex child to shrink
+    lineHeight: '1.2' // Match LINE_HEIGHT_MULTIPLIER for consistent measurements
   }
 } satisfies Record<'window' | 'titleBar' | 'title' | 'buttons' | 'button' | 'terminal', JSX.CSSProperties>;
 
@@ -67,28 +70,132 @@ const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgro
   const terminalRef = externalRef ?? internalRef;
   const dimensionsRef = useRef<{ rows: number; cols: number } | null>(null);
   const initializedRef = useRef(false);
+  const charSizeRef = useRef<{ width: number; height: number } | null>(null);
 
   // Use useLayoutEffect to measure and build rows synchronously before paint
   useLayoutEffect(() => {
+    let disposed = false;
     const terminal = terminalRef.current;
     if (!terminal) return;
 
     const measureAndUpdate = () => {
-      // Create temp element to measure actual character size
-      const tempElement = document.createElement('div');
-      tempElement.style.position = 'absolute';
-      tempElement.style.visibility = 'hidden';
-      tempElement.style.whiteSpace = 'pre';
-      tempElement.style.font = 'inherit';
-      tempElement.textContent = 'X';
-      terminal.appendChild(tempElement);
+      if (disposed) return;
+      // Measure character size using Canvas API (no DOM manipulation, no forced reflow)
+      if (!charSizeRef.current) {
+        const computedStyle = window.getComputedStyle(terminal);
+        const fontFamily = computedStyle.fontFamily;
+        const fontSize = computedStyle.fontSize;
+        const fontWeight = computedStyle.fontWeight;
+        const fontStyle = computedStyle.fontStyle;
 
-      const rect = tempElement.getBoundingClientRect();
-      const charWidth = rect.width || CHAR_WIDTH_ESTIMATE;
-      const lineHeight = rect.height || CHAR_HEIGHT_ESTIMATE;
+        // Try to load from localStorage cache first
+        const cacheKey = `sl-font-metrics-${CACHE_VERSION}-${fontFamily}-${fontSize}-${fontWeight}-${fontStyle}`;
+        try {
+          const cached = localStorage.getItem(cacheKey);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            // Validate structure
+            if (
+              typeof parsed.width === 'number' &&
+              typeof parsed.height === 'number' &&
+              parsed.width > 0 &&
+              parsed.height > 0
+            ) {
+              // Check if Fira Mono is required and loaded
+              if (fontFamily.startsWith('Fira Mono')) {
+                if (document.fonts.check(`${fontSize} "Fira Mono"`)) {
+                  charSizeRef.current = parsed;
+                }
+              } else {
+                charSizeRef.current = parsed;
+              }
+            }
+          }
+        } catch {
+          // Invalid cache, remove it
+          try {
+            localStorage.removeItem(cacheKey);
+          } catch {
+            // localStorage disabled, proceed without caching
+          }
+        }
 
-      terminal.removeChild(tempElement);
+        if (!charSizeRef.current) {
+          // Check if Fira Mono is specified and wait for it to load
+          if (fontFamily.startsWith('Fira Mono')) {
+            const fontLoaded = document.fonts.check(`${fontSize} "Fira Mono"`);
+            if (!fontLoaded) {
+              // Font not ready, use estimates and wait for font to load
+              charSizeRef.current = { width: CHAR_WIDTH_ESTIMATE, height: CHAR_HEIGHT_ESTIMATE };
+              // Remeasure once font is loaded
+              document.fonts
+                .load(`${fontSize} "Fira Mono"`)
+                .then(() => {
+                  if (!disposed) {
+                    charSizeRef.current = null;
+                    measureAndUpdate();
+                  }
+                })
+                .catch(() => {
+                  // Font failed to load, keep using estimates
+                });
+              return;
+            }
+          }
 
+          // Font is ready or not needed, measure accurately
+          try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.font = `${fontSize} ${fontFamily}`;
+              const metrics = ctx.measureText('M'); // Use 'M' as it's typically widest in monospace
+              const fontSizeNum = parseFloat(fontSize) || 16;
+
+              // Use TextMetrics bounding box for more accurate line height
+              const lineHeight =
+                metrics.fontBoundingBoxAscent && metrics.fontBoundingBoxDescent
+                  ? metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent
+                  : fontSizeNum * LINE_HEIGHT_MULTIPLIER;
+
+              charSizeRef.current = {
+                width: metrics.width || CHAR_WIDTH_ESTIMATE,
+                height: lineHeight || CHAR_HEIGHT_ESTIMATE
+              };
+
+              // Cache the measured metrics
+              try {
+                localStorage.setItem(cacheKey, JSON.stringify(charSizeRef.current));
+              } catch (e) {
+                // Handle quota exceeded by clearing old caches
+                if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+                  try {
+                    for (let i = localStorage.length - 1; i >= 0; i--) {
+                      const key = localStorage.key(i);
+                      if (key?.startsWith('sl-font-metrics-')) {
+                        localStorage.removeItem(key);
+                      }
+                    }
+                    // Retry after cleanup
+                    localStorage.setItem(cacheKey, JSON.stringify(charSizeRef.current));
+                  } catch {
+                    // Still failed, proceed without caching
+                  }
+                }
+              }
+            } else {
+              charSizeRef.current = { width: CHAR_WIDTH_ESTIMATE, height: CHAR_HEIGHT_ESTIMATE };
+            }
+          } catch (error) {
+            console.error('Failed to measure terminal:', error);
+            charSizeRef.current = { width: CHAR_WIDTH_ESTIMATE, height: CHAR_HEIGHT_ESTIMATE };
+          }
+        }
+      }
+
+      const { width: charWidth, height: lineHeight } = charSizeRef.current;
+
+      // Batch all DOM reads
       const { clientWidth, clientHeight } = terminal;
       const cols = Math.floor(clientWidth / charWidth);
       const rows = Math.min(80, Math.floor(clientHeight / lineHeight));
@@ -98,13 +205,16 @@ const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgro
       if (!prev || prev.rows !== rows || prev.cols !== cols) {
         dimensionsRef.current = { rows, cols };
 
-        // Build rows directly in the same synchronous block
-        terminal.innerHTML = '';
+        // Use DocumentFragment to batch all DOM writes
+        const fragment = document.createDocumentFragment();
         for (let i = 0; i < rows; i++) {
           const row = document.createElement('div');
           row.textContent = '\xa0'.repeat(cols);
-          terminal.appendChild(row);
+          fragment.appendChild(row);
         }
+
+        // Single DOM write operation using modern API
+        terminal.replaceChildren(fragment);
       }
 
       initializedRef.current = true;
@@ -114,13 +224,14 @@ const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgro
 
     const resizeObserver = new ResizeObserver(() => {
       // Skip resize events during initial render
-      if (initializedRef.current) {
+      if (initializedRef.current && !disposed) {
         measureAndUpdate();
       }
     });
     resizeObserver.observe(terminal);
 
     return () => {
+      disposed = true;
       resizeObserver.disconnect();
     };
   }, [terminalRef]);
