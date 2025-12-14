@@ -49,9 +49,9 @@ const useSlAnimation = (props: {
 
   useEffect(() => {
     let animationFrameId: number;
+    let timeoutId: number | undefined;
     let disposed = false;
-    let lastFrameTime = 0;
-    const frameInterval = 60; // Target ~16.67 FPS (same as original 60ms interval)
+    const frameInterval = 60; // 60ms = ~16.67 FPS (reduced from 60 FPS for performance)
 
     const runWasm = async () => {
       const sl = await slPromise;
@@ -71,36 +71,37 @@ const useSlAnimation = (props: {
         xRef.current = terminal.children[0].textContent?.length ?? 0;
       }
 
-      const animate = (currentTime: number) => {
+      const animate = () => {
         if (disposed) return;
 
-        // Throttle to maintain original animation speed
-        if (currentTime - lastFrameTime >= frameInterval) {
-          lastFrameTime = currentTime;
+        const cols = terminal.children[0].textContent?.length ?? 0;
+        const rows = terminal.children.length;
+        const display = new sl.Display(cols, rows, (y: number, x: number, str: string) => {
+          const row = terminal.children[y] as HTMLElement | undefined;
+          if (!row || !row.textContent) return;
 
-          const cols = terminal.children[0].textContent?.length ?? 0;
-          const rows = terminal.children.length;
-          const display = new sl.Display(cols, rows, (y: number, x: number, str: string) => {
-            const row = terminal.children[y] as HTMLElement | undefined;
-            if (!row || !row.textContent) return;
-
-            let newText = row.textContent.substring(0, x) + str + row.textContent.substring(x + str.length);
-            newText += '\xa0'.repeat(Math.max(0, cols - newText.length));
-            row.textContent = newText.substring(0, row.textContent.length);
-          });
-
-          if ((xRef.current ?? 0) > cols) {
-            clear();
-            xRef.current = cols;
+          // Use array-based approach for better performance
+          const textArray = Array.from(row.textContent);
+          for (let i = 0; i < str.length && x + i < cols; i++) {
+            textArray[x + i] = str[i];
           }
+          row.textContent = textArray.join('');
+        });
 
-          if (!trains[trainType](--(xRef.current as number), messages, display, options)) {
-            clear();
-            xRef.current = cols;
-          }
+        if ((xRef.current ?? 0) > cols) {
+          clear();
+          xRef.current = cols;
         }
 
-        animationFrameId = requestAnimationFrame(animate);
+        if (!trains[trainType](--(xRef.current as number), messages, display, options)) {
+          clear();
+          xRef.current = cols;
+        }
+
+        // Use setTimeout + RAF pattern to reduce callback overhead
+        timeoutId = window.setTimeout(() => {
+          animationFrameId = requestAnimationFrame(animate);
+        }, frameInterval);
       };
 
       animationFrameId = requestAnimationFrame(animate);
@@ -111,6 +112,7 @@ const useSlAnimation = (props: {
     return () => {
       disposed = true;
       cancelAnimationFrame(animationFrameId);
+      clearTimeout(timeoutId);
       clear();
     };
   }, [accident, fly, trainType, messages, smoke, clear]);

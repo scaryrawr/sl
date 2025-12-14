@@ -5,7 +5,9 @@ edition = "2021"
 
 [profile.release]
 # Tell `rustc` to optimize for small code size.
-opt-level = "s"
+opt-level = "z"   # Aggressive size optimization (was "s")
+lto = true        # Link-time optimization for smaller binaries
+codegen-units = 1 # Better optimization at cost of compile time
 
 [features]
 default = ["console_error_panic_hook"]
