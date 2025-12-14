@@ -51,6 +51,15 @@ const useSlAnimation = (props: {
     let animationFrameId: number;
     let timeoutId: number | undefined;
     let disposed = false;
+    
+    // Check for reduced motion preference - disable animation if preferred
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      return () => {
+        disposed = true;
+      };
+    }
+    
     const frameInterval = 60; // 60ms = ~16.67 FPS (reduced from 60 FPS for performance)
 
     const runWasm = async () => {
