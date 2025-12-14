@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SL Embed</title>
+  <title>SL - Steam Locomotive Terminal Animation</title>
   <!-- Preload critical resources -->
   <link rel="modulepreload" href="./embed.js">
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fira+Mono:wght@400;700&display=swap" as="style">
@@ -14,13 +14,32 @@
     body {
       margin: 0;
       padding: 0;
-      overflow: hidden;
+      overflow: auto;
     }
 
     /* Prevent layout shift - pre-style the root */
     #root {
       width: 100vw;
       height: 100vh;
+    }
+
+    /* Screen reader only content */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* Enhanced focus indicators */
+    :focus-visible {
+      outline: 2px solid #0066cc;
+      outline-offset: 2px;
     }
   </style>
 </head>

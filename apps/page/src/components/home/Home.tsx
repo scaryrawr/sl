@@ -60,14 +60,23 @@ const Home = () => {
   const [state, dispatch] = useReducer(slReducer, initialState);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
+    <main id="main-content" style={{ display: 'flex', flexDirection: 'column', padding: '20px' }}>
       <h1>Welcome to the SL Project</h1>
       <p>
         SL (Steam Locomotive) runs across your terminal when you type &ldquo;sl&rdquo; as you meant to type
         &ldquo;ls&rdquo;. It&rsquo;s just a joke command.
       </p>
       <p>
-        Visit our <a href="https://github.com/scaryrawr/sl">GitHub repository</a> for more information.
+        Visit our{' '}
+        <a 
+          href="https://github.com/scaryrawr/sl" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          aria-label="GitHub repository (opens in new tab)"
+        >
+          GitHub repository
+        </a>{' '}
+        for more information.
       </p>
       <hr />
       <h2>Demo</h2>
@@ -88,7 +97,7 @@ const Home = () => {
       <Piping />
       <Embed />
       <Installation />
-    </div>
+    </main>
   );
 };
 

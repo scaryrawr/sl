@@ -247,15 +247,20 @@ const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgro
 
   return (
     <div style={styles.window}>
-      <div style={styles.titleBar}>
+      <div style={styles.titleBar} aria-hidden="true">
         <span style={styles.title}>{title}</span>
         <div style={styles.buttons}>
-          <button style={styles.button}>_</button>
-          <button style={styles.button}>□</button>
-          <button style={styles.button}>×</button>
+          <span style={styles.button}>_</span>
+          <span style={styles.button}>□</span>
+          <span style={styles.button}>×</span>
         </div>
       </div>
-      <div ref={terminalRef} style={terminalStyle}></div>
+      <div 
+        ref={terminalRef} 
+        style={terminalStyle}
+        role="img"
+        aria-label="Animated ASCII art train moving across terminal screen"
+      ></div>
     </div>
   );
 };
