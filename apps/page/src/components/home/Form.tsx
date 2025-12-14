@@ -1,5 +1,5 @@
 import type { JSX } from 'preact';
-import { useCallback } from 'preact/hooks';
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { TrainType, type TrainTypeValue } from '../slTerminal';
 import type { Action, State } from './Home';
 
@@ -8,7 +8,33 @@ type FormProps = {
   dispatch: (action: Action) => void;
 };
 
+// Debounce delay for aria-live color announcements
+const ARIA_LIVE_DEBOUNCE_MS = 500;
+
 const Form = ({ state, dispatch }: FormProps) => {
+  // Debounced color announcements to avoid overwhelming screen readers
+  const [announcedFontColor, setAnnouncedFontColor] = useState(state.fontColor);
+  const [announcedBgColor, setAnnouncedBgColor] = useState(state.backgroundColor);
+  const fontColorTimerRef = useRef<number>();
+  const bgColorTimerRef = useRef<number>();
+
+  // Sync announced colors with parent state changes (e.g., reset button)
+  useEffect(() => {
+    setAnnouncedFontColor(state.fontColor);
+  }, [state.fontColor]);
+
+  useEffect(() => {
+    setAnnouncedBgColor(state.backgroundColor);
+  }, [state.backgroundColor]);
+
+  // Cleanup timers on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      clearTimeout(fontColorTimerRef.current);
+      clearTimeout(bgColorTimerRef.current);
+    };
+  }, []);
+
   const handleAccidentChange = useCallback(
     (e: JSX.TargetedEvent<HTMLInputElement>) => {
       dispatch({ type: 'SET_ACCIDENT', payload: e.currentTarget.checked });
@@ -46,14 +72,28 @@ const Form = ({ state, dispatch }: FormProps) => {
 
   const handleFontColorChange = useCallback(
     (e: JSX.TargetedEvent<HTMLInputElement>) => {
-      dispatch({ type: 'SET_FONT_COLOR', payload: e.currentTarget.value });
+      const newColor = e.currentTarget.value;
+      dispatch({ type: 'SET_FONT_COLOR', payload: newColor });
+      
+      // Debounce aria-live announcement
+      clearTimeout(fontColorTimerRef.current);
+      fontColorTimerRef.current = window.setTimeout(() => {
+        setAnnouncedFontColor(newColor);
+      }, ARIA_LIVE_DEBOUNCE_MS);
     },
     [dispatch]
   );
 
   const handleBackgroundColorChange = useCallback(
     (e: JSX.TargetedEvent<HTMLInputElement>) => {
-      dispatch({ type: 'SET_BACKGROUND_COLOR', payload: e.currentTarget.value });
+      const newColor = e.currentTarget.value;
+      dispatch({ type: 'SET_BACKGROUND_COLOR', payload: newColor });
+      
+      // Debounce aria-live announcement
+      clearTimeout(bgColorTimerRef.current);
+      bgColorTimerRef.current = window.setTimeout(() => {
+        setAnnouncedBgColor(newColor);
+      }, ARIA_LIVE_DEBOUNCE_MS);
     },
     [dispatch]
   );
@@ -88,14 +128,16 @@ const Form = ({ state, dispatch }: FormProps) => {
         <div>Font Color</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
           <input id="font-color-input" type="color" value={state.fontColor} onChange={handleFontColorChange} />
-          <span aria-live="polite" aria-atomic="true">Font color: {state.fontColor}</span>
+          <span>{state.fontColor}</span>
+          <span aria-live="polite" aria-atomic="true" className="sr-only">Font color: {announcedFontColor}</span>
         </div>
       </label>
       <label htmlFor="background-color-input">
         <div>Background Color</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
           <input id="background-color-input" type="color" value={state.backgroundColor} onChange={handleBackgroundColorChange} />
-          <span aria-live="polite" aria-atomic="true">Background color: {state.backgroundColor}</span>
+          <span>{state.backgroundColor}</span>
+          <span aria-live="polite" aria-atomic="true" className="sr-only">Background color: {announcedBgColor}</span>
         </div>
       </label>
     </div>

@@ -52,9 +52,72 @@ const useSlAnimation = (props: {
     let timeoutId: number | undefined;
     let disposed = false;
     
-    // Check for reduced motion preference - disable animation if preferred
+    // Check for reduced motion preference - show static fallback if preferred
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) {
+      // Display static train when animation is disabled
+      const terminal = terminalRef.current;
+      if (terminal && terminal.children.length > 0) {
+        // Standard steam locomotive ASCII art (used for both D51 and C51)
+        const standardTrain = [
+          '      ====        ________                ___________ ',
+          '  _D _|  |_______/        \\__I_I_____===__|_________| ',
+          '   |(_)---  |   H\\________/ |   |        =|___ ___|   ',
+          '   /     |  |   H  |  |     |   |         ||_| |_||   ',
+          '  |      |  |   H  |__--------------------| [___] |   ',
+          '  | ________|___H__/__|_____/[][]~\\_______|       |   ',
+          '  |/ |   |-----------I_____I [][] []  D   |=======|__ ',
+          '__/ =| o |=-~~\\  /~~\\  /~~\\  /~~\\ ____Y___________|__ ',
+          ' |/-=|___|=    ||    ||    ||    |_____/~\\___/         ',
+          '  \\_/      \\O=====O=====O=====O_/      \\_/             '
+        ];
+
+        const staticTrains: Record<TrainTypeValue, string[]> = {
+          [TrainType.D51]: standardTrain,
+          [TrainType.C51]: standardTrain,
+          [TrainType.LOGO]: [
+            '     ++      +------ ',
+            '     ||      |+-+ |  ',
+            '   /---------|| | |  ',
+            '  + ========  +-+ |  ',
+            ' _|--O========O~\\-+  ',
+            '//// \\_/      \\_/    ',
+            '                     '
+          ]
+        };
+        
+        const staticTrain = staticTrains[trainType] || standardTrain;
+        const MESSAGE_ROWS = 1; // Reserve rows for accessibility message
+        const minRequiredRows = staticTrain.length + MESSAGE_ROWS;
+        
+        // Check if terminal is large enough to display static content
+        if (terminal.children.length < minRequiredRows) {
+          return;
+        }
+        
+        // Center the train vertically (accounting for message row)
+        const startRow = Math.max(0, Math.floor((terminal.children.length - staticTrain.length - MESSAGE_ROWS) / 2));
+        
+        // Render static train centered both vertically and horizontally
+        staticTrain.forEach((line, idx) => {
+          const row = terminal.children[startRow + idx] as HTMLElement | undefined;
+          if (row) {
+            const cols = row.textContent?.length ?? 0;
+            const padding = Math.max(0, Math.floor((cols - line.length) / 2));
+            row.textContent = '\xa0'.repeat(padding) + line + '\xa0'.repeat(cols - padding - line.length);
+          }
+        });
+        
+        // Add accessibility message explaining why animation is disabled
+        const msgRow = terminal.children[startRow + staticTrain.length] as HTMLElement | undefined;
+        if (msgRow) {
+          const msg = 'Static view - Animation disabled due to reduced motion preference';
+          const cols = msgRow.textContent?.length ?? 0;
+          const padding = Math.max(0, Math.floor((cols - msg.length) / 2));
+          msgRow.textContent = '\xa0'.repeat(padding) + msg + '\xa0'.repeat(cols - padding - msg.length);
+        }
+      }
+      
       return () => {
         disposed = true;
       };
