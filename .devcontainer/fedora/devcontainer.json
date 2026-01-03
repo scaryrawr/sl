@@ -8,7 +8,9 @@
     "ghcr.io/devcontainers/features/rust:1": {},
     "ghcr.io/devcontainers/features/node:1": {},
     "ghcr.io/scaryrawr/dev-feats/bun:1": {},
-    "ghcr.io/scaryrawr/dev-feats/zig:1": {}
+    "ghcr.io/scaryrawr/dev-feats/zig:1": {
+      "version": "0.15.2"
+    }
   },
   "containerEnv": {
     "CARGO_HOME": "/home/vscode/.cargo"
