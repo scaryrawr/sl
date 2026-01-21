@@ -10,6 +10,7 @@ const ASSETS_TO_CACHE = [
   '/favicon.svg',
   '/index.js',
   '/embed.js',
+  '/manifest.json',
 ];
 
 // Install event - cache initial assets
