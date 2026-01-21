@@ -77,6 +77,8 @@ self.addEventListener('fetch', (event: FetchEvent) => {
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(request, responseToCache);
+          }).catch((error) => {
+            console.error('Service Worker: Failed to cache navigation response', error);
           });
           return response;
         })
@@ -108,6 +110,8 @@ self.addEventListener('fetch', (event: FetchEvent) => {
           if (response && response.status === 200) {
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(request, response.clone());
+            }).catch((error) => {
+              console.error('Service Worker: Failed to update cache in background', error);
             });
           }
         }).catch(() => {
@@ -127,6 +131,8 @@ self.addEventListener('fetch', (event: FetchEvent) => {
         const responseToCache = response.clone();
         caches.open(CACHE_NAME).then((cache) => {
           cache.put(request, responseToCache);
+        }).catch((error) => {
+          console.error('Service Worker: Failed to cache response', error);
         });
 
         return response;
