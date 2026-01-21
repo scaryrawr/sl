@@ -99,7 +99,7 @@ self.addEventListener('fetch', (event: FetchEvent) => {
     return;
   }
 
-  // For all other requests (JS, CSS, images, etc.), use cache-first strategy
+  // For all other requests (JS, CSS, images, WASM, etc.), use cache-first strategy
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
@@ -130,6 +130,16 @@ self.addEventListener('fetch', (event: FetchEvent) => {
         });
 
         return response;
+      }).catch(() => {
+        // Network failed and not in cache
+        // For WASM files, provide a helpful error
+        if (request.url.endsWith('.wasm')) {
+          return new Response('WASM module not available offline', {
+            status: 503,
+            statusText: 'Service Unavailable',
+          });
+        }
+        throw new Error('Network request failed and no cache available');
       });
     })
   );
