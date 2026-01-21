@@ -18,7 +18,7 @@ self.addEventListener('install', (event: ExtendableEvent) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('Service Worker: Caching initial assets');
-      // Use addAll with { mode: 'no-cors' } for cross-origin resources
+      // Force reload to ensure we have the latest version during installation
       return cache.addAll(ASSETS_TO_CACHE.map(url => new Request(url, { cache: 'reload' })));
     }).catch((error) => {
       console.error('Service Worker: Failed to cache initial assets', error);
@@ -107,7 +107,7 @@ self.addEventListener('fetch', (event: FetchEvent) => {
         fetch(request).then((response) => {
           if (response && response.status === 200) {
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, response);
+              cache.put(request, response.clone());
             });
           }
         }).catch(() => {
