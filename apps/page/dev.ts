@@ -7,11 +7,17 @@ const indexSrc = path.join(root, 'index.html');
 const indexDest = path.join(libDir, 'index.html');
 const embedSrc = path.join(root, 'embed.html');
 const embedDest = path.join(libDir, 'embed.html');
+const faviconSrc = path.join(root, 'favicon.svg');
+const faviconDest = path.join(libDir, 'favicon.svg');
+const manifestSrc = path.join(root, 'manifest.json');
+const manifestDest = path.join(libDir, 'manifest.json');
 const PORT = process.env.PORT || '8080';
 
 await mkdir(libDir, { recursive: true });
 await copyFile(indexSrc, indexDest);
 await copyFile(embedSrc, embedDest);
+await copyFile(faviconSrc, faviconDest);
+await copyFile(manifestSrc, manifestDest);
 
 const build = Bun.spawn(
   [
@@ -19,6 +25,7 @@ const build = Bun.spawn(
     'build',
     './src/index.tsx',
     './src/embed.tsx',
+    './src/service-worker.ts',
     '--outdir',
     './lib',
     '--target=browser',
