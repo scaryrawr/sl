@@ -7,7 +7,7 @@ SL (Steam Locomotive) is a joke command that runs a train across your terminal w
 - **Rust CLI application** (`apps/sl`): The main terminal application
 - **Rust library** (`libraries/libsl`): Core train rendering logic
 - **WASM library** (`libraries/websl`): WebAssembly bindings for web embedding
-- **Web page** (`apps/page`): TypeScript/React application for embedding SL in browsers
+- **Web page** (`apps/page`): TypeScript/Preact application for embedding SL in browsers
 
 ## Tech Stack
 
@@ -16,7 +16,7 @@ SL (Steam Locomotive) is a joke command that runs a train across your terminal w
 - **Testing**: Cargo test, wasm-pack test, Bun test
 - **Key Dependencies**:
   - Rust: clap (v4.5+), crossterm (v0.28+), filedescriptor
-  - TypeScript: React, Vite (for page app)
+  - TypeScript: Preact (for page app)
   - WASM: wasm-pack for building WebAssembly
 
 ## Build and Test Commands
