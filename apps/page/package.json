@@ -6,7 +6,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "build": "bun build ./src/index.tsx ./src/embed.tsx --outdir ./lib --target=browser --sourcemap --minify --public-path ./ --define:process.env.NODE_ENV=\"production\" && bun build ./src/service-worker.ts --outdir ./lib --target=browser --sourcemap --minify --define:process.env.NODE_ENV=\"production\" && cp index.html embed.html favicon.svg manifest.json lib/",
+    "build": "bun build.ts",
     "dev": "bun dev.ts",
     "format": "prettier \"src/**/*.{ts,tsx,json,md}\" --write",
     "start": "bunx http-server ./lib/",
