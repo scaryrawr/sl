@@ -11,7 +11,7 @@ const ASSETS_TO_CACHE = [
   '/index.js',
   '/embed.js',
   '/manifest.json',
-  '/websl_bg-jr474qvy.wasm',
+  // WASM_PLACEHOLDER - will be replaced at build time
 ];
 
 // Install event - cache initial assets
