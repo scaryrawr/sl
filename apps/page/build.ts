@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { readdir, readFile, writeFile, copyFile } from 'node:fs/promises';
+import { readdir, readFile, writeFile, copyFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
 
 const root = path.dirname(new URL(import.meta.url).pathname);
@@ -101,7 +101,6 @@ await copyFile(swTempOutput, swFinalOutput);
 await copyFile(swTempMap, swFinalMap);
 
 // Clean up temp files
-const { unlink } = await import('node:fs/promises');
 await unlink(serviceWorkerTemp);
 await unlink(swTempOutput);
 await unlink(swTempMap);
