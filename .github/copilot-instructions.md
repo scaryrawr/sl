@@ -15,7 +15,7 @@ SL (Steam Locomotive) is a joke command that runs a train across your terminal w
 - **Build Tools**: Cargo, wasm-pack, Bun (v1.3.3)
 - **Testing**: Cargo test, wasm-pack test, Bun test
 - **Key Dependencies**:
-  - Rust: clap, crossterm, filedescriptor
+  - Rust: clap (v4.5+), crossterm (v0.28+), filedescriptor
   - TypeScript: React, Vite (for page app)
   - WASM: wasm-pack for building WebAssembly
 
