@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { readdir, readFile, writeFile, copyFile, unlink } from 'node:fs/promises';
+import { copyFile, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const root = path.dirname(new URL(import.meta.url).pathname);
@@ -21,12 +21,12 @@ const mainBuild = Bun.spawn(
     '--minify',
     '--public-path',
     './',
-    '--define:process.env.NODE_ENV=production',
+    '--define:process.env.NODE_ENV=production'
   ],
   {
     cwd: root,
     stdout: 'inherit',
-    stderr: 'inherit',
+    stderr: 'inherit'
   }
 );
 
@@ -58,7 +58,7 @@ let serviceWorkerContent = await readFile(serviceWorkerSrc, 'utf-8');
 // Replace the placeholder with the actual WASM filename
 serviceWorkerContent = serviceWorkerContent.replace(
   '// WASM_PLACEHOLDER - will be replaced at build time',
-  `'/${wasmFile}',`
+  `\`\${BASE_PATH}/${wasmFile}\`,`
 );
 
 await writeFile(serviceWorkerTemp, serviceWorkerContent);
@@ -75,12 +75,12 @@ const swBuild = Bun.spawn(
     '--target=browser',
     '--sourcemap',
     '--minify',
-    '--define:process.env.NODE_ENV=production',
+    '--define:process.env.NODE_ENV=production'
   ],
   {
     cwd: root,
     stdout: 'inherit',
-    stderr: 'inherit',
+    stderr: 'inherit'
   }
 );
 

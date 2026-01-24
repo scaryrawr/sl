@@ -3,27 +3,43 @@
 // and cache-first strategy for static assets
 
 const CACHE_NAME = 'sl-page-v1';
+
+// Dynamically determine the base path from the service worker's location
+// For GitHub Pages project sites (e.g., https://username.github.io/project/),
+// the service worker will be at /project/service-worker.js, so we extract /project/
+const getBasePath = () => {
+  const swPath = self.location.pathname;
+  // Remove /service-worker.js to get the base directory
+  const basePath = swPath.substring(0, swPath.lastIndexOf('/'));
+  return basePath || '';
+};
+
+const BASE_PATH = getBasePath();
+
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/embed.html',
-  '/favicon.svg',
-  '/index.js',
-  '/embed.js',
-  '/manifest.json',
+  `${BASE_PATH}/`,
+  `${BASE_PATH}/index.html`,
+  `${BASE_PATH}/embed.html`,
+  `${BASE_PATH}/favicon.svg`,
+  `${BASE_PATH}/index.js`,
+  `${BASE_PATH}/embed.js`,
+  `${BASE_PATH}/manifest.json`
   // WASM_PLACEHOLDER - will be replaced at build time
 ];
 
 // Install event - cache initial assets
 self.addEventListener('install', (event: ExtendableEvent) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('Service Worker: Caching initial assets');
-      // Force reload to ensure we have the latest version during installation
-      return cache.addAll(ASSETS_TO_CACHE.map(url => new Request(url, { cache: 'reload' })));
-    }).catch((error) => {
-      console.error('Service Worker: Failed to cache initial assets', error);
-    })
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => {
+        console.log('Service Worker: Caching initial assets');
+        // Force reload to ensure we have the latest version during installation
+        return cache.addAll(ASSETS_TO_CACHE.map((url) => new Request(url, { cache: 'reload' })));
+      })
+      .catch((error) => {
+        console.error('Service Worker: Failed to cache initial assets', error);
+      })
   );
   // Force the waiting service worker to become the active service worker
   self.skipWaiting();
@@ -76,11 +92,14 @@ self.addEventListener('fetch', (event: FetchEvent) => {
         .then((response) => {
           // Clone the response before caching
           const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseToCache);
-          }).catch((error) => {
-            console.error('Service Worker: Failed to cache navigation response', error);
-          });
+          caches
+            .open(CACHE_NAME)
+            .then((cache) => {
+              cache.put(request, responseToCache);
+            })
+            .catch((error) => {
+              console.error('Service Worker: Failed to cache navigation response', error);
+            });
           return response;
         })
         .catch(() => {
@@ -90,11 +109,14 @@ self.addEventListener('fetch', (event: FetchEvent) => {
               return cachedResponse;
             }
             // Fallback to index.html for client-side routing
-            return caches.match('/index.html').then((indexResponse) => {
-              return indexResponse || new Response('Offline - Page not found', {
-                status: 404,
-                statusText: 'Not Found',
-              });
+            return caches.match(`${BASE_PATH}/index.html`).then((indexResponse) => {
+              return (
+                indexResponse ||
+                new Response('Offline - Page not found', {
+                  status: 404,
+                  statusText: 'Not Found'
+                })
+              );
             });
           });
         })
@@ -107,47 +129,57 @@ self.addEventListener('fetch', (event: FetchEvent) => {
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
         // Return cached version and update cache in background
-        fetch(request).then((response) => {
-          if (response && response.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, response.clone());
-            }).catch((error) => {
-              console.error('Service Worker: Failed to update cache in background', error);
-            });
-          }
-        }).catch(() => {
-          // Silently fail background update
-        });
+        fetch(request)
+          .then((response) => {
+            if (response && response.status === 200) {
+              caches
+                .open(CACHE_NAME)
+                .then((cache) => {
+                  cache.put(request, response.clone());
+                })
+                .catch((error) => {
+                  console.error('Service Worker: Failed to update cache in background', error);
+                });
+            }
+          })
+          .catch(() => {
+            // Silently fail background update
+          });
         return cachedResponse;
       }
 
       // Not in cache, fetch from network
-      return fetch(request).then((response) => {
-        // Don't cache non-successful responses
-        if (!response || response.status !== 200 || response.type === 'error') {
+      return fetch(request)
+        .then((response) => {
+          // Don't cache non-successful responses
+          if (!response || response.status !== 200 || response.type === 'error') {
+            return response;
+          }
+
+          // Clone the response before caching
+          const responseToCache = response.clone();
+          caches
+            .open(CACHE_NAME)
+            .then((cache) => {
+              cache.put(request, responseToCache);
+            })
+            .catch((error) => {
+              console.error('Service Worker: Failed to cache response', error);
+            });
+
           return response;
-        }
-
-        // Clone the response before caching
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(request, responseToCache);
-        }).catch((error) => {
-          console.error('Service Worker: Failed to cache response', error);
+        })
+        .catch(() => {
+          // Network failed and not in cache
+          // For WASM files, provide a helpful error
+          if (request.url.endsWith('.wasm')) {
+            return new Response('WASM module not available offline', {
+              status: 503,
+              statusText: 'Service Unavailable'
+            });
+          }
+          throw new Error('Network request failed and no cache available');
         });
-
-        return response;
-      }).catch(() => {
-        // Network failed and not in cache
-        // For WASM files, provide a helpful error
-        if (request.url.endsWith('.wasm')) {
-          return new Response('WASM module not available offline', {
-            status: 503,
-            statusText: 'Service Unavailable',
-          });
-        }
-        throw new Error('Network request failed and no cache available');
-      });
     })
   );
 });
