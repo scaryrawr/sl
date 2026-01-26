@@ -51,7 +51,7 @@ const useSlAnimation = (props: {
     let animationFrameId: number;
     let timeoutId: number | undefined;
     let disposed = false;
-    
+
     // Check for reduced motion preference - show static fallback if preferred
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) {
@@ -85,19 +85,19 @@ const useSlAnimation = (props: {
             '                     '
           ]
         };
-        
+
         const staticTrain = staticTrains[trainType] || standardTrain;
         const MESSAGE_ROWS = 1; // Reserve rows for accessibility message
         const minRequiredRows = staticTrain.length + MESSAGE_ROWS;
-        
+
         // Check if terminal is large enough to display static content
         if (terminal.children.length < minRequiredRows) {
           return;
         }
-        
+
         // Center the train vertically (accounting for message row)
         const startRow = Math.max(0, Math.floor((terminal.children.length - staticTrain.length - MESSAGE_ROWS) / 2));
-        
+
         // Render static train centered both vertically and horizontally
         staticTrain.forEach((line, idx) => {
           const row = terminal.children[startRow + idx] as HTMLElement | undefined;
@@ -107,7 +107,7 @@ const useSlAnimation = (props: {
             row.textContent = '\xa0'.repeat(padding) + line + '\xa0'.repeat(cols - padding - line.length);
           }
         });
-        
+
         // Add accessibility message explaining why animation is disabled
         const msgRow = terminal.children[startRow + staticTrain.length] as HTMLElement | undefined;
         if (msgRow) {
@@ -117,66 +117,80 @@ const useSlAnimation = (props: {
           msgRow.textContent = '\xa0'.repeat(padding) + msg + '\xa0'.repeat(cols - padding - msg.length);
         }
       }
-      
+
       return () => {
         disposed = true;
       };
     }
-    
+
     const frameInterval = 60; // 60ms = ~16.67 FPS (reduced from 60 FPS for performance)
 
     const runWasm = async () => {
-      const sl = await slPromise;
-      if (disposed) return;
-
-      const terminal = terminalRef.current;
-      if (!terminal || terminal.children.length === 0) return;
-
-      const options = new sl.Options(accident, fly, smoke);
-      const trains: Record<TrainTypeValue, typeof sl.add_c51> = {
-        [TrainType.C51]: sl.add_c51,
-        [TrainType.D51]: sl.add_d51,
-        [TrainType.LOGO]: sl.add_logo
-      };
-
-      if (xRef.current === null) {
-        xRef.current = terminal.children[0].textContent?.length ?? 0;
-      }
-
-      const animate = () => {
+      try {
+        const sl = await slPromise;
         if (disposed) return;
 
-        const cols = terminal.children[0].textContent?.length ?? 0;
-        const rows = terminal.children.length;
-        const display = new sl.Display(cols, rows, (y: number, x: number, str: string) => {
-          const row = terminal.children[y] as HTMLElement | undefined;
-          if (!row || !row.textContent) return;
+        const terminal = terminalRef.current;
+        if (!terminal || terminal.children.length === 0) return;
 
-          // Use array-based approach for better performance
-          const textArray = Array.from(row.textContent);
-          for (let i = 0; i < str.length && x + i < cols; i++) {
-            textArray[x + i] = str[i];
+        const options = new sl.Options(accident, fly, smoke);
+        const trains: Record<TrainTypeValue, typeof sl.add_c51> = {
+          [TrainType.C51]: sl.add_c51,
+          [TrainType.D51]: sl.add_d51,
+          [TrainType.LOGO]: sl.add_logo
+        };
+
+        if (xRef.current === null) {
+          xRef.current = terminal.children[0].textContent?.length ?? 0;
+        }
+
+        const animate = () => {
+          if (disposed) return;
+
+          const cols = terminal.children[0].textContent?.length ?? 0;
+          const rows = terminal.children.length;
+          const display = new sl.Display(cols, rows, (y: number, x: number, str: string) => {
+            const row = terminal.children[y] as HTMLElement | undefined;
+            if (!row || !row.textContent) return;
+
+            // Use array-based approach for better performance
+            const textArray = Array.from(row.textContent);
+            for (let i = 0; i < str.length && x + i < cols; i++) {
+              textArray[x + i] = str[i];
+            }
+            row.textContent = textArray.join('');
+          });
+
+          if ((xRef.current ?? 0) > cols) {
+            clear();
+            xRef.current = cols;
           }
-          row.textContent = textArray.join('');
-        });
 
-        if ((xRef.current ?? 0) > cols) {
-          clear();
-          xRef.current = cols;
-        }
+          if (!trains[trainType](--(xRef.current as number), messages, display, options)) {
+            clear();
+            xRef.current = cols;
+          }
 
-        if (!trains[trainType](--(xRef.current as number), messages, display, options)) {
-          clear();
-          xRef.current = cols;
-        }
+          // Use setTimeout + RAF pattern to reduce callback overhead
+          timeoutId = window.setTimeout(() => {
+            animationFrameId = requestAnimationFrame(animate);
+          }, frameInterval);
+        };
 
-        // Use setTimeout + RAF pattern to reduce callback overhead
-        timeoutId = window.setTimeout(() => {
-          animationFrameId = requestAnimationFrame(animate);
-        }, frameInterval);
-      };
-
-      animationFrameId = requestAnimationFrame(animate);
+        animationFrameId = requestAnimationFrame(animate);
+      } catch (error) {
+        console.error('Failed to load WASM module', error);
+        if (disposed) return;
+        const message = 'Failed to load animation. Please refresh the page to try again.';
+        const terminal = terminalRef.current;
+        if (!terminal || terminal.children.length === 0) return;
+        const row = terminal.children[0] as HTMLElement | undefined;
+        if (!row) return;
+        const cols = row.textContent?.length ?? 0;
+        const padding = Math.max(0, Math.floor((cols - message.length) / 2));
+        row.textContent =
+          '\xa0'.repeat(padding) + message + '\xa0'.repeat(Math.max(0, cols - padding - message.length));
+      }
     };
 
     runWasm();
