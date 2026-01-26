@@ -2,13 +2,13 @@
   "name": "SL - Steam Locomotive Terminal Animation",
   "short_name": "SL Demo",
   "description": "SL (Steam Locomotive) terminal animation demo",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#000000",
   "icons": [
     {
-      "src": "/favicon.svg",
+      "src": "./favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"

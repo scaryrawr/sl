@@ -2,7 +2,8 @@
 // Implements a network-first strategy with cache fallback for navigation
 // and cache-first strategy for static assets
 
-const CACHE_NAME = 'sl-page-v1';
+const CACHE_VERSION = 'v2';
+const CACHE_NAME = `sl-page-${CACHE_VERSION}`;
 
 // Dynamically determine the base path from the service worker's location
 // For GitHub Pages project sites (e.g., https://username.github.io/project/),
@@ -23,9 +24,11 @@ const ASSETS_TO_CACHE = [
   `${BASE_PATH}/favicon.svg`,
   `${BASE_PATH}/index.js`,
   `${BASE_PATH}/embed.js`,
-  `${BASE_PATH}/manifest.json`
+  `${BASE_PATH}/manifest.json`,
   // WASM_PLACEHOLDER - will be replaced at build time
 ];
+
+const ASSET_URLS = new Set(ASSETS_TO_CACHE.map((url) => new URL(url, self.location.origin).toString()));
 
 // Install event - cache initial assets
 self.addEventListener('install', (event: ExtendableEvent) => {
@@ -49,7 +52,7 @@ self.addEventListener('install', (event: ExtendableEvent) => {
 self.addEventListener('activate', (event: ExtendableEvent) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
-      return Promise.all(
+      const deleteOldCaches = Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
             console.log('Service Worker: Deleting old cache', cacheName);
@@ -57,6 +60,25 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
           }
         })
       );
+
+      const cleanupStaleAssets = caches.open(CACHE_NAME).then((cache) => {
+        return cache.keys().then((requests) => {
+          return Promise.all(
+            requests.map((request) => {
+              const url = new URL(request.url);
+              if (ASSET_URLS.has(url.toString())) {
+                return;
+              }
+              if (url.origin === self.location.origin && url.pathname.endsWith('.wasm')) {
+                console.log('Service Worker: Removing stale asset', request.url);
+                return cache.delete(request);
+              }
+            })
+          );
+        });
+      });
+
+      return Promise.all([deleteOldCaches, cleanupStaleAssets]);
     })
   );
   // Claim all clients immediately

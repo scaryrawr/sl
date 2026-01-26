@@ -74,7 +74,7 @@ const Form = ({ state, dispatch }: FormProps) => {
     (e: JSX.TargetedEvent<HTMLInputElement>) => {
       const newColor = e.currentTarget.value;
       dispatch({ type: 'SET_FONT_COLOR', payload: newColor });
-      
+
       // Debounce aria-live announcement
       clearTimeout(fontColorTimerRef.current);
       fontColorTimerRef.current = window.setTimeout(() => {
@@ -88,7 +88,7 @@ const Form = ({ state, dispatch }: FormProps) => {
     (e: JSX.TargetedEvent<HTMLInputElement>) => {
       const newColor = e.currentTarget.value;
       dispatch({ type: 'SET_BACKGROUND_COLOR', payload: newColor });
-      
+
       // Debounce aria-live announcement
       clearTimeout(bgColorTimerRef.current);
       bgColorTimerRef.current = window.setTimeout(() => {
@@ -129,15 +129,24 @@ const Form = ({ state, dispatch }: FormProps) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
           <input id="font-color-input" type="color" value={state.fontColor} onChange={handleFontColorChange} />
           <span>{state.fontColor}</span>
-          <span aria-live="polite" aria-atomic="true" className="sr-only">Font color: {announcedFontColor}</span>
+          <span aria-live="polite" aria-atomic="true" className="sr-only">
+            Font color: {announcedFontColor}
+          </span>
         </div>
       </label>
       <label htmlFor="background-color-input">
         <div>Background Color</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <input id="background-color-input" type="color" value={state.backgroundColor} onChange={handleBackgroundColorChange} />
+          <input
+            id="background-color-input"
+            type="color"
+            value={state.backgroundColor}
+            onChange={handleBackgroundColorChange}
+          />
           <span>{state.backgroundColor}</span>
-          <span aria-live="polite" aria-atomic="true" className="sr-only">Background color: {announcedBgColor}</span>
+          <span aria-live="polite" aria-atomic="true" className="sr-only">
+            Background color: {announcedBgColor}
+          </span>
         </div>
       </label>
     </div>

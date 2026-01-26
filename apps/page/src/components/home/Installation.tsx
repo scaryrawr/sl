@@ -4,12 +4,7 @@ const Installation = () => (
     <h3>macOS and x64 Linux</h3>
     <p>
       Using{' '}
-      <a 
-        href="https://brew.sh" 
-        target="_blank" 
-        rel="noopener noreferrer"
-        aria-label="Homebrew (opens in new tab)"
-      >
+      <a href="https://brew.sh" target="_blank" rel="noopener noreferrer" aria-label="Homebrew (opens in new tab)">
         homebrew
       </a>
       :
@@ -18,9 +13,9 @@ const Installation = () => (
     <h3>Fedora Linux</h3>
     <p>
       Using{' '}
-      <a 
-        href="https://copr.fedorainfracloud.org/coprs/scaryrawr/sl/" 
-        target="_blank" 
+      <a
+        href="https://copr.fedorainfracloud.org/coprs/scaryrawr/sl/"
+        target="_blank"
         rel="noopener noreferrer"
         aria-label="Copr (opens in new tab)"
       >
@@ -35,9 +30,9 @@ sudo dnf install sl`}
     <h3>Windows</h3>
     <p>
       Download the{' '}
-      <a 
-        href="https://github.com/scaryrawr/sl/releases/latest" 
-        target="_blank" 
+      <a
+        href="https://github.com/scaryrawr/sl/releases/latest"
+        target="_blank"
         rel="noopener noreferrer"
         aria-label="Latest release (opens in new tab)"
       >

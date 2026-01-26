@@ -255,8 +255,8 @@ const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgro
           <span style={styles.button}>×</span>
         </div>
       </div>
-      <div 
-        ref={terminalRef} 
+      <div
+        ref={terminalRef}
         style={terminalStyle}
         role="img"
         aria-label="Animated ASCII art train moving across terminal screen"
