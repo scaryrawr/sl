@@ -37,14 +37,30 @@ if (mainBuild.exitCode !== 0) {
   process.exit(1);
 }
 
-// Step 2: Find the generated WASM file
+// Step 2: Find the generated WASM file (newest by mtime to avoid stale artifacts)
 console.log('Finding WASM file...');
 const files = await readdir(libDir);
-const wasmFile = files.find((file) => file.endsWith('.wasm'));
+const wasmFiles = files.filter((file) => file.endsWith('.wasm'));
 
-if (!wasmFile) {
+if (wasmFiles.length === 0) {
   console.error('No WASM file found in lib directory');
   process.exit(1);
+}
+
+// Select newest WASM file by modification time to avoid picking stale artifacts
+let wasmFile = wasmFiles[0];
+if (wasmFiles.length > 1) {
+  const stats = await Promise.all(
+    wasmFiles.map(async (file) => {
+      const stat = await Bun.file(path.join(libDir, file)).stat();
+      return { file, mtime: stat?.mtime ?? 0 };
+    })
+  );
+  stats.sort(
+    (a, b) => (b.mtime instanceof Date ? b.mtime.getTime() : 0) - (a.mtime instanceof Date ? a.mtime.getTime() : 0)
+  );
+  wasmFile = stats[0].file;
+  console.log(`Multiple WASM files found, selecting newest: ${wasmFile}`);
 }
 
 console.log(`Found WASM file: ${wasmFile}`);
