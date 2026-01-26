@@ -68,9 +68,9 @@ const Home = () => {
       </p>
       <p>
         Visit our{' '}
-        <a 
-          href="https://github.com/scaryrawr/sl" 
-          target="_blank" 
+        <a
+          href="https://github.com/scaryrawr/sl"
+          target="_blank"
           rel="noopener noreferrer"
           aria-label="GitHub repository (opens in new tab)"
         >
