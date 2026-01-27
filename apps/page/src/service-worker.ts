@@ -85,6 +85,23 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
   self.clients.claim();
 });
 
+// Helper function to create a Request without query parameters
+// This is used to cache and match navigation requests consistently
+const createRequestWithoutQuery = (request: Request): Request => {
+  const urlWithoutQuery = new URL(request.url);
+  urlWithoutQuery.search = '';
+  return new Request(urlWithoutQuery.toString(), {
+    method: request.method,
+    headers: request.headers,
+    mode: request.mode,
+    credentials: request.credentials,
+    cache: request.cache,
+    redirect: request.redirect,
+    referrer: request.referrer,
+    integrity: request.integrity
+  });
+};
+
 // Fetch event - serve from cache or network
 self.addEventListener('fetch', (event: FetchEvent) => {
   const { request } = event;
@@ -119,19 +136,7 @@ self.addEventListener('fetch', (event: FetchEvent) => {
             .then((cache) => {
               // Cache without query parameters since HTML is the same regardless
               // This ensures offline mode can find the cached page with any query params
-              const urlWithoutQuery = new URL(request.url);
-              urlWithoutQuery.search = '';
-              const requestWithoutQuery = new Request(urlWithoutQuery.toString(), {
-                method: request.method,
-                headers: request.headers,
-                mode: request.mode,
-                credentials: request.credentials,
-                cache: request.cache,
-                redirect: request.redirect,
-                referrer: request.referrer,
-                integrity: request.integrity
-              });
-              cache.put(requestWithoutQuery, responseToCache);
+              cache.put(createRequestWithoutQuery(request), responseToCache);
             })
             .catch((error) => {
               console.error('Service Worker: Failed to cache navigation response', error);
@@ -142,20 +147,7 @@ self.addEventListener('fetch', (event: FetchEvent) => {
           // If network fails, try cache
           // Strip query parameters from the URL since HTML is the same regardless of query params
           // JavaScript will read query params from window.location.search at runtime
-          const urlWithoutQuery = new URL(request.url);
-          urlWithoutQuery.search = '';
-          const requestWithoutQuery = new Request(urlWithoutQuery.toString(), {
-            method: request.method,
-            headers: request.headers,
-            mode: request.mode,
-            credentials: request.credentials,
-            cache: request.cache,
-            redirect: request.redirect,
-            referrer: request.referrer,
-            integrity: request.integrity
-          });
-
-          return caches.match(requestWithoutQuery).then((cachedResponse) => {
+          return caches.match(createRequestWithoutQuery(request)).then((cachedResponse) => {
             if (cachedResponse) {
               return cachedResponse;
             }
