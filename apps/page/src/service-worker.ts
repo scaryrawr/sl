@@ -102,7 +102,8 @@ const createRequestWithoutQuery = (request: Request): Request => {
     cache: request.cache,
     redirect: request.redirect,
     referrer: request.referrer,
-    integrity: request.integrity
+    integrity: request.integrity,
+    referrerPolicy: request.referrerPolicy
   });
 };
 
