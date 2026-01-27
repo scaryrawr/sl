@@ -88,9 +88,13 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
 // Helper function to create a Request without query parameters
 // This is used to cache and match navigation requests consistently
 const createRequestWithoutQuery = (request: Request): Request => {
-  const urlWithoutQuery = new URL(request.url);
-  urlWithoutQuery.search = '';
-  return new Request(urlWithoutQuery.toString(), {
+  const url = new URL(request.url);
+  // If there are no query parameters, return the original request
+  if (!url.search) {
+    return request;
+  }
+  url.search = '';
+  return new Request(url.toString(), {
     method: request.method,
     headers: request.headers,
     mode: request.mode,
