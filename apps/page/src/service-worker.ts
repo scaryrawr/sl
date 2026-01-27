@@ -24,7 +24,7 @@ const ASSETS_TO_CACHE = [
   `${BASE_PATH}/favicon.svg`,
   `${BASE_PATH}/index.js`,
   `${BASE_PATH}/embed.js`,
-  `${BASE_PATH}/manifest.json`,
+  `${BASE_PATH}/manifest.json`
   // WASM_PLACEHOLDER - will be replaced at build time
 ];
 
@@ -117,7 +117,21 @@ self.addEventListener('fetch', (event: FetchEvent) => {
           caches
             .open(CACHE_NAME)
             .then((cache) => {
-              cache.put(request, responseToCache);
+              // Cache without query parameters since HTML is the same regardless
+              // This ensures offline mode can find the cached page with any query params
+              const urlWithoutQuery = new URL(request.url);
+              urlWithoutQuery.search = '';
+              const requestWithoutQuery = new Request(urlWithoutQuery.toString(), {
+                method: request.method,
+                headers: request.headers,
+                mode: request.mode,
+                credentials: request.credentials,
+                cache: request.cache,
+                redirect: request.redirect,
+                referrer: request.referrer,
+                integrity: request.integrity
+              });
+              cache.put(requestWithoutQuery, responseToCache);
             })
             .catch((error) => {
               console.error('Service Worker: Failed to cache navigation response', error);
@@ -126,7 +140,22 @@ self.addEventListener('fetch', (event: FetchEvent) => {
         })
         .catch(() => {
           // If network fails, try cache
-          return caches.match(request).then((cachedResponse) => {
+          // Strip query parameters from the URL since HTML is the same regardless of query params
+          // JavaScript will read query params from window.location.search at runtime
+          const urlWithoutQuery = new URL(request.url);
+          urlWithoutQuery.search = '';
+          const requestWithoutQuery = new Request(urlWithoutQuery.toString(), {
+            method: request.method,
+            headers: request.headers,
+            mode: request.mode,
+            credentials: request.credentials,
+            cache: request.cache,
+            redirect: request.redirect,
+            referrer: request.referrer,
+            integrity: request.integrity
+          });
+
+          return caches.match(requestWithoutQuery).then((cachedResponse) => {
             if (cachedResponse) {
               return cachedResponse;
             }
