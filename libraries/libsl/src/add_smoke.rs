@@ -42,11 +42,11 @@ pub fn add_smoke<T: Display>(y: i32, x: i32, display: &T) {
         unsafe {
             let sum = (((display.cols() - (min(x, display.cols()))) / 4) % display.cols()) as usize;
             for i in 0..sum {
-                _ = mvaddstr(SMOKES[i].y, SMOKES[i].x, ERASER[SMOKES[i].ptrn], display);
+                mvaddstr(SMOKES[i].y, SMOKES[i].x, ERASER[SMOKES[i].ptrn], display);
                 SMOKES[i].y -= DY[SMOKES[i].ptrn];
                 SMOKES[i].x += DX[SMOKES[i].ptrn];
                 SMOKES[i].ptrn += if SMOKES[i].ptrn < 15 { 1 } else { 0 };
-                _ = mvaddstr(
+                mvaddstr(
                     SMOKES[i].y,
                     SMOKES[i].x,
                     SMOKE[SMOKES[i].kind][SMOKES[i].ptrn],
@@ -54,7 +54,7 @@ pub fn add_smoke<T: Display>(y: i32, x: i32, display: &T) {
                 );
             }
 
-            _ = mvaddstr(y, x, SMOKE[sum % 2][0], display);
+            mvaddstr(y, x, SMOKE[sum % 2][0], display);
             SMOKES[sum].y = y;
             SMOKES[sum].x = x;
             SMOKES[sum].ptrn = 0;
