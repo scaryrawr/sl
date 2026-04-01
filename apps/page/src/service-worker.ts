@@ -1,8 +1,10 @@
+import { getNavigationCachePath, getNavigationFallbackPath } from './service-worker-navigation';
+
 // Service Worker for offline support
 // Implements a network-first strategy with cache fallback for navigation
 // and cache-first strategy for static assets
 
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE_NAME = `sl-page-${CACHE_VERSION}`;
 
 // Dynamically determine the base path from the service worker's location
@@ -24,11 +26,22 @@ const ASSETS_TO_CACHE = [
   `${BASE_PATH}/favicon.svg`,
   `${BASE_PATH}/index.js`,
   `${BASE_PATH}/embed.js`,
-  `${BASE_PATH}/manifest.json`,
+  `${BASE_PATH}/manifest.json`
   // WASM_PLACEHOLDER - will be replaced at build time
 ];
 
 const ASSET_URLS = new Set(ASSETS_TO_CACHE.map((url) => new URL(url, self.location.origin).toString()));
+
+const createOfflineNotFoundResponse = () =>
+  new Response('Offline - Page not found', {
+    status: 404,
+    statusText: 'Not Found'
+  });
+
+const matchNavigationFallback = (cache: Cache, pathname: string) =>
+  cache.match(getNavigationFallbackPath(BASE_PATH, pathname)).then((fallbackResponse) => {
+    return fallbackResponse || createOfflineNotFoundResponse();
+  });
 
 // Install event - cache initial assets
 self.addEventListener('install', (event: ExtendableEvent) => {
@@ -112,12 +125,17 @@ self.addEventListener('fetch', (event: FetchEvent) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
+          if (!response.ok) {
+            return response;
+          }
+
           // Clone the response before caching
           const responseToCache = response.clone();
+          const navigationCachePath = getNavigationCachePath(BASE_PATH, url.pathname);
           caches
             .open(CACHE_NAME)
             .then((cache) => {
-              cache.put(request, responseToCache);
+              cache.put(navigationCachePath ?? request, responseToCache);
             })
             .catch((error) => {
               console.error('Service Worker: Failed to cache navigation response', error);
@@ -126,19 +144,24 @@ self.addEventListener('fetch', (event: FetchEvent) => {
         })
         .catch(() => {
           // If network fails, try cache
-          return caches.match(request).then((cachedResponse) => {
-            if (cachedResponse) {
-              return cachedResponse;
-            }
-            // Fallback to index.html for client-side routing
-            return caches.match(`${BASE_PATH}/index.html`).then((indexResponse) => {
-              return (
-                indexResponse ||
-                new Response('Offline - Page not found', {
-                  status: 404,
-                  statusText: 'Not Found'
-                })
-              );
+          return caches.open(CACHE_NAME).then((cache) => {
+            return cache.match(request).then((cachedResponse) => {
+              if (cachedResponse) {
+                return cachedResponse;
+              }
+
+              const navigationCachePath = getNavigationCachePath(BASE_PATH, url.pathname);
+              if (navigationCachePath) {
+                return cache.match(navigationCachePath).then((cachedPageResponse) => {
+                  if (cachedPageResponse) {
+                    return cachedPageResponse;
+                  }
+
+                  return matchNavigationFallback(cache, url.pathname);
+                });
+              }
+
+              return matchNavigationFallback(cache, url.pathname);
             });
           });
         })

@@ -10,7 +10,7 @@
     "dev": "bun dev.ts",
     "format": "prettier \"src/**/*.{ts,tsx,json,md}\" --write",
     "start": "bunx http-server ./lib/",
-    "test": "echo 'No tests for this package'",
+    "test": "bun test",
     "typecheck": "tsc --noEmit --project tsconfig.json"
   },
   "dependencies": {

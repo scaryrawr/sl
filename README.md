@@ -42,7 +42,7 @@ cargo build 2>&1 | awk -F' ' '/Compiling/ {print $2}' | sl
 You can embed the SL terminal in your own pages using query parameters:
 
 ```txt
-https://scaryrawr.github.io/sl/#embed?accident=true&fly=false&smoke=true&trainType=d51&messages=["hello","world"]
+https://scaryrawr.github.io/sl/embed.html?accident=true&fly=false&smoke=true&trainType=d51&messages=["hello","world"]
 ```
 
 Supported query parameters:
