@@ -26,7 +26,7 @@ const ASSETS_TO_CACHE = [
   `${BASE_PATH}/favicon.svg`,
   `${BASE_PATH}/index.js`,
   `${BASE_PATH}/embed.js`,
-  `${BASE_PATH}/manifest.json`
+  `${BASE_PATH}/manifest.json`,
   // WASM_PLACEHOLDER - will be replaced at build time
 ];
 
