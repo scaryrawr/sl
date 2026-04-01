@@ -32,6 +32,17 @@ const ASSETS_TO_CACHE = [
 
 const ASSET_URLS = new Set(ASSETS_TO_CACHE.map((url) => new URL(url, self.location.origin).toString()));
 
+const createOfflineNotFoundResponse = () =>
+  new Response('Offline - Page not found', {
+    status: 404,
+    statusText: 'Not Found'
+  });
+
+const matchNavigationFallback = (cache: Cache, pathname: string) =>
+  cache.match(getNavigationFallbackPath(BASE_PATH, pathname)).then((fallbackResponse) => {
+    return fallbackResponse || createOfflineNotFoundResponse();
+  });
+
 // Install event - cache initial assets
 self.addEventListener('install', (event: ExtendableEvent) => {
   event.waitUntil(
@@ -146,27 +157,11 @@ self.addEventListener('fetch', (event: FetchEvent) => {
                     return cachedPageResponse;
                   }
 
-                  return cache.match(getNavigationFallbackPath(BASE_PATH, url.pathname)).then((fallbackResponse) => {
-                    return (
-                      fallbackResponse ||
-                      new Response('Offline - Page not found', {
-                        status: 404,
-                        statusText: 'Not Found'
-                      })
-                    );
-                  });
+                  return matchNavigationFallback(cache, url.pathname);
                 });
               }
 
-              return cache.match(getNavigationFallbackPath(BASE_PATH, url.pathname)).then((fallbackResponse) => {
-                return (
-                  fallbackResponse ||
-                  new Response('Offline - Page not found', {
-                    status: 404,
-                    statusText: 'Not Found'
-                  })
-                );
-              });
+              return matchNavigationFallback(cache, url.pathname);
             });
           });
         })
