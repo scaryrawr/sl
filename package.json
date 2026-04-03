@@ -41,6 +41,7 @@
     "test": "bun run test:websl && bun run test:page",
     "test:libsl": "cargo test --manifest-path libraries/libsl/Cargo.toml",
     "test:page": "bun run --cwd apps/page test",
+    "test:page:e2e": "bun run --cwd apps/page test:e2e",
     "test:websl": "bun run --cwd libraries/websl test",
     "test:websl:rust": "wasm-pack test --headless --firefox libraries/websl",
     "typecheck": "bun run typecheck:page",

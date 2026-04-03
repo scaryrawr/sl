@@ -18,6 +18,19 @@ export const getNavigationCachePath = (basePath: string, pathname: string) => {
 };
 
 /**
+ * Returns the canonical navigation URL to redirect to before serving a cached
+ * document shell. Bare project base paths need a trailing slash so relative
+ * assets resolve underneath the project path.
+ */
+export const getNavigationRedirectPath = (basePath: string, pathname: string) => {
+  if (basePath && pathname === basePath) {
+    return `${basePath}/`;
+  }
+
+  return null;
+};
+
+/**
  * Returns the best offline shell to serve for a document route.
  * Unknown routes intentionally fall back to the main index shell.
  */

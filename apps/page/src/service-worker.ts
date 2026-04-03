@@ -1,4 +1,24 @@
-import { getNavigationCachePath, getNavigationFallbackPath } from './service-worker-navigation';
+import {
+  getNavigationCachePath,
+  getNavigationFallbackPath,
+  getNavigationRedirectPath
+} from './service-worker-navigation';
+
+type ExtendableEventLike = Event & {
+  waitUntil: (promise: Promise<unknown>) => void;
+};
+
+type FetchEventLike = ExtendableEventLike & {
+  request: Request;
+  respondWith: (response: Promise<Response> | Response) => void;
+};
+
+const serviceWorker = self as typeof self & {
+  skipWaiting: () => Promise<void>;
+  clients: {
+    claim: () => Promise<void>;
+  };
+};
 
 // Service Worker for offline support
 // Implements a network-first strategy with cache fallback for navigation
@@ -19,6 +39,7 @@ const getBasePath = () => {
 
 const BASE_PATH = getBasePath();
 
+// prettier-ignore
 const ASSETS_TO_CACHE = [
   `${BASE_PATH}/`,
   `${BASE_PATH}/index.html`,
@@ -44,7 +65,7 @@ const matchNavigationFallback = (cache: Cache, pathname: string) =>
   });
 
 // Install event - cache initial assets
-self.addEventListener('install', (event: ExtendableEvent) => {
+serviceWorker.addEventListener('install', (event: ExtendableEventLike) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
@@ -55,14 +76,14 @@ self.addEventListener('install', (event: ExtendableEvent) => {
       })
       .catch((error) => {
         console.error('Service Worker: Failed to cache initial assets', error);
+        throw error;
       })
+      .then(() => serviceWorker.skipWaiting())
   );
-  // Force the waiting service worker to become the active service worker
-  self.skipWaiting();
 });
 
 // Activate event - clean up old caches
-self.addEventListener('activate', (event: ExtendableEvent) => {
+serviceWorker.addEventListener('activate', (event: ExtendableEventLike) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       const deleteOldCaches = Promise.all(
@@ -95,11 +116,11 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
     })
   );
   // Claim all clients immediately
-  self.clients.claim();
+  serviceWorker.clients.claim();
 });
 
 // Fetch event - serve from cache or network
-self.addEventListener('fetch', (event: FetchEvent) => {
+serviceWorker.addEventListener('fetch', (event: FetchEventLike) => {
   const { request } = event;
   const url = new URL(request.url);
 
@@ -143,6 +164,11 @@ self.addEventListener('fetch', (event: FetchEvent) => {
           return response;
         })
         .catch(() => {
+          const navigationRedirectPath = getNavigationRedirectPath(BASE_PATH, url.pathname);
+          if (navigationRedirectPath) {
+            return Response.redirect(new URL(navigationRedirectPath, self.location.origin).toString());
+          }
+
           // If network fails, try cache
           return caches.open(CACHE_NAME).then((cache) => {
             return cache.match(request).then((cachedResponse) => {
