@@ -112,11 +112,9 @@ serviceWorker.addEventListener('activate', (event: ExtendableEventLike) => {
         });
       });
 
-      return Promise.all([deleteOldCaches, cleanupStaleAssets]);
+      return Promise.all([deleteOldCaches, cleanupStaleAssets, serviceWorker.clients.claim()]);
     })
   );
-  // Claim all clients immediately
-  serviceWorker.clients.claim();
 });
 
 // Fetch event - serve from cache or network

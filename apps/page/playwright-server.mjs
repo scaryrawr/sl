@@ -28,6 +28,8 @@ const resolvePathname = (pathname) => {
   return path.join(libDir, pathname.slice(`${basePath}/`.length));
 };
 
+const isPathSafe = (resolvedPath) => resolvedPath.startsWith(libDir + path.sep);
+
 const server = Bun.serve({
   hostname: '127.0.0.1',
   port,
@@ -39,7 +41,7 @@ const server = Bun.serve({
     }
 
     const filePath = resolvePathname(url.pathname);
-    if (!filePath) {
+    if (!filePath || !isPathSafe(filePath)) {
       return new Response('Not found', { status: 404 });
     }
 
