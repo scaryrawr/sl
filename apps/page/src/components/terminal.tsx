@@ -45,7 +45,7 @@ const styles = {
     borderRadius: '3px',
     width: '20px',
     height: '20px',
-    cursor: 'pointer'
+    cursor: 'default'
   },
   terminal: {
     fontFamily: 'monospace',
@@ -65,12 +65,105 @@ type TerminalProps = {
   backgroundColor?: string;
 };
 
+type NavigatorLike = {
+  platform?: string;
+  userAgent?: string;
+  userAgentData?: {
+    platform?: string;
+  };
+};
+
+type TerminalWindowButton = {
+  backgroundColor: string;
+  color: string;
+  label: string;
+  borderRadius?: string;
+  fontSize?: string;
+  height?: string;
+  width?: string;
+};
+
+type TerminalWindowChrome = {
+  titleBarBackgroundColor: string;
+  titleBarColor: string;
+  buttonPosition: 'left' | 'right';
+  buttons: readonly TerminalWindowButton[];
+};
+
+const DEFAULT_WINDOW_CHROME = {
+  titleBarBackgroundColor: '#333',
+  titleBarColor: '#fff',
+  buttonPosition: 'right',
+  buttons: [
+    { backgroundColor: '#555', color: '#fff', label: '_' },
+    { backgroundColor: '#555', color: '#fff', label: '□' },
+    { backgroundColor: '#555', color: '#fff', label: '×' }
+  ]
+} as const satisfies TerminalWindowChrome;
+
+const MACOS_WINDOW_CHROME = {
+  titleBarBackgroundColor: '#ececec',
+  titleBarColor: '#444',
+  buttonPosition: 'left',
+  buttons: [
+    {
+      backgroundColor: '#ff5f57',
+      borderRadius: '999px',
+      color: 'transparent',
+      fontSize: '0',
+      height: '12px',
+      label: '●',
+      width: '12px'
+    },
+    {
+      backgroundColor: '#febc2e',
+      borderRadius: '999px',
+      color: 'transparent',
+      fontSize: '0',
+      height: '12px',
+      label: '●',
+      width: '12px'
+    },
+    {
+      backgroundColor: '#28c840',
+      borderRadius: '999px',
+      color: 'transparent',
+      fontSize: '0',
+      height: '12px',
+      label: '●',
+      width: '12px'
+    }
+  ]
+} as const satisfies TerminalWindowChrome;
+
+const isMacOs = (navigatorLike?: NavigatorLike) => {
+  const userAgentDataPlatform = navigatorLike?.userAgentData?.platform?.toLowerCase();
+  if (userAgentDataPlatform?.includes('mac')) {
+    return true;
+  }
+
+  const platform = navigatorLike?.platform?.toLowerCase();
+  if (platform?.includes('mac')) {
+    return true;
+  }
+
+  const userAgent = navigatorLike?.userAgent?.toLowerCase();
+  return Boolean(userAgent?.includes('macintosh') || userAgent?.includes('mac os x'));
+};
+
+export const getTerminalWindowChrome = (navigatorLike?: NavigatorLike): TerminalWindowChrome =>
+  isMacOs(navigatorLike) ? MACOS_WINDOW_CHROME : DEFAULT_WINDOW_CHROME;
+
 const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgroundColor = '#000' }: TerminalProps) => {
   const internalRef = useRef<HTMLDivElement | null>(null);
   const terminalRef = externalRef ?? internalRef;
   const dimensionsRef = useRef<{ rows: number; cols: number } | null>(null);
   const initializedRef = useRef(false);
   const charSizeRef = useRef<{ width: number; height: number } | null>(null);
+  const windowChrome = useMemo(
+    () => getTerminalWindowChrome(typeof navigator === 'undefined' ? undefined : navigator),
+    []
+  );
 
   // Use useLayoutEffect to measure and build rows synchronously before paint
   useLayoutEffect(() => {
@@ -244,16 +337,58 @@ const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgro
     }),
     [fontColor, backgroundColor]
   );
+  const titleBarStyle = useMemo(
+    () => ({
+      ...styles.titleBar,
+      backgroundColor: windowChrome.titleBarBackgroundColor,
+      color: windowChrome.titleBarColor
+    }),
+    [windowChrome]
+  );
+  const buttonsStyle = styles.buttons;
+  const hiddenButtonsStyle = useMemo(
+    () => ({
+      ...buttonsStyle,
+      visibility: 'hidden'
+    }),
+    [buttonsStyle]
+  );
+  const titleStyle = useMemo(
+    () => ({
+      ...styles.title,
+      color: windowChrome.titleBarColor,
+      flex: 1,
+      textAlign: 'center'
+    }),
+    [windowChrome]
+  );
+  const renderWindowButtons = (style = buttonsStyle) => (
+    <div style={style}>
+      {windowChrome.buttons.map((button) => (
+        <span
+          key={`${button.backgroundColor}-${button.label}`}
+          style={{
+            ...styles.button,
+            backgroundColor: button.backgroundColor,
+            borderRadius: button.borderRadius ?? styles.button.borderRadius,
+            color: button.color,
+            fontSize: button.fontSize ?? 'inherit',
+            height: button.height ?? styles.button.height,
+            width: button.width ?? styles.button.width
+          }}
+        >
+          {button.label}
+        </span>
+      ))}
+    </div>
+  );
 
   return (
     <div style={styles.window}>
-      <div style={styles.titleBar} aria-hidden="true">
-        <span style={styles.title}>{title}</span>
-        <div style={styles.buttons}>
-          <span style={styles.button}>_</span>
-          <span style={styles.button}>□</span>
-          <span style={styles.button}>×</span>
-        </div>
+      <div style={titleBarStyle} aria-hidden="true">
+        {windowChrome.buttonPosition === 'left' ? renderWindowButtons() : renderWindowButtons(hiddenButtonsStyle)}
+        <span style={titleStyle}>{title}</span>
+        {windowChrome.buttonPosition === 'right' ? renderWindowButtons() : renderWindowButtons(hiddenButtonsStyle)}
       </div>
       <div
         ref={terminalRef}
