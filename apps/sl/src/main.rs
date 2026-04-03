@@ -77,11 +77,8 @@ fn main() -> Result<(), Error> {
     let mut x = display.cols - 1;
 
     loop {
-        match names_receiver.try_recv() {
-            Ok(name) => {
-                names.push(name);
-            }
-            Err(_) => {}
+        if let Ok(name) = names_receiver.try_recv() {
+            names.push(name);
         }
 
         if add_train(x, &names, &display, &args).is_err() {
@@ -121,9 +118,10 @@ fn cars_receiver(args: &CliOptions, stdin: Stdin) -> Result<Receiver<String>, Er
         let stdin_file = FileDescriptor::dup(&stdin.lock())?;
         std::thread::spawn(move || {
             let reader = BufReader::new(stdin_file);
-            reader.lines().for_each(|line| match line {
-                Ok(line) => sender.send(line).unwrap(),
-                Err(_) => {}
+            reader.lines().for_each(|line| {
+                if let Ok(line) = line {
+                    sender.send(line).unwrap();
+                }
             });
         });
     } else if args.files {

@@ -114,7 +114,7 @@ pub fn set_panic_hook() {
 ///
 /// `true` if the train was added successfully, `false` otherwise.
 pub fn add_d51(x: i32, names: &Array, display: &Display, options: &Options) -> bool {
-    match libsl::add_d51(
+    libsl::add_d51(
         x,
         &names
             .iter()
@@ -122,10 +122,8 @@ pub fn add_d51(x: i32, names: &Array, display: &Display, options: &Options) -> b
             .collect::<Vec<String>>(),
         display,
         options,
-    ) {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+    )
+    .is_ok()
 }
 
 #[wasm_bindgen]
@@ -142,7 +140,7 @@ pub fn add_d51(x: i32, names: &Array, display: &Display, options: &Options) -> b
 ///
 /// `true` if the train was added successfully, `false` otherwise.
 pub fn add_logo(x: i32, names: &Array, display: &Display, options: &Options) -> bool {
-    match libsl::add_logo(
+    libsl::add_logo(
         x,
         &names
             .iter()
@@ -150,10 +148,8 @@ pub fn add_logo(x: i32, names: &Array, display: &Display, options: &Options) -> 
             .collect::<Vec<String>>(),
         display,
         options,
-    ) {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+    )
+    .is_ok()
 }
 
 #[wasm_bindgen]
@@ -170,7 +166,7 @@ pub fn add_logo(x: i32, names: &Array, display: &Display, options: &Options) -> 
 ///
 /// `true` if the train was added successfully, `false` otherwise.
 pub fn add_c51(x: i32, names: &Array, display: &Display, options: &Options) -> bool {
-    match libsl::add_c51(
+    libsl::add_c51(
         x,
         &names
             .iter()
@@ -178,8 +174,6 @@ pub fn add_c51(x: i32, names: &Array, display: &Display, options: &Options) -> b
             .collect::<Vec<String>>(),
         display,
         options,
-    ) {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+    )
+    .is_ok()
 }
