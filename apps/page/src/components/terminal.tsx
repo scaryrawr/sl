@@ -344,7 +344,6 @@ const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgro
     }),
     [windowChrome]
   );
-  const buttonsStyle = styles.buttons;
   const titleStyle = useMemo(
     () => ({
       ...styles.title,
@@ -356,14 +355,13 @@ const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgro
       pointerEvents: 'none',
       position: 'absolute',
       right: 0,
-      textAlign: 'center',
       top: 0,
       bottom: 0
     }),
     [windowChrome]
   );
-  const renderWindowButtons = (style = buttonsStyle) => (
-    <div style={style}>
+  const renderWindowButtons = () => (
+    <div style={styles.buttons}>
       {windowChrome.buttons.map((button, index) => (
         <span
           key={index}
