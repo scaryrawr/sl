@@ -160,10 +160,7 @@ const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgro
   const dimensionsRef = useRef<{ rows: number; cols: number } | null>(null);
   const initializedRef = useRef(false);
   const charSizeRef = useRef<{ width: number; height: number } | null>(null);
-  const windowChrome = useMemo(
-    () => getTerminalWindowChrome(typeof navigator === 'undefined' ? undefined : navigator),
-    []
-  );
+  const windowChrome = getTerminalWindowChrome(typeof navigator === 'undefined' ? undefined : navigator);
 
   // Use useLayoutEffect to measure and build rows synchronously before paint
   useLayoutEffect(() => {
@@ -341,32 +338,35 @@ const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgro
     () => ({
       ...styles.titleBar,
       backgroundColor: windowChrome.titleBarBackgroundColor,
-      color: windowChrome.titleBarColor
+      color: windowChrome.titleBarColor,
+      justifyContent: windowChrome.buttonPosition === 'left' ? 'flex-start' : 'flex-end',
+      position: 'relative'
     }),
     [windowChrome]
   );
   const buttonsStyle = styles.buttons;
-  const hiddenButtonsStyle = useMemo(
-    () => ({
-      ...buttonsStyle,
-      visibility: 'hidden'
-    }),
-    [buttonsStyle]
-  );
   const titleStyle = useMemo(
     () => ({
       ...styles.title,
+      alignItems: 'center',
       color: windowChrome.titleBarColor,
-      flex: 1,
-      textAlign: 'center'
+      display: 'flex',
+      justifyContent: 'center',
+      left: 0,
+      pointerEvents: 'none',
+      position: 'absolute',
+      right: 0,
+      textAlign: 'center',
+      top: 0,
+      bottom: 0
     }),
     [windowChrome]
   );
   const renderWindowButtons = (style = buttonsStyle) => (
     <div style={style}>
-      {windowChrome.buttons.map((button) => (
+      {windowChrome.buttons.map((button, index) => (
         <span
-          key={`${button.backgroundColor}-${button.label}`}
+          key={index}
           style={{
             ...styles.button,
             backgroundColor: button.backgroundColor,
@@ -386,9 +386,8 @@ const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgro
   return (
     <div style={styles.window}>
       <div style={titleBarStyle} aria-hidden="true">
-        {windowChrome.buttonPosition === 'left' ? renderWindowButtons() : renderWindowButtons(hiddenButtonsStyle)}
+        {renderWindowButtons()}
         <span style={titleStyle}>{title}</span>
-        {windowChrome.buttonPosition === 'right' ? renderWindowButtons() : renderWindowButtons(hiddenButtonsStyle)}
       </div>
       <div
         ref={terminalRef}
