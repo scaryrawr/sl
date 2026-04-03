@@ -28,7 +28,11 @@ const resolvePathname = (pathname) => {
   return path.join(libDir, pathname.slice(`${basePath}/`.length));
 };
 
-const isPathSafe = (resolvedPath) => resolvedPath.startsWith(libDir + path.sep);
+const isPathSafe = (resolvedPath) => {
+  const normalizedPath = path.resolve(resolvedPath);
+  const normalizedLib = path.resolve(libDir) + path.sep;
+  return normalizedPath.startsWith(normalizedLib);
+};
 
 const server = Bun.serve({
   hostname: '127.0.0.1',
