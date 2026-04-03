@@ -11,6 +11,8 @@ describe('service worker build integration', () => {
     const serviceWorkerContent = await readFile(SERVICE_WORKER_PATH, 'utf8');
     const builtServiceWorkerContent = serviceWorkerContent.replace(WASM_PLACEHOLDER, '`${BASE_PATH}/websl_bg.wasm`,');
 
-    expect(builtServiceWorkerContent).toMatch(/`\$\{BASE_PATH\}\/manifest\.json`,\s+`\$\{BASE_PATH\}\/websl_bg\.wasm`,/);
+    expect(builtServiceWorkerContent).toMatch(
+      /`\$\{BASE_PATH\}\/manifest\.json`,\s+`\$\{BASE_PATH\}\/websl_bg\.wasm`,/
+    );
   });
 });

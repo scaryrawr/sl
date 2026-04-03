@@ -9,8 +9,11 @@
     "build": "bun build.ts",
     "dev": "bun dev.ts",
     "format": "prettier \"src/**/*.{ts,tsx,json,md}\" --write",
+    "playwright:install": "bunx playwright install chromium",
+    "serve:playwright": "bun ./playwright-server.mjs",
     "start": "bunx http-server ./lib/",
-    "test": "bun test",
+    "test": "bun test ./src",
+    "test:e2e": "cd ../.. && bun run build:websl && bun run build:page && cd apps/page && bunx playwright test",
     "typecheck": "tsc --noEmit --project tsconfig.json"
   },
   "dependencies": {
@@ -18,6 +21,7 @@
     "websl": "*"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/bun": "1.3.3",
     "typescript": "^5.9.3"
   },
