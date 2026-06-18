@@ -98,7 +98,8 @@ pub fn set_panic_hook() {
 ///
 /// # Returns
 ///
-/// `true` if the train was added successfully, `false` otherwise.
+/// `true` if the train was added successfully, `false` if it moved offscreen.
+/// Render-target failures are thrown as JavaScript exceptions.
 pub fn add_d51(x: i32, names: &Array, display: &mut Display, options: &Options) -> bool {
     let names = names_from_array(names);
     let screen = display.screen_size();
@@ -119,7 +120,8 @@ pub fn add_d51(x: i32, names: &Array, display: &mut Display, options: &Options) 
 ///
 /// # Returns
 ///
-/// `true` if the train was added successfully, `false` otherwise.
+/// `true` if the train was added successfully, `false` if it moved offscreen.
+/// Render-target failures are thrown as JavaScript exceptions.
 pub fn add_logo(x: i32, names: &Array, display: &mut Display, options: &Options) -> bool {
     let names = names_from_array(names);
     let screen = display.screen_size();
@@ -140,7 +142,8 @@ pub fn add_logo(x: i32, names: &Array, display: &mut Display, options: &Options)
 ///
 /// # Returns
 ///
-/// `true` if the train was added successfully, `false` otherwise.
+/// `true` if the train was added successfully, `false` if it moved offscreen.
+/// Render-target failures are thrown as JavaScript exceptions.
 pub fn add_c51(x: i32, names: &Array, display: &mut Display, options: &Options) -> bool {
     let names = names_from_array(names);
     let screen = display.screen_size();
