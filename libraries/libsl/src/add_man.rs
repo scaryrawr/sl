@@ -1,11 +1,18 @@
-use crate::Display;
+use crate::{RenderTarget, ScreenSize};
 
 use super::mvaddstr::mvaddstr;
 
-pub fn add_man<T: Display>(y: i32, x: i32, display: &T) {
+pub fn add_man<T: RenderTarget>(
+    y: i32,
+    x: i32,
+    screen: ScreenSize,
+    target: &mut T,
+) -> Result<(), T::Error> {
     const MAN: [[&str; 2]; 2] = [["", "Help!"], ["(O)", "\\O/"]];
-    MAN.iter().enumerate().for_each(|(i, row)| {
+    for (i, row) in MAN.iter().enumerate() {
         let man = row[(x.abs() / 12 % 2) as usize];
-        _ = mvaddstr(y + i as i32, x, man, display);
-    });
+        mvaddstr(y + i as i32, x, man, screen, target)?;
+    }
+
+    Ok(())
 }

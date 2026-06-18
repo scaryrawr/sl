@@ -2,14 +2,20 @@ use core::str;
 
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::Display;
+use crate::{RenderTarget, ScreenSize};
 
 use super::unicode_width::UnicodeWidthStr;
 
-pub fn mvaddstr<T: Display>(y: i32, x: i32, line: &str, display: &T) {
+pub fn mvaddstr<T: RenderTarget>(
+    y: i32,
+    x: i32,
+    line: &str,
+    screen: ScreenSize,
+    target: &mut T,
+) -> Result<(), T::Error> {
     // Vertically off screen
-    if y < 0 || y > display.lines() || x > display.cols() {
-        return;
+    if y < 0 || y >= screen.lines || x >= screen.columns || screen.columns <= 0 {
+        return Ok(());
     }
 
     let mut line = line;
@@ -17,7 +23,7 @@ pub fn mvaddstr<T: Display>(y: i32, x: i32, line: &str, display: &T) {
 
     // Everything is off screen to the left
     if end_position < 0 {
-        return;
+        return Ok(());
     }
 
     let mut x = x;
@@ -40,7 +46,7 @@ pub fn mvaddstr<T: Display>(y: i32, x: i32, line: &str, display: &T) {
     };
 
     // Remove everything that would be offscreen to the right
-    let mut past_end = end_position - display.cols();
+    let mut past_end = end_position - screen.columns;
     if past_end > 0 {
         for c in line.graphemes(true).rev() {
             let c_width = c.width() as i32;
@@ -53,9 +59,80 @@ pub fn mvaddstr<T: Display>(y: i32, x: i32, line: &str, display: &T) {
     }
 
     for _ in 0..leading_spaces {
-        display.add_str(y, x, " ");
+        target.draw_str(y, x, " ")?;
         x += 1;
     }
 
-    display.add_str(y, x, line);
+    target.draw_str(y, x, line)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{string::String, vec::Vec};
+
+    use super::*;
+
+    #[derive(Debug, Eq, PartialEq)]
+    enum TestError {
+        Failed,
+    }
+
+    #[derive(Default)]
+    struct RecordingTarget {
+        writes: Vec<(i32, i32, String)>,
+        fail: bool,
+    }
+
+    impl RenderTarget for RecordingTarget {
+        type Error = TestError;
+
+        fn draw_str(&mut self, line: i32, column: i32, value: &str) -> Result<(), Self::Error> {
+            if self.fail {
+                return Err(TestError::Failed);
+            }
+
+            self.writes.push((line, column, String::from(value)));
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn clips_text_off_the_left_edge() {
+        let mut target = RecordingTarget::default();
+
+        mvaddstr(1, -2, "abcd", ScreenSize::new(10, 3), &mut target).unwrap();
+
+        assert_eq!(target.writes, [(1, 0, String::from("cd"))]);
+    }
+
+    #[test]
+    fn clips_text_off_the_right_edge() {
+        let mut target = RecordingTarget::default();
+
+        mvaddstr(1, 8, "abcd", ScreenSize::new(10, 3), &mut target).unwrap();
+
+        assert_eq!(target.writes, [(1, 8, String::from("ab"))]);
+    }
+
+    #[test]
+    fn skips_text_below_the_bottom_edge() {
+        let mut target = RecordingTarget::default();
+
+        mvaddstr(3, 0, "abcd", ScreenSize::new(10, 3), &mut target).unwrap();
+
+        assert!(target.writes.is_empty());
+    }
+
+    #[test]
+    fn propagates_target_errors() {
+        let mut target = RecordingTarget {
+            fail: true,
+            ..RecordingTarget::default()
+        };
+
+        assert_eq!(
+            mvaddstr(1, 0, "abcd", ScreenSize::new(10, 3), &mut target),
+            Err(TestError::Failed)
+        );
+    }
 }
