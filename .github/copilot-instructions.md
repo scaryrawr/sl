@@ -2,7 +2,8 @@
 
 ## Project Overview
 
-SL (Steam Locomotive) is a joke command that runs a train across your terminal when you type "sl" instead of "ls". This repository contains:
+SL (Steam Locomotive) is a joke command that runs a train across your terminal when you type "sl" instead of "ls". This
+repository contains:
 
 - **Rust CLI application** (`apps/sl`): The main terminal application
 - **Rust library** (`libraries/libsl`): Core train rendering logic
@@ -20,6 +21,17 @@ SL (Steam Locomotive) is a joke command that runs a train across your terminal w
   - WASM: wasm-pack for building WebAssembly
 
 ## Build and Test Commands
+
+### Setup
+
+```bash
+# Install website WebAssembly prerequisites
+bun run setup
+```
+
+Use `bun run setup` instead of calling `rustup target add wasm32-unknown-unknown` and `cargo install wasm-pack`
+directly. Website build, dev, and WASM test scripts check these prerequisites and print the setup command when anything
+is missing.
 
 ### Building
 
@@ -46,7 +58,7 @@ bun run test
 cargo test --manifest-path libraries/libsl/Cargo.toml  # Rust library tests
 bun run test:websl                                      # WASM tests
 bun run test:page                                       # Page tests
-wasm-pack test --headless --firefox libraries/websl    # WASM browser tests
+bun run test:websl:rust                                 # WASM browser tests
 ```
 
 ### Linting and Formatting
@@ -90,6 +102,7 @@ sl/
 ## Code Style Guidelines
 
 ### Rust
+
 - Follow standard Rust conventions (use `cargo fmt`)
 - Use the 2021 edition
 - Optimize for release builds with LTO enabled
@@ -97,12 +110,14 @@ sl/
 - Leverage existing types from `libsl` for train rendering
 
 ### TypeScript/JavaScript
+
 - Use Prettier for formatting (configured in `.prettierrc.js`)
 - Use ESLint rules (configured in `eslint.config.mjs`)
 - Organize imports automatically
 - Use TypeScript strict mode where possible
 
 ### Documentation
+
 - Update README files when adding new features or changing behavior
 - Maintain both English (`README.md`) and Japanese (`README.ja.md`) versions
 - Document CLI options in help text and man pages
@@ -110,13 +125,16 @@ sl/
 ## Boundaries and Constraints
 
 ### DO NOT modify:
+
 - **License files**: `LICENSE` file is MIT licensed
 - **Build artifacts**: Don't commit compiled binaries, `target/`, `node_modules/`, `pkg/`, or `dist/` directories
 - **Lock files unnecessarily**: `Cargo.lock`, `bun.lock` should only change when dependencies are intentionally updated
 - **Git configuration**: `.gitignore`, `.gitattributes`
-- **Core animation logic**: The train ASCII art and animation in `libsl` is the heart of the project; changes should be minimal and preserve the original spirit
+- **Core animation logic**: The train ASCII art and animation in `libsl` is the heart of the project; changes should be
+  minimal and preserve the original spirit
 
 ### DO modify with care:
+
 - **Dependencies**: Only update when necessary for security or features
 - **CI/CD workflows**: Changes should maintain cross-platform builds (Fedora, Ubuntu, macOS, Windows)
 - **CLI arguments**: Changes should maintain backward compatibility where possible
@@ -124,6 +142,7 @@ sl/
 ## Platform Support
 
 This project supports:
+
 - **macOS** (x64, ARM64)
 - **Linux** (Fedora, Ubuntu/Debian, other distributions)
 - **Windows** (x64, ARM64)
@@ -134,13 +153,14 @@ When making changes, ensure they work across all platforms or use conditional co
 
 - Always run relevant tests before submitting changes
 - For Rust changes: Run `cargo test` and ensure CLI still works
-- For WASM changes: Run `wasm-pack test --headless --firefox libraries/websl`
+- For WASM changes: Run `bun run test:websl` or `bun run test:websl:rust` so prerequisite checks run first
 - For web page changes: Run `bun run test:page` and manually test in browser
 - Verify the CLI works by running `cargo run -- --help` and testing basic animation
 
 ## Common Tasks
 
 ### Adding a new CLI option
+
 1. Update `apps/sl/src/main.rs` with new clap argument
 2. Update `build.rs` to regenerate completions
 3. Update man pages (`sl.1.ja`)
@@ -148,12 +168,14 @@ When making changes, ensure they work across all platforms or use conditional co
 5. Test with `cargo run -- --new-option`
 
 ### Modifying train animations
+
 1. Core animation is in `libraries/libsl/src/`
 2. Update both Rust library and WASM bindings if needed
 3. Test with CLI and web embed
 4. Ensure frame timing works correctly
 
 ### Web embed changes
+
 1. Modify TypeScript in `apps/page/`
 2. Update WASM interface in `libraries/websl/` if needed
 3. Test query parameters work correctly
@@ -169,6 +191,7 @@ When making changes, ensure they work across all platforms or use conditional co
 ## Success Criteria
 
 A successful change:
+
 - Passes all existing tests
 - Builds successfully on all platforms
 - Maintains backward compatibility for CLI options
