@@ -99,3 +99,15 @@ Using cargo:
 ```sh
 cargo install --git https://github.com/scaryrawr/sl
 ```
+
+## Development
+
+Install the JavaScript dependencies and WebAssembly build tools before building the website:
+
+```sh
+bun install
+bun run setup
+```
+
+`bun run setup` installs the Rust `wasm32-unknown-unknown` target and `wasm-pack`, which are required by the website
+build. The build and dev scripts also check for these prerequisites and print the setup command if anything is missing.

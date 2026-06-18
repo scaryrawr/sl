@@ -6,14 +6,16 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
+    "prebuild": "cd ../.. && bun run build:websl",
     "build": "bun build.ts",
+    "predev": "cd ../.. && bun run build:websl",
     "dev": "bun dev.ts",
     "format": "prettier \"src/**/*.{ts,tsx,json,md}\" --write",
     "playwright:install": "bunx playwright install chromium",
     "serve:playwright": "bun ./playwright-server.mjs",
     "start": "bunx http-server ./lib/",
     "test": "bun test ./src",
-    "test:e2e": "cd ../.. && bun run build:websl && bun run build:page && cd apps/page && bunx playwright test",
+    "test:e2e": "cd ../.. && bun run build:page && cd apps/page && bunx playwright test",
     "typecheck": "tsc --noEmit --project tsconfig.json"
   },
   "dependencies": {
