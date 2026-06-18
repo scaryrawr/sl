@@ -1,5 +1,8 @@
 #![no_std]
 
+#[cfg(test)]
+extern crate std;
+
 mod add_man;
 mod add_smoke;
 mod add_train;
@@ -10,30 +13,66 @@ mod mvaddstr;
 mod print_car;
 mod unicode_width;
 
-/// Options for customizing the display.
-pub trait Options {
-    /// Returns `true` if the accident option is enabled.
-    fn accident(&self) -> bool;
-    /// Returns `true` if the fly option is enabled.
-    fn fly(&self) -> bool;
-    /// Returns `true` if the smoke option is enabled.
-    fn smoke(&self) -> bool;
+/// The drawable area available to the train renderer.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ScreenSize {
+    /// The number of addressable columns.
+    pub columns: i32,
+    /// The number of addressable lines.
+    pub lines: i32,
 }
 
-/// A trait representing a display.
-pub trait Display {
-    /// Adds a string to the display at the specified line and column.
-    ///
-    /// # Arguments
-    ///
-    /// * `line` - The line number where the string should be added.
-    /// * `column` - The column number where the string should be added.
-    /// * `value` - The string to be added.
-    fn add_str(&self, line: i32, column: i32, value: &str);
-    /// Returns the number of columns in the display.
-    fn cols(&self) -> i32;
-    /// Returns the number of lines in the display.
-    fn lines(&self) -> i32;
+impl ScreenSize {
+    /// Creates a new screen size from a column and line count.
+    pub const fn new(columns: i32, lines: i32) -> Self {
+        Self { columns, lines }
+    }
+}
+
+/// Options that control the train animation.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TrainOptions {
+    /// Whether passengers should fall out of the train.
+    pub accident: bool,
+    /// Whether the train should fly diagonally.
+    pub fly: bool,
+    /// Whether smoke should be rendered.
+    pub smoke: bool,
+}
+
+impl TrainOptions {
+    /// Creates train options from explicit flag values.
+    pub const fn new(accident: bool, fly: bool, smoke: bool) -> Self {
+        Self {
+            accident,
+            fly,
+            smoke,
+        }
+    }
+}
+
+impl Default for TrainOptions {
+    fn default() -> Self {
+        Self::new(false, false, true)
+    }
+}
+
+/// A destination that can draw text at a screen coordinate.
+pub trait RenderTarget {
+    /// The error returned when drawing fails.
+    type Error;
+
+    /// Draws `value` with its first grapheme at `line`, `column`.
+    fn draw_str(&mut self, line: i32, column: i32, value: &str) -> Result<(), Self::Error>;
+}
+
+/// Errors that can stop train rendering.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RenderError<TargetError> {
+    /// The train has moved fully off screen.
+    Offscreen,
+    /// The render target failed while drawing text.
+    Target(TargetError),
 }
 
 pub use c51::add_c51;

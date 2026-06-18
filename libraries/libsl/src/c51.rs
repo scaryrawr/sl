@@ -1,4 +1,4 @@
-use crate::{add_train::Error, Display, Options};
+use crate::{RenderError, RenderTarget, ScreenSize, TrainOptions};
 
 use super::add_train::{add_train, TrainOffsets, WindowOffsets};
 
@@ -8,18 +8,20 @@ use super::add_train::{add_train, TrainOffsets, WindowOffsets};
 ///
 /// * `x` - The x-coordinate where the train should be added.
 /// * `names` - A slice of strings representing the names to be displayed.
-/// * `display` - The display where the train will be added.
+/// * `screen` - The drawable area available to the train.
+/// * `target` - The destination where train text will be drawn.
 /// * `options` - Options for customizing the train.
 ///
 /// # Returns
 ///
-/// * `Result<(), Error>` - Returns `Ok(())` if successful, otherwise returns an `Error`.
-pub fn add_c51<T: AsRef<str>, U: Display, V: Options>(
+/// * `Result<(), RenderError<_>>` - Returns `Ok(())` if successful.
+pub fn add_c51<T: AsRef<str>, U: RenderTarget>(
     x: i32,
     names: &[T],
-    display: &U,
-    options: &V,
-) -> Result<(), Error> {
+    screen: ScreenSize,
+    target: &mut U,
+    options: &TrainOptions,
+) -> Result<(), RenderError<U::Error>> {
     const ENGINE: [[&str; 12]; 6] = [
         [
             "        ___                                            ",
@@ -150,5 +152,7 @@ pub fn add_c51<T: AsRef<str>, U: Display, V: Options>(
         car_text_width: 22,
     };
 
-    add_train(x, &ENGINE, &COAL, &CAR, OFFSETS, names, display, options)
+    add_train(
+        x, &ENGINE, &COAL, &CAR, OFFSETS, names, screen, target, options,
+    )
 }

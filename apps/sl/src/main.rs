@@ -5,45 +5,24 @@ use crossterm::event::{read, Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::terminal::{Clear, ClearType};
 use crossterm::{cursor, terminal, ExecutableCommand, QueueableCommand};
 use filedescriptor::{Error, FileDescriptor};
-use libsl::{add_c51, add_d51, add_logo};
+use libsl::{add_c51, add_d51, add_logo, RenderError, RenderTarget, ScreenSize, TrainOptions};
 use std::fs;
-use std::io::{stdin, stdout, BufRead, BufReader, IsTerminal, Stdin, Write};
+use std::io::{stdin, stdout, BufRead, BufReader, IsTerminal, Stdin, Stdout, Write};
 use std::sync::mpsc::Receiver;
 
 mod cli;
 
-struct TerminalDisplay {
-    cols: i32,
-    lines: i32,
+struct TerminalRenderer<'a> {
+    stdout: &'a mut Stdout,
 }
 
-impl libsl::Display for TerminalDisplay {
-    fn add_str(&self, y: i32, x: i32, s: &str) {
-        let mut stdout = std::io::stdout();
-        stdout.queue(cursor::MoveTo(x as u16, y as u16)).unwrap();
-        stdout.write_all(s.as_bytes()).unwrap();
-    }
+impl RenderTarget for TerminalRenderer<'_> {
+    type Error = Error;
 
-    fn cols(&self) -> i32 {
-        self.cols
-    }
-
-    fn lines(&self) -> i32 {
-        self.lines
-    }
-}
-
-impl libsl::Options for CliOptions {
-    fn accident(&self) -> bool {
-        self.accident
-    }
-
-    fn fly(&self) -> bool {
-        self.fly
-    }
-
-    fn smoke(&self) -> bool {
-        true
+    fn draw_str(&mut self, line: i32, column: i32, value: &str) -> Result<(), Self::Error> {
+        self.stdout
+            .queue(cursor::MoveTo(column as u16, line as u16))?;
+        Ok(self.stdout.write_all(value.as_bytes())?)
     }
 }
 
@@ -57,24 +36,15 @@ fn main() -> Result<(), Error> {
     let mut stdout = stdout();
     stdout.execute(cursor::Hide)?;
 
-    let add_train = if args.logo {
-        add_logo
-    } else if args.c51 {
-        add_c51
-    } else {
-        add_d51
-    };
-
     stdout.queue(Clear(ClearType::All))?;
     let mut names: Vec<String> = vec![];
 
     let size = terminal::size()?;
-    let mut display = TerminalDisplay {
-        cols: size.0 as i32,
-        lines: size.1 as i32,
-    };
+    let mut screen = ScreenSize::new(size.0 as i32, size.1 as i32);
+    let options = TrainOptions::new(args.accident, args.fly, true);
+    let mut render_error = None;
 
-    let mut x = display.cols - 1;
+    let mut x = screen.columns - 1;
 
     loop {
         match names_receiver.try_recv() {
@@ -84,8 +54,24 @@ fn main() -> Result<(), Error> {
             Err(_) => {}
         }
 
-        if add_train(x, &names, &display, &args).is_err() {
-            break;
+        let mut renderer = TerminalRenderer {
+            stdout: &mut stdout,
+        };
+        let result = if args.logo {
+            add_logo(x, &names, screen, &mut renderer, &options)
+        } else if args.c51 {
+            add_c51(x, &names, screen, &mut renderer, &options)
+        } else {
+            add_d51(x, &names, screen, &mut renderer, &options)
+        };
+
+        match result {
+            Ok(()) => {}
+            Err(RenderError::Offscreen) => break,
+            Err(RenderError::Target(error)) => {
+                render_error = Some(error);
+                break;
+            }
         }
 
         stdout.flush()?;
@@ -100,8 +86,7 @@ fn main() -> Result<(), Error> {
                 }) => break,
                 Event::Resize(cols, lines) => {
                     stdout.queue(Clear(ClearType::All))?;
-                    display.cols = cols as i32;
-                    display.lines = lines as i32;
+                    screen = ScreenSize::new(cols as i32, lines as i32);
                 }
                 _ => {}
             }
@@ -111,6 +96,10 @@ fn main() -> Result<(), Error> {
     stdout.queue(Clear(ClearType::All))?.queue(cursor::Show)?;
     stdout.flush()?;
     terminal::disable_raw_mode()?;
+
+    if let Some(error) = render_error {
+        return Err(error);
+    }
 
     Ok(())
 }

@@ -1,8 +1,6 @@
 mod utils;
 
-use std::str::FromStr;
-
-use js_sys::{Array, Function, JsString};
+use js_sys::{Array, Function};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -30,26 +28,24 @@ impl Display {
             add_str,
         }
     }
+
+    fn screen_size(&self) -> libsl::ScreenSize {
+        libsl::ScreenSize::new(self.cols, self.lines)
+    }
 }
 
-impl libsl::Display for Display {
-    fn add_str(&self, y: i32, x: i32, s: &str) {
+impl libsl::RenderTarget for Display {
+    type Error = JsValue;
+
+    fn draw_str(&mut self, y: i32, x: i32, s: &str) -> Result<(), Self::Error> {
         self.add_str
             .call3(
                 &JsValue::NULL,
                 &JsValue::from(y),
                 &JsValue::from(x),
-                &JsString::from_str(s).unwrap(),
+                &JsValue::from_str(s),
             )
-            .unwrap();
-    }
-
-    fn cols(&self) -> i32 {
-        self.cols
-    }
-
-    fn lines(&self) -> i32 {
-        self.lines
+            .map(|_| ())
     }
 }
 
@@ -78,19 +74,9 @@ impl Options {
             smoke,
         }
     }
-}
 
-impl libsl::Options for Options {
-    fn accident(&self) -> bool {
-        self.accident
-    }
-
-    fn fly(&self) -> bool {
-        self.fly
-    }
-
-    fn smoke(&self) -> bool {
-        self.smoke
+    fn train_options(&self) -> libsl::TrainOptions {
+        libsl::TrainOptions::new(self.accident, self.fly, self.smoke)
     }
 }
 
@@ -112,20 +98,14 @@ pub fn set_panic_hook() {
 ///
 /// # Returns
 ///
-/// `true` if the train was added successfully, `false` otherwise.
-pub fn add_d51(x: i32, names: &Array, display: &Display, options: &Options) -> bool {
-    match libsl::add_d51(
-        x,
-        &names
-            .iter()
-            .map(|x| x.as_string().unwrap())
-            .collect::<Vec<String>>(),
-        display,
-        options,
-    ) {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+/// `true` if the train was added successfully, `false` if it moved offscreen.
+/// Render-target failures are thrown as JavaScript exceptions.
+pub fn add_d51(x: i32, names: &Array, display: &mut Display, options: &Options) -> bool {
+    let names = names_from_array(names);
+    let screen = display.screen_size();
+    let options = options.train_options();
+
+    render_result(libsl::add_d51(x, &names, screen, display, &options))
 }
 
 #[wasm_bindgen]
@@ -140,20 +120,14 @@ pub fn add_d51(x: i32, names: &Array, display: &Display, options: &Options) -> b
 ///
 /// # Returns
 ///
-/// `true` if the train was added successfully, `false` otherwise.
-pub fn add_logo(x: i32, names: &Array, display: &Display, options: &Options) -> bool {
-    match libsl::add_logo(
-        x,
-        &names
-            .iter()
-            .map(|x| x.as_string().unwrap())
-            .collect::<Vec<String>>(),
-        display,
-        options,
-    ) {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+/// `true` if the train was added successfully, `false` if it moved offscreen.
+/// Render-target failures are thrown as JavaScript exceptions.
+pub fn add_logo(x: i32, names: &Array, display: &mut Display, options: &Options) -> bool {
+    let names = names_from_array(names);
+    let screen = display.screen_size();
+    let options = options.train_options();
+
+    render_result(libsl::add_logo(x, &names, screen, display, &options))
 }
 
 #[wasm_bindgen]
@@ -168,18 +142,27 @@ pub fn add_logo(x: i32, names: &Array, display: &Display, options: &Options) -> 
 ///
 /// # Returns
 ///
-/// `true` if the train was added successfully, `false` otherwise.
-pub fn add_c51(x: i32, names: &Array, display: &Display, options: &Options) -> bool {
-    match libsl::add_c51(
-        x,
-        &names
-            .iter()
-            .map(|x| x.as_string().unwrap())
-            .collect::<Vec<String>>(),
-        display,
-        options,
-    ) {
-        Ok(_) => true,
-        Err(_) => false,
+/// `true` if the train was added successfully, `false` if it moved offscreen.
+/// Render-target failures are thrown as JavaScript exceptions.
+pub fn add_c51(x: i32, names: &Array, display: &mut Display, options: &Options) -> bool {
+    let names = names_from_array(names);
+    let screen = display.screen_size();
+    let options = options.train_options();
+
+    render_result(libsl::add_c51(x, &names, screen, display, &options))
+}
+
+fn names_from_array(names: &Array) -> Vec<String> {
+    names
+        .iter()
+        .map(|x| x.as_string().unwrap())
+        .collect::<Vec<String>>()
+}
+
+fn render_result(result: Result<(), libsl::RenderError<JsValue>>) -> bool {
+    match result {
+        Ok(()) => true,
+        Err(libsl::RenderError::Offscreen) => false,
+        Err(libsl::RenderError::Target(error)) => wasm_bindgen::throw_val(error),
     }
 }
