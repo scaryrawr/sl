@@ -19,8 +19,7 @@
     "typecheck": "tsc --noEmit --project tsconfig.json"
   },
   "dependencies": {
-    "preact": "^10.25.4",
-    "websl": "*"
+    "preact": "^10.25.4"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",

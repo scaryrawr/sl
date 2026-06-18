@@ -16,7 +16,7 @@
         "prettier-plugin-organize-imports": "^4.3.0",
         "prettier-plugin-packagejson": "^2.5.22",
         "typescript": "^5.9.3",
-        "typescript-eslint": "^8.61.0",
+        "typescript-eslint": "^8.61.1",
       },
     },
     "apps/page": {
@@ -24,17 +24,12 @@
       "version": "1.0.0",
       "dependencies": {
         "preact": "^10.25.4",
-        "websl": "*",
       },
       "devDependencies": {
         "@playwright/test": "^1.59.1",
         "@types/bun": "1.3.3",
         "typescript": "^5.9.3",
       },
-    },
-    "libraries/websl": {
-      "name": "websl",
-      "version": "0.1.0",
     },
   },
   "packages": {
@@ -579,8 +574,6 @@
     "update-browserslist-db": ["update-browserslist-db@1.2.2", "", { "dependencies": { "escalade": "^3.2.0", "picocolors": "^1.1.1" }, "peerDependencies": { "browserslist": ">= 4.21.0" }, "bin": { "update-browserslist-db": "cli.js" } }, "sha512-E85pfNzMQ9jpKkA7+TJAi4TJN+tBCuWh5rUcS/sv6cFi+1q9LYDwDI5dpUL0u/73EElyQ8d3TEaeW4sPedBqYA=="],
 
     "uri-js": ["uri-js@4.4.1", "", { "dependencies": { "punycode": "^2.1.0" } }, "sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg=="],
-
-    "websl": ["websl@workspace:libraries/websl"],
 
     "which": ["which@2.0.2", "", { "dependencies": { "isexe": "^2.0.0" }, "bin": { "node-which": "./bin/node-which" } }, "sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA=="],
 

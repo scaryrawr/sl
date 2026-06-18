@@ -19,7 +19,6 @@
   "author": "Mike Wallio",
   "main": "index.js",
   "workspaces": [
-    "libraries/*",
     "apps/*"
   ],
   "scripts": {
@@ -27,14 +26,14 @@
     "build": "bun run build:page",
     "build:libsl": "cargo build --manifest-path libraries/libsl/Cargo.toml --release",
     "build:page": "bun run --cwd apps/page build",
-    "build:websl": "bun run --cwd libraries/websl build",
-    "build:websl:rust": "bun run check:wasm-pack && wasm-pack build libraries/websl --target web --release",
+    "build:websl": "bun run check:wasm-pack && wasm-pack build libraries/websl --target web --release --no-pack",
+    "build:websl:rust": "bun run check:wasm-pack && wasm-pack build libraries/websl --target web --release --no-pack",
     "check:wasm-pack": "bun ./scripts/ensure-wasm-pack.ts",
     "dev": "bun run dev:page",
     "dev:page": "bun run --cwd apps/page dev",
-    "dev:websl": "bun run --cwd libraries/websl dev",
+    "dev:websl": "cargo check --manifest-path libraries/websl/Cargo.toml",
     "format": "prettier \"{.,**}.{tsx,ts,js,less,json,md,yaml}\" --write",
-    "format:websl": "bun run --cwd libraries/websl format",
+    "format:websl": "cargo fmt --manifest-path libraries/websl/Cargo.toml",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "setup": "bun run setup:wasm-pack",
@@ -45,7 +44,7 @@
     "test:libsl": "cargo test --manifest-path libraries/libsl/Cargo.toml",
     "test:page": "bun run --cwd apps/page test",
     "test:page:e2e": "bun run --cwd apps/page test:e2e",
-    "test:websl": "bun run --cwd libraries/websl test",
+    "test:websl": "bun run check:wasm-pack && wasm-pack test --headless --firefox libraries/websl",
     "test:websl:rust": "bun run check:wasm-pack && wasm-pack test --headless --firefox libraries/websl",
     "typecheck": "bun run typecheck:page",
     "typecheck:page": "bun run --cwd apps/page typecheck"

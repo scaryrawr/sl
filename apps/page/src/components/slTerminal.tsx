@@ -20,7 +20,7 @@ type SlProps = {
   backgroundColor?: string;
 };
 
-const slPromise = import('websl').then((module) => {
+const slPromise = import('../websl').then((module) => {
   module.set_panic_hook();
   return module;
 });

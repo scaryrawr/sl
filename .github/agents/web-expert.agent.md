@@ -109,9 +109,10 @@ Before completing any task:
 ### Updating WASM bindings
 
 1. Rust code in `libraries/websl/src/`
-2. TypeScript bindings in `libraries/websl/index.js`
-3. Rebuild with `bun run build:websl:rust`
-4. Test WASM loads correctly in browser
+2. Generated JS/TypeScript bindings are in `libraries/websl/pkg/`
+3. Page code imports them through the adapter at `apps/page/src/websl.ts`
+4. Rebuild with `bun run build:websl:rust` (uses `wasm-pack --no-pack`; `libraries/websl` is not a Bun/npm workspace package)
+5. Test WASM loads correctly in browser
 
 ### Adding new embed options
 
@@ -132,9 +133,10 @@ Before completing any task:
 
 - **Web app**: `apps/page/src/`
 - **WASM Rust code**: `libraries/websl/src/`
-- **WASM TypeScript bindings**: `libraries/websl/index.js`
+- **WASM TypeScript adapter**: `apps/page/src/websl.ts`
+- **Generated WASM bindings**: `libraries/websl/pkg/`
 - **Web app config**: `apps/page/build.ts`, `apps/page/package.json`
-- **WASM config**: `libraries/websl/Cargo.toml`, `libraries/websl/package.json`
+- **WASM config**: `libraries/websl/Cargo.toml`
 
 ## Success Criteria
 
