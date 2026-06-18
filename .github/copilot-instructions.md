@@ -178,8 +178,10 @@ When making changes, ensure they work across all platforms or use conditional co
 
 1. Modify TypeScript in `apps/page/`
 2. Update WASM interface in `libraries/websl/` if needed
-3. Test query parameters work correctly
-4. Ensure build produces correct WASM filename references
+3. Keep the page-local WASM adapter (`apps/page/src/websl.ts`) aligned with generated bindings in `libraries/websl/pkg/`
+4. Build WASM with `wasm-pack --no-pack`; `libraries/websl` is not a Bun/npm workspace package
+5. Test query parameters work correctly
+6. Ensure build produces correct WASM filename references
 
 ## Security
 
