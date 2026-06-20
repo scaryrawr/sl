@@ -25,6 +25,5 @@
       ]
     }
   },
-  "remoteUser": "vscode",
-  "onCreateCommand": "${containerWorkspaceFolder}/.devcontainer/fedora/onCreateCommand.sh"
+  "remoteUser": "vscode"
 }

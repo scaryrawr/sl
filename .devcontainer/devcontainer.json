@@ -23,6 +23,5 @@
         "vadimcn.vscode-lldb"
       ]
     }
-  },
-  "onCreateCommand": "${containerWorkspaceFolder}/.devcontainer/ubuntu/onCreateCommand.sh"
+  }
 }
