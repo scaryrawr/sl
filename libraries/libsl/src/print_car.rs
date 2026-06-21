@@ -39,7 +39,7 @@ pub fn print_car(buffer: &mut [u8], format: &str, text: &str, text_display_width
     buffer[end_pos] = 0;
 }
 
-fn car_text<'a>(buffer_len: usize, text_display_width: usize, text: &'a str) -> &'a str {
+fn car_text(buffer_len: usize, text_display_width: usize, text: &str) -> &str {
     let mut working_text = text;
 
     // We need to remove clusters until we will fit in the buffer
