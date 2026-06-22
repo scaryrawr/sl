@@ -33,7 +33,7 @@ pub fn mvaddstr<T: RenderTarget>(
             let c_width = c.width() as i32;
             x += c_width;
             line = &line[c.len()..];
-            if !(x < 0) {
+            if x >= 0 {
                 break;
             }
         }

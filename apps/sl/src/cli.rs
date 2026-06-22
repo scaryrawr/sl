@@ -1,4 +1,4 @@
-use clap::{command, Parser};
+use clap::Parser;
 
 /// sl cures your bad habit of mistyping.
 #[derive(Parser, Debug)]
