@@ -1,7 +1,26 @@
+//! Accident-mode passenger rendering.
+//!
+//! When accident mode is enabled, small ASCII people are drawn below train windows,
+//! alternating between a standing figure `(O) \O/` and a plea for help.
+
 use crate::{RenderTarget, ScreenSize};
 
 use super::mvaddstr::mvaddstr;
 
+/// Draw a person (passenger) at position `(y, x)` for the accident animation.
+///
+/// Two frames alternate based on the x position: a standing figure and a "Help!" message.
+///
+/// # Arguments
+///
+/// * `y` – Row position for the top of the figure.
+/// * `x` – Column position.
+/// * `screen` – Dimensions of the drawable area.
+/// * `target` – The render destination.
+///
+/// # Returns
+///
+/// `Ok(())` on success, or the render target's error if drawing fails.
 pub fn add_man<T: RenderTarget>(
     y: i32,
     x: i32,

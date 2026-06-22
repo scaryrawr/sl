@@ -1,3 +1,7 @@
+/**
+ * Documentation section explaining how to pipe content into the `sl` command
+ * so that text appears on the train cars.
+ */
 const Piping = () => (
   <div>
     <h2>Piping</h2>

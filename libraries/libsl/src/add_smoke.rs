@@ -1,17 +1,29 @@
+//! Smoke particle animation for the train's funnel.
+//!
+//! Smoke particles rise and drift from the funnel position, fading from a large
+//! shape to a single character and then disappearing. Two visual styles alternate
+//! between smoke puffs `()` and `@`-based puffs.
+
 use core::cmp::min;
 
 use crate::{RenderTarget, ScreenSize};
 
 use super::mvaddstr::mvaddstr;
 
+/// Internal state tracked for each smoke particle.
 #[derive(Copy, Clone, Debug)]
 struct Smokes {
+    /// Current row position.
     y: i32,
+    /// Current column position.
     x: i32,
+    /// Current frame index (0 = largest, 15 = disappeared).
     ptrn: usize,
+    /// Visual style: 0 for `()` puffs, 1 for `@` puffs.
     kind: usize,
 }
 
+/// Persistent storage for up to 1000 smoke particles.
 static mut SMOKES: [Smokes; 1000] = [Smokes {
     y: 0,
     x: 0,
@@ -19,6 +31,22 @@ static mut SMOKES: [Smokes; 1000] = [Smokes {
     kind: 0,
 }; 1000];
 
+/// Render smoke particles rising from the train's funnel at position `(y, x)`.
+///
+/// Smoke is only emitted every 4 frames (`x % 4 == 0`). Each emission advances
+/// existing particles upward and to the side, cycling through 16 frames from a
+/// large puff down to a single character before disappearing.
+///
+/// # Arguments
+///
+/// * `y` – Row of the smoke funnel.
+/// * `x` – Column of the smoke funnel.
+/// * `screen` – Dimensions of the drawable area.
+/// * `target` – The render destination.
+///
+/// # Returns
+///
+/// `Ok(())` on success, or the render target's error if drawing fails.
 pub fn add_smoke<T: RenderTarget>(
     y: i32,
     x: i32,

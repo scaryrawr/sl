@@ -1,3 +1,7 @@
+/**
+ * Documentation section explaining how to embed the SL terminal in external pages.
+ * Lists supported query parameters and provides a URL example.
+ */
 const Embed = () => (
   <div>
     <h2>Embed</h2>

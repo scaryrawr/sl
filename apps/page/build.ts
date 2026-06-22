@@ -1,4 +1,19 @@
 #!/usr/bin/env bun
+/**
+ * Production build script for the SL web page.
+ *
+ * Steps:
+ * 1. Build `index.tsx` and `embed.tsx` with Bun (generates hashed WASM file).
+ * 2. Discover the generated WASM filename.
+ * 3. Inject the WASM filename into `service-worker.ts` via a placeholder replacement.
+ * 4. Build the patched service worker.
+ * 5. Rename the temp service worker output to `service-worker.js`.
+ * 6. Copy static assets (HTML, favicon, manifest) to the output directory.
+ *
+ * Run with: `bun run build.ts`
+ *
+ * @module build
+ */
 import { copyFile, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
