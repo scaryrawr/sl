@@ -13,7 +13,7 @@ repository contains:
 ## Tech Stack
 
 - **Languages**: Rust (2021 edition), TypeScript, JavaScript
-- **Build Tools**: Cargo, wasm-pack, Bun (v1.3.3)
+- **Build Tools**: Cargo, Zig, cargo-zigbuild, wasm-pack, Bun (v1.3.3)
 - **Testing**: Cargo test, wasm-pack test, Bun test
 - **Key Dependencies**:
   - Rust: clap (v4.5+), crossterm (v0.28+), filedescriptor
@@ -47,6 +47,10 @@ bun run build:page                       # Web page
 # Build WASM from Rust source
 bun run build:websl:rust
 ```
+
+Release CI cross-compiles the CLI from Linux. Linux GNU targets use the checked-in Zig linker wrappers under `scripts/`
+and `.cargo/config.toml`; Windows targets use `cargo-zigbuild` for `x86_64-pc-windows-gnu` and
+`aarch64-pc-windows-gnullvm` instead of MSVC-hosted compilation.
 
 ### Testing
 
