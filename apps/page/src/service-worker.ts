@@ -1,18 +1,30 @@
+/**
+ * Service Worker for the SL web page.
+ *
+ * Provides offline support through a two-tier caching strategy:
+ * - **Navigation requests** (HTML pages): network-first with cache fallback
+ * - **Static assets** (JS, CSS, images, WASM): cache-first with background update
+ *
+ * @module service-worker
+ */
 import {
   getNavigationCachePath,
   getNavigationFallbackPath,
   getNavigationRedirectPath
 } from './service-worker-navigation';
 
+/** Service worker event that supports `waitUntil()` for extending lifecycle. */
 type ExtendableEventLike = Event & {
   waitUntil: (promise: Promise<unknown>) => void;
 };
 
+/** Fetch event extended with `request` and `respondWith()`. */
 type FetchEventLike = ExtendableEventLike & {
   request: Request;
   respondWith: (response: Promise<Response> | Response) => void;
 };
 
+/** Augmented `self` with skipWaiting and clients.claim. */
 const serviceWorker = self as typeof self & {
   skipWaiting: () => Promise<void>;
   clients: {
@@ -20,16 +32,20 @@ const serviceWorker = self as typeof self & {
   };
 };
 
-// Service Worker for offline support
-// Implements a network-first strategy with cache fallback for navigation
-// and cache-first strategy for static assets
-
+/** Cache version bump forces all cached assets to be re-fetched on next activation. */
 const CACHE_VERSION = 'v3';
+
+/** Name of the cache used for both assets and navigation responses. */
 const CACHE_NAME = `sl-page-${CACHE_VERSION}`;
 
-// Dynamically determine the base path from the service worker's location
-// For GitHub Pages project sites (e.g., https://username.github.io/project/),
-// the service worker will be at /project/service-worker.js, so we extract /project/
+/**
+ * Dynamically determine the base path from the service worker's location.
+ *
+ * For GitHub Pages project sites (e.g., `https://username.github.io/project/`),
+ * the service worker will be at `/project/service-worker.js`, so we extract `/project/`.
+ *
+ * @returns Base path string (e.g., `"/project"`) or empty string for root deployments.
+ */
 const getBasePath = () => {
   const swPath = self.location.pathname;
   // Remove /service-worker.js to get the base directory
@@ -39,6 +55,10 @@ const getBasePath = () => {
 
 const BASE_PATH = getBasePath();
 
+/**
+ * Static assets to pre-cache during the install phase.
+ * The `WASM_PLACEHOLDER` comment is replaced with the actual WASM filename at build time.
+ */
 // prettier-ignore
 const ASSETS_TO_CACHE = [
   `${BASE_PATH}/`,
@@ -51,20 +71,34 @@ const ASSETS_TO_CACHE = [
   // WASM_PLACEHOLDER - will be replaced at build time
 ];
 
+/** Set of fully-resolved asset URLs for quick lookup during cache cleanup. */
 const ASSET_URLS = new Set(ASSETS_TO_CACHE.map((url) => new URL(url, self.location.origin).toString()));
 
+/**
+ * Create a 404 response for offline navigation requests that have no cached fallback.
+ *
+ * @returns HTTP 404 response indicating the page is not available offline.
+ */
 const createOfflineNotFoundResponse = () =>
   new Response('Offline - Page not found', {
     status: 404,
     statusText: 'Not Found'
   });
 
+/**
+ * Attempt to match a navigation request against the cached fallback shell.
+ * Falls back to a 404 response if no cached page is found.
+ *
+ * @param cache - The cache to search.
+ * @param pathname - The requested path.
+ * @returns The cached fallback response or a 404.
+ */
 const matchNavigationFallback = (cache: Cache, pathname: string) =>
   cache.match(getNavigationFallbackPath(BASE_PATH, pathname)).then((fallbackResponse) => {
     return fallbackResponse || createOfflineNotFoundResponse();
   });
 
-// Install event - cache initial assets
+/** Install event handler – pre-caches all static assets so the app works offline on first visit. */
 serviceWorker.addEventListener('install', (event: ExtendableEventLike) => {
   event.waitUntil(
     caches
@@ -82,7 +116,7 @@ serviceWorker.addEventListener('install', (event: ExtendableEventLike) => {
   );
 });
 
-// Activate event - clean up old caches
+/** Activate event handler – deletes stale caches and removes non-asset entries from the current cache. */
 serviceWorker.addEventListener('activate', (event: ExtendableEventLike) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -117,7 +151,7 @@ serviceWorker.addEventListener('activate', (event: ExtendableEventLike) => {
   );
 });
 
-// Fetch event - serve from cache or network
+/** Fetch event handler – routes requests through the appropriate caching strategy (network-first for navigation, cache-first for assets). */
 serviceWorker.addEventListener('fetch', (event: FetchEventLike) => {
   const { request } = event;
   const url = new URL(request.url);

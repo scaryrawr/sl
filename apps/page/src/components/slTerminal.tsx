@@ -1,30 +1,59 @@
 import { useCallback, useEffect, useRef } from 'preact/hooks';
 import Terminal from './terminal';
 
+/** Allowed train type identifiers for the SL animation. */
 type TrainTypeValue = 'c51' | 'd51' | 'logo';
 
+/**
+ * Constant map of train type names to their string values.
+ * Use these values when configuring the train animation.
+ */
 const TrainType = {
+  /** C51-class steam locomotive. */
   C51: 'c51',
+  /** D51-class steam locomotive (default). */
   D51: 'd51',
+  /** Small logo train. */
   LOGO: 'logo'
 } as const satisfies Record<string, TrainTypeValue>;
 
+/**
+ * Props for the {@link SlTerminal} component.
+ */
 type SlProps = {
+  /** Title bar text for the terminal window. */
   title: string;
+  /** Whether to show an accident scene (people crying for help, file listing). */
   accident: boolean;
+  /** Whether the train flies through the air (Galaxy Express 999 style). */
   fly: boolean;
+  /** Whether to render smoke particles from the train chimney. */
   smoke: boolean;
+  /** Which train model to render. */
   trainType: TrainTypeValue;
+  /** Array of messages to display on the train cars as they scroll by. */
   messages: string[];
+  /** CSS color for terminal text (passed through to {@link Terminal}). */
   fontColor?: string;
+  /** CSS background color for the terminal (passed through to {@link Terminal}). */
   backgroundColor?: string;
 };
 
+/** Lazy-loaded WASM module promise; initializes the panic hook before resolving. */
 const slPromise = import('../websl').then((module) => {
   module.set_panic_hook();
   return module;
 });
 
+/**
+ * Hook that drives the SL train animation inside a terminal grid.
+ *
+ * Handles WASM initialization, frame rendering, and accessibility fallback
+ * when `prefers-reduced-motion: reduce` is set.
+ *
+ * @param props - Animation configuration (accident, fly, trainType, messages, smoke).
+ * @returns A ref to the terminal `<div>` that parent components can pass to {@link Terminal}.
+ */
 const useSlAnimation = (props: {
   accident: boolean;
   fly: boolean;
@@ -206,6 +235,16 @@ const useSlAnimation = (props: {
   return terminalRef;
 };
 
+/**
+ * Top-level component that renders the SL train animation inside a faux terminal window.
+ *
+ * Combines {@link Terminal} (the visual terminal shell) with {@link useSlAnimation}
+ * (the WASM-driven animation loop). Also respects `prefers-reduced-motion` by showing
+ * a static train when animations are disabled.
+ *
+ * @param props - Configuration for the terminal and animation.
+ * @returns A terminal window with the animated steam locomotive.
+ */
 const SlTerminal = ({ title, accident, fly, trainType, messages, smoke, fontColor, backgroundColor }: SlProps) => {
   const terminalRef = useSlAnimation({ accident, fly, trainType, messages, smoke });
 

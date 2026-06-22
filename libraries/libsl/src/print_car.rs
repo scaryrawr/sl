@@ -1,8 +1,26 @@
+//! Passenger car text rendering utilities.
+//!
+//! Handles substituting a text label into the `{}` placeholder of a car sprite,
+//! truncating graphemes when the text is too wide or too long for the buffer.
+
 use core::{cmp::min, str};
 
 use super::unicode_width::UnicodeWidthStr;
 use unicode_segmentation::UnicodeSegmentation;
 
+/// Render a passenger car row with `text` substituted into the `{}` placeholder of `format`.
+///
+/// The resulting null-terminated string is written into `buffer`. If `text` is wider
+/// than `text_display_width` or longer than the available buffer space, graphemes are
+/// trimmed from the end until it fits. Extra padding spaces are added if the text is
+/// narrower than `text_display_width`.
+///
+/// # Arguments
+///
+/// * `buffer` – Output buffer (must be large enough to hold the result plus a null terminator).
+/// * `format` – Car sprite row containing a single `{}` placeholder for the text.
+/// * `text` – The label to render inside the car.
+/// * `text_display_width` – Maximum display width (in character cells) for the text.
 pub fn print_car(buffer: &mut [u8], format: &str, text: &str, text_display_width: usize) {
     // No format string, just copy text
     if !format.contains("{}") {
@@ -39,6 +57,19 @@ pub fn print_car(buffer: &mut [u8], format: &str, text: &str, text_display_width
     buffer[end_pos] = 0;
 }
 
+/// Truncate `text` so that it fits within both `buffer_len` (byte length) and `text_display_width` (character cells).
+///
+/// Graphemes are removed from the end until the text fits both constraints.
+///
+/// # Arguments
+///
+/// * `buffer_len` – Maximum byte length available in the output buffer.
+/// * `text_display_width` – Maximum display width in character cells.
+/// * `text` – The input text to potentially truncate.
+///
+/// # Returns
+///
+/// A substring of `text` that fits within both limits.
 fn car_text(buffer_len: usize, text_display_width: usize, text: &str) -> &str {
     let mut working_text = text;
 

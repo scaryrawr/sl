@@ -1,3 +1,11 @@
+/**
+ * Entry point for the embeddable SL terminal page (`embed.html`).
+ *
+ * Renders {@link EmbedTerminal} driven by URL query parameters and registers
+ * the service worker for offline support.
+ *
+ * @module embed
+ */
 import { render } from 'preact';
 import EmbedTerminal from './components/EmbedTerminal';
 

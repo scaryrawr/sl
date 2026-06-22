@@ -1,3 +1,11 @@
+//! **sl** – Steam Locomotive CLI application.
+//!
+//! Renders an animated ASCII-art steam train across the terminal. Supports multiple train
+//! types (D51, C51, logo), accident mode, flying mode, and smoke particles.
+//!
+//! When stdin is not a terminal, piped input is displayed on the train cars. Otherwise,
+//! directory listings are used (unless `--files` is set).
+
 use clap::Parser;
 use cli::CliOptions;
 use core::time;
@@ -12,6 +20,8 @@ use std::sync::mpsc::Receiver;
 
 mod cli;
 
+/// Bridges the real terminal (`stdout`) to the [`RenderTarget`] trait so the train
+/// can be drawn using crossterm cursor positioning and byte writes.
 struct TerminalRenderer<'a> {
     stdout: &'a mut Stdout,
 }
@@ -26,6 +36,14 @@ impl RenderTarget for TerminalRenderer<'_> {
     }
 }
 
+/// Application entry point.
+///
+/// Parses CLI arguments, sets up raw terminal mode, and runs the animation loop until
+/// the train scrolls off-screen or the user presses `Ctrl+C`.
+///
+/// # Returns
+///
+/// `Ok(())` on clean exit, or an error if the terminal I/O fails.
 fn main() -> Result<(), Error> {
     let args = CliOptions::parse();
     let stdin = stdin();
@@ -101,6 +119,20 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
+/// Spawn a background thread that sends train car labels through a channel.
+///
+/// - If stdin is **not** a terminal, piped lines are sent as labels.
+/// - If `--files` is set, no labels are sent (empty train cars).
+/// - Otherwise, directory entries from `.` are sent (skipping dotfiles unless `--accident`).
+///
+/// # Arguments
+///
+/// * `args` - Parsed CLI options.
+/// * `stdin` - Standard input handle.
+///
+/// # Returns
+///
+/// A receiver that yields `String` labels for the train cars.
 fn cars_receiver(args: &CliOptions, stdin: Stdin) -> Result<Receiver<String>, Error> {
     let (sender, receiver) = std::sync::mpsc::channel();
     if !Stdin::is_terminal(&stdin) {
@@ -122,7 +154,7 @@ fn cars_receiver(args: &CliOptions, stdin: Stdin) -> Result<Receiver<String>, Er
                 let p = p.unwrap();
                 let name = p.file_name().to_str().unwrap().to_string();
                 if accident || !name.starts_with('.') {
-                    sender.send(name).unwrap();
+                    sender.send(name).unwrap()
                 }
             });
         });

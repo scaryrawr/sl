@@ -1,3 +1,7 @@
+/**
+ * Documentation section with installation instructions for all supported platforms.
+ * Covers macOS/Linux (Homebrew), Fedora (copr), Windows (winget), and cargo install.
+ */
 const Installation = () => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
     <h2>Installation</h2>

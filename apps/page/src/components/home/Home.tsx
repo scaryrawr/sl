@@ -6,6 +6,10 @@ import Installation from './Installation';
 import Piping from './Piping';
 import Usage from './Usage';
 
+/**
+ * Application state for the SL demo on the home page.
+ * Tracks all animation options and terminal styling.
+ */
 type State = {
   accident: boolean;
   fly: boolean;
@@ -16,6 +20,9 @@ type State = {
   backgroundColor: string;
 };
 
+/**
+ * Dispatched actions that mutate the SL demo state.
+ */
 type Action =
   | { type: 'SET_ACCIDENT'; payload: boolean }
   | { type: 'SET_FLY'; payload: boolean }
@@ -25,6 +32,7 @@ type Action =
   | { type: 'SET_FONT_COLOR'; payload: string }
   | { type: 'SET_BACKGROUND_COLOR'; payload: string };
 
+/** Default state when the demo first loads. */
 const initialState: State = {
   accident: true,
   fly: false,
@@ -35,6 +43,13 @@ const initialState: State = {
   backgroundColor: '#000'
 };
 
+/**
+ * Reducer that handles SL demo state updates.
+ *
+ * @param state - Current demo state.
+ * @param action - Action describing the state change.
+ * @returns Updated state with the action applied.
+ */
 const slReducer = (state: State, action: Action): State => {
   switch (action.type) {
     case 'SET_ACCIDENT':
@@ -56,6 +71,14 @@ const slReducer = (state: State, action: Action): State => {
   }
 };
 
+/**
+ * Main home page component.
+ *
+ * Renders the SL demo with an interactive control form, usage documentation,
+ * piping examples, embed instructions, and installation guides.
+ *
+ * @returns The complete home page layout.
+ */
 const Home = () => {
   const [state, dispatch] = useReducer(slReducer, initialState);
 

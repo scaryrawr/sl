@@ -1,3 +1,10 @@
+/**
+ * Main entry point for the SL web page (`index.html`).
+ *
+ * Renders the {@link App} component and registers the service worker for offline support.
+ *
+ * @module index
+ */
 import { render } from 'preact';
 import App from './components/App';
 

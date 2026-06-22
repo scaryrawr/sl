@@ -3,14 +3,29 @@ import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { TrainType, type TrainTypeValue } from '../slTerminal';
 import type { Action, State } from './Home';
 
+/**
+ * Props for the demo control form.
+ */
 type FormProps = {
+  /** Current demo state. */
   state: State;
+  /** Dispatch function to update demo state. */
   dispatch: (action: Action) => void;
 };
 
-// Debounce delay for aria-live color announcements
+/** Debounce delay (ms) for aria-live color announcements to avoid overwhelming screen readers. */
 const ARIA_LIVE_DEBOUNCE_MS = 500;
 
+/**
+ * Interactive form that lets users configure the SL demo animation.
+ *
+ * Provides checkboxes for accident/fly/smoke, a select for train type,
+ * a textarea for messages, and color pickers for font/background colors.
+ * Color changes are debounced before announcing to screen readers.
+ *
+ * @param props - Current state and dispatch function.
+ * @returns A form with controls for all animation options.
+ */
 const Form = ({ state, dispatch }: FormProps) => {
   // Debounced color announcements to avoid overwhelming screen readers
   const [announcedFontColor, setAnnouncedFontColor] = useState(state.fontColor);

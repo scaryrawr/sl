@@ -1,3 +1,18 @@
+#!/usr/bin/env bun
+/**
+ * Development server script for the SL web page.
+ *
+ * Copies static assets to `lib/`, then starts:
+ * - A Bun build process in watch mode for `index.tsx`, `embed.tsx`, and `service-worker.ts`.
+ * - An `http-server` to serve the `lib/` directory.
+ *
+ * Listens on the port specified by the `PORT` environment variable (default: `8080`).
+ * Gracefully shuts down both processes on `SIGINT` or `SIGTERM`.
+ *
+ * Run with: `bun run dev.ts`
+ *
+ * @module dev
+ */
 import { copyFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 

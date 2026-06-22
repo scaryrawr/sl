@@ -1,4 +1,40 @@
 #![no_std]
+//! **libsl** – core rendering library for the SL (Steam Locomotive) animation.
+//!
+//! This crate provides the data structures and functions needed to render ASCII-art
+//! steam locomotives onto any surface that implements [`RenderTarget`]. It is designed
+//! to work in both `no_std` environments (e.g., WebAssembly) and standard applications.
+//!
+//! # Train types
+//!
+//! Three train variants are available:
+//! - [`add_d51`] – the classic D51 steam locomotive
+//! - [`add_c51`] – the C51 steam locomotive
+//! - [`add_logo`] – a small logo train
+//!
+//! # Example
+//!
+//! ```ignore
+//! use libsl::{add_d51, RenderTarget, ScreenSize, TrainOptions};
+//!
+//! struct Terminal;
+//! impl RenderTarget for Terminal {
+//!     type Error = std::convert::Infallible;
+//!     fn draw_str(&mut self, line: i32, column: i32, value: &str) -> Result<(), Self::Error> {
+//!         println!("({},{}) {}", line, column, value);
+//!         Ok(())
+//!     }
+//! }
+//!
+//! let mut term = Terminal;
+//! add_d51(
+//!     0,
+//!     &["hello", "world"],
+//!     ScreenSize::new(80, 24),
+//!     &mut term,
+//!     &TrainOptions::default(),
+//! ).unwrap();
+//! ```
 
 #[cfg(test)]
 extern crate std;

@@ -1,3 +1,6 @@
+/**
+ * Documentation section showing the CLI usage and available options for the `sl` command.
+ */
 const Usage = () => (
   <div>
     <h2>Usage</h2>

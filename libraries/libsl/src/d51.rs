@@ -1,5 +1,5 @@
 use crate::{
-    add_train::{add_train, TrainOffsets, WindowOffsets},
+    add_train::{add_train, TrainFrames, TrainOffsets, WindowOffsets},
     RenderError, RenderTarget, ScreenSize, TrainOptions,
 };
 
@@ -132,6 +132,12 @@ pub fn add_d51<T: AsRef<str>, U: RenderTarget>(
         "                              ",
     ];
 
+    const FRAMES: TrainFrames<11, 6> = TrainFrames {
+        engine: ENGINE,
+        coal: COAL,
+        car: CAR,
+    };
+
     const OFFSETS: TrainOffsets<2, 4> = TrainOffsets {
         funnel: 7,
         engine_windows: WindowOffsets {
@@ -146,7 +152,7 @@ pub fn add_d51<T: AsRef<str>, U: RenderTarget>(
     };
 
     add_train(
-        x, &ENGINE, &COAL, &CAR, OFFSETS, names, screen, target, options,
+        x, &FRAMES, OFFSETS, names, screen, target, options,
     )
 }
 

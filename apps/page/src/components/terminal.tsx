@@ -1,10 +1,16 @@
 import type { JSX, RefObject } from 'preact';
 import { useLayoutEffect, useMemo, useRef } from 'preact/hooks';
 
-// Approximate character dimensions for 16px monospace font
+/** Approximate character width in pixels for a 16px monospace font (fallback before measurement). */
 const CHAR_WIDTH_ESTIMATE = 9.6;
+
+/** Approximate character height in pixels for a 16px monospace font (fallback before measurement). */
 const CHAR_HEIGHT_ESTIMATE = 19;
+
+/** Multiplier applied to font size to compute line height when TextMetrics bounding box is unavailable. */
 const LINE_HEIGHT_MULTIPLIER = 1.2;
+
+/** Version tag for the localStorage font-metrics cache key; bump to invalidate stale measurements. */
 const CACHE_VERSION = 'v1';
 
 const styles = {
@@ -58,13 +64,29 @@ const styles = {
   }
 } satisfies Record<'window' | 'titleBar' | 'title' | 'buttons' | 'button' | 'terminal', JSX.CSSProperties>;
 
+/**
+ * Props for the {@link Terminal} component.
+ */
 type TerminalProps = {
+  /** Text displayed in the terminal window title bar. */
   title: string;
+  /** Optional external ref to the inner terminal div, used by parent components to write animation frames. */
   terminalRef?: RefObject<HTMLDivElement | null>;
+  /** CSS color for terminal text (default: `#0f0` green). */
   fontColor?: string;
+  /** CSS background color for the terminal area (default: `#000` black). */
   backgroundColor?: string;
 };
 
+/**
+ * Renders a faux terminal window with a title bar and a monospace text area.
+ *
+ * Automatically measures character dimensions using the Canvas API and builds a grid
+ * of `<div>` rows sized to fit the available space. Resizes are handled via `ResizeObserver`.
+ *
+ * @param props - Terminal configuration props.
+ * @returns A styled terminal window element.
+ */
 const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgroundColor = '#000' }: TerminalProps) => {
   const internalRef = useRef<HTMLDivElement | null>(null);
   const terminalRef = externalRef ?? internalRef;
