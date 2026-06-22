@@ -1,4 +1,4 @@
-use super::add_train::{add_train, TrainOffsets, WindowOffsets};
+use super::add_train::{add_train, TrainFrames, TrainOffsets, WindowOffsets};
 use crate::{RenderError, RenderTarget, ScreenSize, TrainOptions};
 
 /// Adds a logo to the display.
@@ -97,6 +97,12 @@ pub fn add_logo<T: AsRef<str>, U: RenderTarget>(
         "                      ",
     ];
 
+    const FRAMES: TrainFrames<7, 6> = TrainFrames {
+        engine: ENGINE,
+        coal: COAL,
+        car: CAR,
+    };
+
     const OFFSETS: TrainOffsets<1, 4> = TrainOffsets {
         funnel: 4,
         engine_windows: WindowOffsets {
@@ -111,6 +117,6 @@ pub fn add_logo<T: AsRef<str>, U: RenderTarget>(
     };
 
     add_train(
-        x, &ENGINE, &COAL, &CAR, OFFSETS, names, screen, target, options,
+        x, &FRAMES, OFFSETS, names, screen, target, options,
     )
 }
