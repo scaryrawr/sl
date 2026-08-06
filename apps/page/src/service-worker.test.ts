@@ -149,4 +149,42 @@ describe('service worker regressions', () => {
     expect(response.headers.get('Location')).toBe('https://example.com/sl/');
     expect(cacheOpenCalls).toBe(0);
   });
+
+  test('serves the cached embed shell when the extensionless route returns 404', async () => {
+    openCache = async () =>
+      ({
+        match: async (request: RequestInfo | URL) => {
+          expect(request).toBe('/sl/embed.html');
+          return new Response('<!doctype html><title>SL embed</title>', {
+            headers: {
+              'Content-Type': 'text/html'
+            }
+          });
+        }
+      }) as unknown as Cache;
+    fetchImpl = (async () => new Response('Not found', { status: 404 })) as unknown as typeof fetch;
+
+    const fetchHandler = listeners.get('fetch');
+    expect(fetchHandler).toBeDefined();
+
+    let responsePromise: Promise<Response> | undefined;
+    fetchHandler?.({
+      request: {
+        destination: 'document',
+        method: 'GET',
+        mode: 'navigate',
+        url: 'https://example.com/sl/embed?trainType=d51'
+      },
+      respondWith: (promise: Promise<Response>) => {
+        responsePromise = promise;
+      }
+    });
+
+    expect(responsePromise).toBeDefined();
+    const response = await responsePromise;
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('SL embed');
+    expect(cacheOpenCalls).toBe(1);
+  });
 });
