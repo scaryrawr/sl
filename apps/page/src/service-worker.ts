@@ -179,7 +179,15 @@ serviceWorker.addEventListener('fetch', (event: FetchEventLike) => {
       fetch(request)
         .then((response) => {
           if (!response.ok) {
-            return response;
+            const navigationCachePath = getNavigationCachePath(BASE_PATH, url.pathname);
+            if (!navigationCachePath) {
+              return response;
+            }
+
+            return caches
+              .open(CACHE_NAME)
+              .then((cache) => cache.match(navigationCachePath))
+              .then((cachedResponse) => cachedResponse || response);
           }
 
           // Clone the response before caching

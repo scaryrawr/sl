@@ -52,7 +52,7 @@ console.log('Offline screenshot saved.');
 
 // Also take offline embed screenshot
 const embedPage = await context.newPage();
-await embedPage.goto(`${baseURL}/sl/embed?train=D1&loop=true`, { waitUntil: 'domcontentloaded' });
+await embedPage.goto(`${baseURL}/sl/embed.html?train=D1&loop=true`, { waitUntil: 'domcontentloaded' });
 await embedPage.waitForTimeout(2000);
 await embedPage.screenshot({ path: path.join(__dirname, 'offline-embed.png'), fullPage: false });
 console.log('Offline embed screenshot saved.');

@@ -57,3 +57,17 @@ test('loads the home page offline from the bare project path', async ({ context,
   expect(requestedOutsideProjectPath).not.toContain('/index.js');
   expect(requestedOutsideProjectPath).not.toContain('/manifest.json');
 });
+
+test('loads and runs the embed page offline', async ({ context, page }) => {
+  await page.goto('/sl/', { waitUntil: 'networkidle' });
+  await waitForServiceWorkerControl(page);
+
+  await context.setOffline(true);
+  await page.goto('/sl/embed.html?trainType=d51&smoke=true', { waitUntil: 'domcontentloaded' });
+
+  await expect(page.getByRole('heading', { name: 'SL Steam Locomotive Animation' })).toBeAttached();
+  const terminal = page.getByRole('img', { name: 'Animated ASCII art train moving across terminal screen' });
+  await expect(terminal).toBeVisible();
+  await expect.poll(() => terminal.textContent()).toMatch(/[^\s\u00a0]/);
+  await expect(terminal).not.toContainText('Failed to load animation');
+});
