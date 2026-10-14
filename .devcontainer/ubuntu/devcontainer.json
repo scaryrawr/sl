@@ -24,6 +24,5 @@
       ]
     }
   },
-  "remoteUser": "vscode",
-  "onCreateCommand": "${containerWorkspaceFolder}/.devcontainer/ubuntu/onCreateCommand.sh"
+  "remoteUser": "vscode"
 }
