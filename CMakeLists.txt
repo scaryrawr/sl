@@ -2,10 +2,27 @@ cmake_minimum_required(VERSION 3.28)
 project("SL"
         VERSION 6.1.5
         DESCRIPTION "CHOO CHOO"
-        LANGUAGES C)
+        LANGUAGES NONE)
 
-find_program(SL_EXE NAMES sl.exe PATHS "${PROJECT_BINARY_DIR}/release" "${PROJECT_BINARY_DIR}/${ARCH}-pc-windows-msvc/release" REQUIRED)
-install(FILES ${CURSES_DLL} ${SL_EXE} DESTINATION bin COMPONENT applications)
+set(SL_TARGET "" CACHE STRING "Rust target triple containing the sl.exe release build")
+set(ARCH "" CACHE STRING "Release artifact architecture label")
+
+set(SL_EXE_SEARCH_PATHS "${CMAKE_SOURCE_DIR}/target/release")
+if(SL_TARGET)
+  list(APPEND SL_EXE_SEARCH_PATHS "${CMAKE_SOURCE_DIR}/target/${SL_TARGET}/release")
+endif()
+if(ARCH)
+  list(APPEND SL_EXE_SEARCH_PATHS "${CMAKE_SOURCE_DIR}/target/${ARCH}-pc-windows-msvc/release")
+endif()
+
+find_program(SL_EXE NAMES sl.exe PATHS ${SL_EXE_SEARCH_PATHS} NO_DEFAULT_PATH REQUIRED)
+
+set(SL_INSTALL_FILES "${SL_EXE}")
+if(DEFINED CURSES_DLL AND NOT "${CURSES_DLL}" STREQUAL "")
+  list(APPEND SL_INSTALL_FILES "${CURSES_DLL}")
+endif()
+
+install(FILES ${SL_INSTALL_FILES} DESTINATION bin COMPONENT applications)
 
 set(CPACK_PACKAGE_NAME "sl")
 set(CPACK_PACKAGE_VENDOR "sl")
@@ -15,6 +32,16 @@ set(CPACK_PACKAGE_VERSION_MAJOR "6")
 set(CPACK_PACKAGE_VERSION_MINOR "1")
 set(CPACK_PACKAGE_VERSION_PATCH "5")
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "sl")
+set(CPACK_PACKAGE_DIRECTORY "${CMAKE_BINARY_DIR}")
+set(CPACK_GENERATOR "NSIS")
+if(ARCH STREQUAL "aarch64")
+  set(CPACK_SYSTEM_NAME "woa64")
+elseif(ARCH STREQUAL "x86_64")
+  set(CPACK_SYSTEM_NAME "win64")
+endif()
+if(CPACK_SYSTEM_NAME)
+  set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_SYSTEM_NAME}")
+endif()
 set(CPACK_COMPONENTS_ALL applications)
 set(CPACK_COMPONENT_APPLICATIONS_DISPLAY_NAME "sl")
 set(CPACK_COMPONENT_APPLICATIONS_DESCRIPTION "SL (Steam Locomotive) runs across your terminal")
