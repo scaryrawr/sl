@@ -13,16 +13,23 @@
   <script type="module" src="./embed.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Fira+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>
+    html,
+    body {
+      height: 100%;
+    }
+
     body {
       margin: 0;
       padding: 0;
-      overflow: auto;
+      overflow: hidden;
+      /* Match the terminal background so embeds never show white letterboxing */
+      background: var(--sl-background, #000);
     }
 
     /* Prevent layout shift - pre-style the root */
     #root {
-      width: 100vw;
-      height: 100vh;
+      width: 100%;
+      height: 100%;
     }
 
     /* Screen reader only content */
@@ -47,7 +54,7 @@
 </head>
 
 <body>
-  <div id="root">
+  <div id="root" style="background: var(--sl-background, #000)">
   </div>
 </body>
 

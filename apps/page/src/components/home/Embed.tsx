@@ -28,7 +28,17 @@ const Embed = () => (
       <li>
         <code>messages</code>: URL encoded JSON array of messages
       </li>
+      <li>
+        <code>fontColor</code>: CSS color for the terminal text (default: <code>#0f0</code>)
+      </li>
+      <li>
+        <code>backgroundColor</code>: CSS color for the terminal and page background (default: <code>#000</code>)
+      </li>
     </ul>
+    <p>
+      The terminal fills the entire embed viewport and the page background matches <code>backgroundColor</code>, so an
+      embed blends into your page without letterboxing or scrollbars.
+    </p>
   </div>
 );
 

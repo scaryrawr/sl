@@ -1,3 +1,4 @@
+import { useEffect } from 'preact/hooks';
 import SlTerminal, { TrainType, type TrainTypeValue } from './slTerminal';
 
 /**
@@ -33,6 +34,9 @@ const parseMessages = (messagesParam: string | null): string[] => {
  * - `fontColor` – CSS color string (default: `#0f0`)
  * - `backgroundColor` – CSS color string (default: `#000`)
  *
+ * The terminal fills the entire embed viewport, and the page background matches
+ * `backgroundColor` so the iframe never shows letterboxing around the terminal window.
+ *
  * @returns Configured {@link SlTerminal} driven by query parameters.
  */
 const EmbedTerminal = () => {
@@ -42,12 +46,22 @@ const EmbedTerminal = () => {
   const smoke = searchParams.get('smoke') !== 'false';
   const trainType = (searchParams.get('trainType') as TrainTypeValue | null) ?? TrainType.D51;
   const messages = parseMessages(searchParams.get('messages'));
-  const fontColor = searchParams.get('fontColor') ?? '#0f0';
-  const backgroundColor = searchParams.get('backgroundColor') ?? '#000';
+  // `||` so empty query params (e.g. `backgroundColor=`) fall back to the defaults
+  const fontColor = searchParams.get('fontColor') || '#0f0';
+  const backgroundColor = searchParams.get('backgroundColor') || '#000';
+
+  // Keep the page background in sync with the terminal so the embed
+  // never shows a mismatched (white) frame around the terminal window.
+  useEffect(() => {
+    document.documentElement.style.setProperty('--sl-background', backgroundColor);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    meta?.setAttribute('content', backgroundColor);
+  }, [backgroundColor]);
 
   return (
     <SlTerminal
       title="SL"
+      fill
       accident={accident}
       fly={fly}
       smoke={smoke}

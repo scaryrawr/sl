@@ -76,6 +76,12 @@ type TerminalProps = {
   fontColor?: string;
   /** CSS background color for the terminal area (default: `#000` black). */
   backgroundColor?: string;
+  /**
+   * Stretch the window to fill the viewport (no outer margin, border, or rounded
+   * corners) and use `backgroundColor` for the window backing. Used by embeds so
+   * the terminal exactly fills an `<iframe>` without white letterboxing or scrollbars.
+   */
+  fill?: boolean;
 };
 
 /**
@@ -87,7 +93,13 @@ type TerminalProps = {
  * @param props - Terminal configuration props.
  * @returns A styled terminal window element.
  */
-const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgroundColor = '#000' }: TerminalProps) => {
+const Terminal = ({
+  title,
+  terminalRef: externalRef,
+  fontColor = '#0f0',
+  backgroundColor = '#000',
+  fill = false
+}: TerminalProps) => {
   const internalRef = useRef<HTMLDivElement | null>(null);
   const terminalRef = externalRef ?? internalRef;
   const dimensionsRef = useRef<{ rows: number; cols: number } | null>(null);
@@ -258,6 +270,21 @@ const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgro
     };
   }, [terminalRef]);
 
+  const windowStyle = useMemo(
+    () =>
+      fill
+        ? {
+            ...styles.window,
+            margin: 0,
+            height: '100vh',
+            border: 'none',
+            borderRadius: 0,
+            backgroundColor
+          }
+        : styles.window,
+    [fill, backgroundColor]
+  );
+
   const terminalStyle = useMemo(
     () => ({
       ...styles.terminal,
@@ -268,7 +295,7 @@ const Terminal = ({ title, terminalRef: externalRef, fontColor = '#0f0', backgro
   );
 
   return (
-    <div style={styles.window}>
+    <div style={windowStyle}>
       <div style={styles.titleBar} aria-hidden="true">
         <span style={styles.title}>{title}</span>
         <div style={styles.buttons}>
