@@ -37,6 +37,8 @@ type SlProps = {
   fontColor?: string;
   /** CSS background color for the terminal (passed through to {@link Terminal}). */
   backgroundColor?: string;
+  /** Stretch the terminal window to fill the viewport (used by embeds; passed through to {@link Terminal}). */
+  fill?: boolean;
 };
 
 /** Lazy-loaded WASM module promise; initializes the panic hook before resolving. */
@@ -245,10 +247,28 @@ const useSlAnimation = (props: {
  * @param props - Configuration for the terminal and animation.
  * @returns A terminal window with the animated steam locomotive.
  */
-const SlTerminal = ({ title, accident, fly, trainType, messages, smoke, fontColor, backgroundColor }: SlProps) => {
+const SlTerminal = ({
+  title,
+  accident,
+  fly,
+  trainType,
+  messages,
+  smoke,
+  fontColor,
+  backgroundColor,
+  fill
+}: SlProps) => {
   const terminalRef = useSlAnimation({ accident, fly, trainType, messages, smoke });
 
-  return <Terminal title={title} terminalRef={terminalRef} fontColor={fontColor} backgroundColor={backgroundColor} />;
+  return (
+    <Terminal
+      title={title}
+      terminalRef={terminalRef}
+      fontColor={fontColor}
+      backgroundColor={backgroundColor}
+      fill={fill}
+    />
+  );
 };
 
 export { TrainType };
