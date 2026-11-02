@@ -114,3 +114,10 @@ bun run setup
 
 `bun run setup` installs the Rust `wasm32-unknown-unknown` target and `wasm-pack`, which are required by the website
 build. The build and dev scripts also check for these prerequisites and print the setup command if anything is missing.
+
+### CI builds
+
+GitHub Actions uses five build jobs. One Ubuntu runner builds both amd64 and arm64 Debian packages and runs the native
+Linux debug and release smoke checks. One Windows runner builds both x64 and ARM64 MSVC binaries and NSIS installers.
+The ARM64 binaries are cross-compiled, not executed. Separate jobs retain native macOS smoke checks, Fedora RPM
+validation, and the website build. Pages deployment and tagged releases use additional jobs when their conditions match.

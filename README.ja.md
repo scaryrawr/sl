@@ -18,3 +18,9 @@ bun run setup
 
 `bun run setup` は、Web サイトのビルドに必要な Rust の `wasm32-unknown-unknown` ターゲットと `wasm-pack`
 をインストールします。ビルドや開発用スクリプトは、これらが足りない場合にセットアップコマンドを表示します。
+
+### CI ビルド
+
+GitHub
+Actions では 5 つのビルドジョブを実行します。1 台の Ubuntu ランナーで amd64 と arm64 の Debian パッケージを作成し、Linux ネイティブのデバッグ版とリリース版の動作を確認します。1 台の Windows ランナーで x64 と ARM64 の MSVC バイナリと NSIS インストーラーを作成します。ARM64 バイナリはクロスコンパイルのみで、実行はしません。macOS ネイティブの動作確認、Fedora
+RPM の検証、Web サイトのビルドは、それぞれ別のジョブで実行します。Pages のデプロイとタグ付きリリースは、条件を満たす場合に追加のジョブで実行します。
