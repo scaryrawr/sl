@@ -111,7 +111,8 @@ Before completing any task:
 1. Rust code in `libraries/websl/src/`
 2. Generated JS/TypeScript bindings are in `libraries/websl/pkg/`
 3. Page code imports them through the adapter at `apps/page/src/websl.ts`
-4. Rebuild with `bun run build:websl:rust` (uses `wasm-pack --no-pack`; `libraries/websl` is not a Bun/npm workspace package)
+4. Rebuild with `bun run build:websl:rust` (uses `wasm-pack --no-pack`; `libraries/websl` is not a Bun/npm workspace
+   package)
 5. Test WASM loads correctly in browser
 
 ### Adding new embed options

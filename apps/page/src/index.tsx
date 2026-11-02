@@ -6,6 +6,7 @@
  * @module index
  */
 import { render } from 'preact';
+
 import App from './components/App';
 
 const container = document.getElementById('root');
