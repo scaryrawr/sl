@@ -7,6 +7,7 @@
  * @module embed
  */
 import { render } from 'preact';
+
 import EmbedTerminal from './components/EmbedTerminal';
 
 const EmbedPage = () => (

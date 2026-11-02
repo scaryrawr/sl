@@ -19,7 +19,7 @@ web application and WASM bindings.
 
 - **Languages**: TypeScript, JavaScript, Rust (for WASM)
 - **Frameworks**: Preact, Bun (custom build script)
-- **Build Tools**: Bun (v1.3.3), wasm-pack
+- **Build Tools**: Bun (v1.4.4), wasm-pack
 - **WASM**: WebAssembly compiled from Rust using wasm-pack
 
 ## Commands You Use
@@ -48,7 +48,7 @@ bun run test:websl:rust          # WASM browser tests
 # Linting and Formatting
 bun run lint                     # Lint JS/TS
 bun run lint:fix                 # Auto-fix linting issues
-bun run format                   # Format with Prettier
+bun run format                   # Format with bun fmt
 bun run typecheck                # TypeScript type checking
 ```
 
@@ -56,9 +56,10 @@ bun run typecheck                # TypeScript type checking
 
 1. **TypeScript**: Use TypeScript strict mode where possible, define proper types
 2. **Preact**: Follow Preact best practices, use hooks appropriately
-3. **Formatting**: Use Prettier (configured in `.prettierrc.js`)
-4. **Linting**: Follow ESLint rules (configured in `eslint.config.mjs`)
-5. **Imports**: Organize imports automatically (prettier-plugin-organize-imports)
+3. **Formatting**: Use `bun fmt` (configured in `bunfig.toml`)
+4. **Linting**: Follow Oxlint rules (configured in `.oxlintrc.json`), including the explicit type-aware pass in
+   `bun run lint`
+5. **Imports**: Organize imports automatically with `bun fmt`
 6. **WASM Setup**: Use `bun run setup` for `wasm32-unknown-unknown` and `wasm-pack`; build/dev/test scripts check
    prerequisites.
 7. **WASM Integration**: Handle WASM loading asynchronously, provide fallbacks
@@ -111,7 +112,8 @@ Before completing any task:
 1. Rust code in `libraries/websl/src/`
 2. Generated JS/TypeScript bindings are in `libraries/websl/pkg/`
 3. Page code imports them through the adapter at `apps/page/src/websl.ts`
-4. Rebuild with `bun run build:websl:rust` (uses `wasm-pack --no-pack`; `libraries/websl` is not a Bun/npm workspace package)
+4. Rebuild with `bun run build:websl:rust` (uses `wasm-pack --no-pack`; `libraries/websl` is not a Bun/npm workspace
+   package)
 5. Test WASM loads correctly in browser
 
 ### Adding new embed options

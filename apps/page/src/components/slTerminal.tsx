@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'preact/hooks';
+
 import Terminal from './terminal';
 
 /** Allowed train type identifiers for the SL animation. */

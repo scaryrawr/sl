@@ -1,4 +1,5 @@
 import { useReducer } from 'preact/hooks';
+
 import SlTerminal, { TrainType, type TrainTypeValue } from '../slTerminal';
 import Embed from './Embed';
 import Form from './Form';

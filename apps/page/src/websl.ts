@@ -9,6 +9,12 @@
  * @module websl
  */
 import init, {
+  /** Render a C51-class steam locomotive on the display. */
+  add_c51,
+  /** Render a D51-class steam locomotive on the display. */
+  add_d51,
+  /** Render the small logo train on the display. */
+  add_logo,
   /**
    * Backing store for the terminal grid. Holds character dimensions and the
    * callback that paints a string at a given `(y, x)` coordinate.
@@ -21,22 +27,11 @@ import init, {
    * ```
    */
   Display,
-
   /**
    * Configuration flags for the train animation: accident mode, flying mode,
    * and smoke rendering.
    */
   Options,
-
-  /** Render a C51-class steam locomotive on the display. */
-  add_c51,
-
-  /** Render a D51-class steam locomotive on the display. */
-  add_d51,
-
-  /** Render the small logo train on the display. */
-  add_logo,
-
   /** Install a Rust panic hook so panics print readable messages to the console. */
   set_panic_hook
 } from '../../../libraries/websl/pkg/websl.js';
@@ -66,4 +61,4 @@ const resolveWasmImport = (wasmImport: WasmImportDefault): WasmImport =>
 // Initialize the WASM module eagerly when this module is imported
 await init(resolveWasmImport(wasm));
 
-export { Display, Options, add_c51, add_d51, add_logo, set_panic_hook };
+export { add_c51, add_d51, add_logo, Display, Options, set_panic_hook };

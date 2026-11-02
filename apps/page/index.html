@@ -1,66 +1,63 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SL - Steam Locomotive Terminal Animation Demo</title>
-    <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-    <link rel="manifest" href="./manifest.json">
-    <meta name="theme-color" content="#000000">
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="./manifest.json" />
+    <meta name="theme-color" content="#000000" />
     <!-- Preconnect to font origins for faster loading -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Mono:wght@400;700&display=swap" rel="stylesheet" />
     <script type="module" src="./index.js"></script>
     <style>
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            margin: 0;
-            padding: 0;
-        }
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        margin: 0;
+        padding: 0;
+      }
 
-        /* Skip link for keyboard navigation */
-        .skip-link {
-            position: absolute;
-            top: -40px;
-            left: 0;
-            background: #000;
-            color: #fff;
-            padding: 8px;
-            text-decoration: none;
-            z-index: 100;
-        }
+      /* Skip link for keyboard navigation */
+      .skip-link {
+        position: absolute;
+        top: -40px;
+        left: 0;
+        background: #000;
+        color: #fff;
+        padding: 8px;
+        text-decoration: none;
+        z-index: 100;
+      }
 
-        .skip-link:focus {
-            top: 0;
-        }
+      .skip-link:focus {
+        top: 0;
+      }
 
-        /* Screen reader only content */
-        .sr-only {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border: 0;
-        }
+      /* Screen reader only content */
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
 
-        /* Enhanced focus indicators */
-        :focus-visible {
-            outline: 2px solid #0066cc;
-            outline-offset: 2px;
-        }
+      /* Enhanced focus indicators */
+      :focus-visible {
+        outline: 2px solid #0066cc;
+        outline-offset: 2px;
+      }
     </style>
-</head>
+  </head>
 
-<body>
+  <body>
     <a href="#main-content" class="skip-link">Skip to main content</a>
-    <div id="root">
-    </div>
-</body>
-
+    <div id="root"></div>
+  </body>
 </html>
