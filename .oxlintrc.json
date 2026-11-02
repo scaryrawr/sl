@@ -1,0 +1,33 @@
+{
+  "rules": {
+    "no-floating-promises": "warn",
+    "await-thenable": "error",
+    "unbound-method": "off",
+    "no-unused-expressions": "error",
+    "no-unused-vars": "warn",
+    "no-debugger": "error",
+    "no-empty": "error",
+    "no-array-delete": "error",
+    "no-underscore-dangle": ["warn", { "allow": ["__dirname", "__filename"] }]
+  },
+  "env": {
+    "builtin": true
+  },
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/lib/**",
+    "**/pkg/**",
+    "**/coverage/**",
+    "**/target/**",
+    "**/*.tsbuildinfo",
+    "bun.lock",
+    "eslint.config.mjs",
+    "**/dev.ts"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "off"
+  }
+}
