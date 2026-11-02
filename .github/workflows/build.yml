@@ -15,20 +15,142 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  cross-build:
+    name: Cross Build (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            arch: x86_64
+            package: deb
+            builder: cargo
+            linker_env: CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER
+            linker: scripts/zig-cc-x86_64-unknown-linux-gnu.sh
+          - target: aarch64-unknown-linux-gnu
+            arch: aarch64
+            package: deb
+            builder: cargo
+            linker_env: CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER
+            linker: scripts/zig-cc-aarch64-unknown-linux-gnu.sh
+          - target: x86_64-pc-windows-gnu
+            arch: x86_64
+            package: nsis
+            builder: zigbuild
+          - target: aarch64-pc-windows-gnullvm
+            arch: aarch64
+            package: nsis
+            builder: zigbuild
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Cache Cargo Registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ubuntu-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+      - name: Install Rust target
+        run: rustup target add ${{ matrix.target }}
+      - name: Configure Zig linker
+        if: matrix.builder == 'cargo'
+        run: |
+          echo "${{ matrix.linker_env }}=${{ matrix.linker }}" >> $GITHUB_ENV
+      - name: Install cargo-zigbuild
+        if: matrix.builder == 'zigbuild'
+        run: cargo install cargo-zigbuild --version 0.23.0 --locked
+      - name: Build Debug with Cargo
+        if: matrix.builder == 'cargo'
+        run: cargo build --manifest-path=apps/sl/Cargo.toml --target=${{ matrix.target }}
+      - name: Build Release with Cargo
+        if: matrix.builder == 'cargo'
+        run: COMPLETION_DIR="$(pwd)/completions" cargo build --manifest-path=apps/sl/Cargo.toml --release --target=${{ matrix.target }}
+      - name: Build Debug with cargo-zigbuild
+        if: matrix.builder == 'zigbuild'
+        run: cargo zigbuild --manifest-path=apps/sl/Cargo.toml --target=${{ matrix.target }}
+      - name: Build Release with cargo-zigbuild
+        if: matrix.builder == 'zigbuild'
+        run: COMPLETION_DIR="$(pwd)/completions" cargo zigbuild --manifest-path=apps/sl/Cargo.toml --release --target=${{ matrix.target }}
+      - name: Install cargo-deb
+        if: matrix.package == 'deb'
+        run: cargo install cargo-deb
+      - name: Build .deb Package
+        if: matrix.package == 'deb'
+        id: deb_build
+        run: |
+          cargo deb --manifest-path=apps/sl/Cargo.toml --target=${{ matrix.target }} --no-build
+          DEB_FILE=$(ls target/${{ matrix.target }}/debian/sl_*.deb)
+          echo "deb_file=${DEB_FILE}" >> $GITHUB_OUTPUT
+          echo "deb_name=$(basename "${DEB_FILE}")" >> $GITHUB_OUTPUT
+      - name: Test .deb Package
+        if: matrix.package == 'deb'
+        run: |
+          dpkg -I ${{ steps.deb_build.outputs.deb_file }}
+          dpkg -c ${{ steps.deb_build.outputs.deb_file }}
+      - name: Upload .deb Package
+        if: matrix.package == 'deb'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.deb_build.outputs.deb_name }}
+          path: ${{ steps.deb_build.outputs.deb_file }}
+      - name: Install NSIS
+        if: matrix.package == 'nsis'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nsis
+      - name: Build Windows installer
+        if: matrix.package == 'nsis'
+        id: installer_build
+        run: |
+          cmake -S . -B target/installer-${{ matrix.target }} -DSL_TARGET="${{ matrix.target }}" -DARCH="${{ matrix.arch }}"
+          cpack --config target/installer-${{ matrix.target }}/CPackConfig.cmake -C Release
+          INSTALLER=$(find target/installer-${{ matrix.target }} -maxdepth 1 -name 'sl-*.exe' -print -quit)
+          if [ -z "$INSTALLER" ]; then
+            echo "No installer produced" >&2
+            exit 1
+          fi
+          echo "installer=${INSTALLER}" >> $GITHUB_OUTPUT
+          echo "installer_name=$(basename "${INSTALLER}")" >> $GITHUB_OUTPUT
+      - name: Upload Installer
+        if: matrix.package == 'nsis'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.installer_build.outputs.installer_name }}
+          path: ${{ steps.installer_build.outputs.installer }}
+
+  macos-smoke:
+    name: macOS Smoke
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Cache Cargo Registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: macos-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Build Debug
+        run: cargo build
+      - name: Build Release
+        run: cargo build --release
+      - name: Test CLI
+        run: |
+          ./target/debug/sl -h
+          ./target/debug/sl -V
+          ./target/release/sl -h
+          ./target/release/sl -V
+
   build-fedora:
     uses: ./.github/workflows/fedora-build.yml
-  build-posix:
-    uses: ./.github/workflows/posix-build.yml
-  build-ubuntu:
-    uses: ./.github/workflows/ubuntu-build.yml
-  build-windows:
-    uses: ./.github/workflows/win-build.yml
   build-pages:
     uses: ./.github/workflows/site.yml
 
   release:
     name: Release
-    needs: [build-fedora, build-posix, build-ubuntu, build-windows]
+    needs: [cross-build, macos-smoke, build-fedora]
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/sl-')
     runs-on: ubuntu-latest
     permissions:

@@ -111,3 +111,16 @@ bun run setup
 
 `bun run setup` installs the Rust `wasm32-unknown-unknown` target and `wasm-pack`, which are required by the website
 build. The build and dev scripts also check for these prerequisites and print the setup command if anything is missing.
+
+### Cross-compiling with Zig
+
+Release CI uses [Zig](https://ziglang.org/) as the C linker driver for explicit Rust cross targets. Install Zig and add
+the Rust target before building locally:
+
+```sh
+rustup target add aarch64-unknown-linux-gnu
+cargo build --manifest-path apps/sl/Cargo.toml --release --target aarch64-unknown-linux-gnu
+```
+
+The checked-in Cargo config uses Zig for Linux GNU cross targets. CI uses `cargo-zigbuild` for Windows
+`x86_64-pc-windows-gnu` and `aarch64-pc-windows-gnullvm` builds, avoiding MSVC-specific compilation.

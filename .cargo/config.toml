@@ -1,0 +1,5 @@
+[target.x86_64-unknown-linux-gnu]
+linker = "scripts/zig-cc-x86_64-unknown-linux-gnu.sh"
+
+[target.aarch64-unknown-linux-gnu]
+linker = "scripts/zig-cc-aarch64-unknown-linux-gnu.sh"
