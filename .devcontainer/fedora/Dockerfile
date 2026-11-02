@@ -1,0 +1,3 @@
+FROM fedora:latest
+
+RUN dnf install -y libatomic && dnf clean all
