@@ -1,6 +1,8 @@
 {
   "name": "sl (Fedora)",
-  "image": "fedora:latest",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
       "username": "vscode"
