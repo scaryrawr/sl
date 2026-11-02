@@ -1,0 +1,47 @@
+{
+  "plugins": ["typescript", "unicorn", "oxc", "react"],
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "react/react-in-jsx-scope": "off",
+    "no-floating-promises": "warn",
+    "await-thenable": "error",
+    "unbound-method": "off",
+    "no-unused-expressions": "error",
+    "no-unused-vars": "warn",
+    "no-debugger": "error",
+    "no-empty": "error",
+    "no-array-delete": "error",
+    "no-underscore-dangle": ["warn", { "allow": ["__dirname", "__filename"] }]
+  },
+  "env": {
+    "builtin": true
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx"],
+      "rules": {
+        "no-floating-promises": "off",
+        "await-thenable": "off",
+        "unbound-method": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/lib/**",
+    "**/pkg/**",
+    "**/coverage/**",
+    "**/target/**",
+    "**/*.tsbuildinfo",
+    "bun.lock",
+    "eslint.config.mjs",
+    "**/dev.ts"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "off"
+  }
+}

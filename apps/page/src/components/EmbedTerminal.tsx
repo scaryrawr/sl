@@ -1,4 +1,5 @@
 import { useEffect } from 'preact/hooks';
+
 import SlTerminal, { TrainType, type TrainTypeValue } from './slTerminal';
 
 /**

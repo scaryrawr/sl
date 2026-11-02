@@ -32,10 +32,11 @@
     "dev": "bun run dev:page",
     "dev:page": "bun run --cwd apps/page dev",
     "dev:websl": "cargo check --manifest-path libraries/websl/Cargo.toml",
-    "format": "prettier \"{.,**}.{tsx,ts,js,less,json,md,yaml}\" --write",
+    "format": "bun fmt",
     "format:websl": "cargo fmt --manifest-path libraries/websl/Cargo.toml",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
+    "lint": "bunx oxlint . && bun run lint:types",
+    "lint:fix": "bunx oxlint . --fix && bun run lint:types --fix",
+    "lint:types": "bunx oxlint . --type-aware -A all -W typescript/no-floating-promises -D typescript/await-thenable",
     "setup": "bun run setup:wasm-pack",
     "setup:wasm-pack": "bun ./scripts/ensure-wasm-pack.ts --install",
     "start": "bun run build && bun run start:page",
@@ -50,18 +51,9 @@
     "typecheck:page": "bun run --cwd apps/page typecheck"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.4",
-    "eslint": "^9.39.4",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-prettier": "^5.5.6",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-unused-imports": "^4.4.1",
-    "prettier": "^3.8.4",
-    "prettier-plugin-organize-imports": "^4.3.0",
-    "prettier-plugin-packagejson": "^2.5.22",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.61.1"
+    "oxlint": "^1.90.0",
+    "oxlint-tsgolint": "^7.0.2005",
+    "typescript": "^5.9.3"
   },
-  "packageManager": "bun@1.4.3"
+  "packageManager": "bun@1.4.4"
 }

@@ -45,10 +45,18 @@ test('loads the home page offline from the bare project path', async ({ context,
   });
 
   await expect
-    .poll(() => page.frames().find((frame) => frame !== page.mainFrame() && frame.url() === `${origin}/sl/`)?.url() ?? '')
+    .poll(
+      () =>
+        page
+          .frames()
+          .find((frame) => frame !== page.mainFrame() && frame.url() === `${origin}/sl/`)
+          ?.url() ?? ''
+    )
     .toBe(`${origin}/sl/`);
 
-  const frame = page.frames().find((candidate) => candidate !== page.mainFrame() && candidate.url() === `${origin}/sl/`);
+  const frame = page
+    .frames()
+    .find((candidate) => candidate !== page.mainFrame() && candidate.url() === `${origin}/sl/`);
   if (!frame) {
     throw new Error('Offline navigation frame did not load the canonical /sl/ URL');
   }

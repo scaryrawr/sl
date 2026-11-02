@@ -6,6 +6,9 @@ Copyright 1993,1998,2014 Toyoda Masashi (mtoyoda@acm.org)
 
 ## 開発
 
+組み込みフォーマッターを使うため、指定バージョンの Bun 1.4.4 を使用してください。`bun run format` で整形し、
+`bun run lint` で型情報と React Hooks のチェックを含む Oxlint を実行します。
+
 Web サイトをビルドする前に、JavaScript の依存関係と WebAssembly のビルドツールをセットアップしてください。
 
 ```sh

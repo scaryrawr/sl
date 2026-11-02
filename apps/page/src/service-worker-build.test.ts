@@ -1,7 +1,6 @@
+import { describe, expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-
-import { describe, expect, test } from 'bun:test';
 
 const SERVICE_WORKER_PATH = path.join(import.meta.dir, 'service-worker.ts');
 const WASM_PLACEHOLDER = '// WASM_PLACEHOLDER - will be replaced at build time';

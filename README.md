@@ -102,6 +102,9 @@ cargo install --git https://github.com/scaryrawr/sl
 
 ## Development
 
+Use Bun 1.4.4 (the pinned version) for the built-in formatter. Run `bun run format` to format files and `bun run lint`
+for Oxlint, including type-aware and React Hooks checks.
+
 Install the JavaScript dependencies and WebAssembly build tools before building the website:
 
 ```sh

@@ -10,7 +10,7 @@
     "build": "bun build.ts",
     "predev": "cd ../.. && bun run build:websl",
     "dev": "bun dev.ts",
-    "format": "prettier \"src/**/*.{ts,tsx,json,md}\" --write",
+    "format": "bun fmt src",
     "playwright:install": "bunx playwright install chromium",
     "serve:playwright": "bun ./playwright-server.mjs",
     "start": "bunx http-server ./lib/",
@@ -25,5 +25,5 @@
     "@playwright/test": "^1.59.1",
     "@types/bun": "1.3.3"
   },
-  "packageManager": "bun@1.4.3"
+  "packageManager": "bun@1.4.4"
 }

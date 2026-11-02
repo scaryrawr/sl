@@ -1,5 +1,6 @@
 import type { JSX } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
+
 import { TrainType, type TrainTypeValue } from '../slTerminal';
 import type { Action, State } from './Home';
 
