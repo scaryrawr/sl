@@ -6,6 +6,7 @@
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "types": ["bun"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "noEmit": true,
