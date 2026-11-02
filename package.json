@@ -34,8 +34,9 @@
     "dev:websl": "cargo check --manifest-path libraries/websl/Cargo.toml",
     "format": "bun fmt",
     "format:websl": "cargo fmt --manifest-path libraries/websl/Cargo.toml",
-    "lint": "bunx oxlint .",
-    "lint:fix": "bunx oxlint . --fix",
+    "lint": "bunx oxlint . && bun run lint:types",
+    "lint:fix": "bunx oxlint . --fix && bun run lint:types --fix",
+    "lint:types": "bunx oxlint . --type-aware -A all -W typescript/no-floating-promises -D typescript/await-thenable",
     "setup": "bun run setup:wasm-pack",
     "setup:wasm-pack": "bun ./scripts/ensure-wasm-pack.ts --install",
     "start": "bun run build && bun run start:page",
@@ -51,7 +52,8 @@
   },
   "devDependencies": {
     "oxlint": "^1.90.0",
+    "oxlint-tsgolint": "^7.0.2005",
     "typescript": "^5.9.3"
   },
-  "packageManager": "bun@1.3.3"
+  "packageManager": "bun@1.4.4"
 }

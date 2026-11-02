@@ -13,7 +13,7 @@ repository contains:
 ## Tech Stack
 
 - **Languages**: Rust (2021 edition), TypeScript, JavaScript
-- **Build Tools**: Cargo, wasm-pack, Bun (v1.3.3)
+- **Build Tools**: Cargo, wasm-pack, Bun (v1.4.4)
 - **Testing**: Cargo test, wasm-pack test, Bun test
 - **Key Dependencies**:
   - Rust: clap (v4.5+), crossterm (v0.28+), filedescriptor
@@ -111,8 +111,9 @@ sl/
 
 ### TypeScript/JavaScript
 
-- Use Prettier for formatting (configured in `.prettierrc.js`)
-- Use ESLint rules (configured in `eslint.config.mjs`)
+- Use `bun fmt` for formatting (configured in `bunfig.toml`)
+- Use Oxlint rules (configured in `.oxlintrc.json`); `bun run lint` also runs the explicitly configured type-aware
+  checks
 - Organize imports automatically
 - Use TypeScript strict mode where possible
 

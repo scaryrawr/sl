@@ -1,5 +1,9 @@
 {
+  "plugins": ["typescript", "unicorn", "oxc", "react"],
   "rules": {
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "react/react-in-jsx-scope": "off",
     "no-floating-promises": "warn",
     "await-thenable": "error",
     "unbound-method": "off",
@@ -13,6 +17,16 @@
   "env": {
     "builtin": true
   },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx"],
+      "rules": {
+        "no-floating-promises": "off",
+        "await-thenable": "off",
+        "unbound-method": "off"
+      }
+    }
+  ],
   "ignorePatterns": [
     "**/node_modules/**",
     "**/dist/**",
