@@ -36,12 +36,12 @@ jobs:
     steps:
       - name: Download Artifacts
         id: download-extension
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
 
       - name: List Files
         run: ls -R ${{ steps.download-extension.outputs.download-path }}
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           prerelease: ${{ contains(github.ref, 'rc') }}
           generate_release_notes: true

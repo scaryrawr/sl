@@ -6,15 +6,11 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    strategy:
-      matrix:
-        target: [aarch64, x86_64]
-
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Cache Cargo Registry
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
@@ -27,28 +23,39 @@ jobs:
             Add-Content $env:GITHUB_PATH "C:\Program Files\NSIS"
           }
         shell: pwsh
-      - name: Install toolchain
-        run: rustup target install ${{ matrix.target }}-pc-windows-msvc
+      - name: Install toolchains
+        run: rustup target add aarch64-pc-windows-msvc x86_64-pc-windows-msvc
       - name: Build Debug
-        run: cargo build --target=${{ matrix.target }}-pc-windows-msvc
+        run: cargo build --target=aarch64-pc-windows-msvc --target=x86_64-pc-windows-msvc
       - name: Build Release
-        run: cargo build --target=${{ matrix.target }}-pc-windows-msvc --release
-      - name: Build and Process Installer
+        run: cargo build --target=aarch64-pc-windows-msvc --target=x86_64-pc-windows-msvc --release
+      - name: Build and Process Installers
         id: installer_build
-        working-directory: ${{github.workspace}}/target
         shell: bash
         run: |
-          cmake .. -DARCH="${{ matrix.target }}"
-          cpack -C Release
-          if [ "${{ matrix.target }}" == "aarch64" ]; then
-            INSTALLER=$(ls sl-*.exe)
-            NEW_INSTALLER=$(echo $INSTALLER | sed 's/win64/woa64/')
-            mv $INSTALLER $NEW_INSTALLER
-          fi
-          INSTALLER=$(ls sl-*.exe)
-          echo "installer=${INSTALLER}" >> $GITHUB_OUTPUT
-      - name: Upload Installer
-        uses: actions/upload-artifact@v4
+          for arch in aarch64 x86_64; do
+            package_dir="target/package-$arch"
+            cmake -S . -B "$package_dir" -DARCH="$arch" \
+              -DSL_EXE="$PWD/target/$arch-pc-windows-msvc/release/sl.exe"
+            cpack --config "$package_dir/CPackConfig.cmake" -C Release -B "$package_dir"
+            installer=$(ls "$package_dir"/sl-*.exe)
+            if [ "$arch" = "aarch64" ]; then
+              new_installer=${installer/win64/woa64}
+              mv "$installer" "$new_installer"
+              installer=$new_installer
+            fi
+            echo "${arch}_file=$installer" >> "$GITHUB_OUTPUT"
+            echo "${arch}_name=$(basename "$installer")" >> "$GITHUB_OUTPUT"
+          done
+      - name: Upload ARM64 Installer
+        uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.installer_build.outputs.installer }}
-          path: target/${{ steps.installer_build.outputs.installer }}
+          name: ${{ steps.installer_build.outputs.aarch64_name }}
+          path: ${{ steps.installer_build.outputs.aarch64_file }}
+          if-no-files-found: error
+      - name: Upload x64 Installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.installer_build.outputs.x86_64_name }}
+          path: ${{ steps.installer_build.outputs.x86_64_file }}
+          if-no-files-found: error
