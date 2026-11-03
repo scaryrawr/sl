@@ -18,6 +18,7 @@ const EmbedPage = () => (
 );
 
 const container = document.getElementById('root');
+
 if (!container) {
   throw new Error('Root container #root not found');
 }

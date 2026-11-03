@@ -25,6 +25,8 @@ type FetchEventLike = ExtendableEventLike & {
 };
 
 /** Augmented `self` with skipWaiting and clients.claim. */
+// SAFETY: This script only loads as a module service worker, where the runtime
+// global is a ServiceWorkerGlobalScope that always provides skipWaiting and clients.
 const serviceWorker = self as typeof self & {
   skipWaiting: () => Promise<void>;
   clients: {
@@ -50,6 +52,7 @@ const getBasePath = () => {
   const swPath = self.location.pathname;
   // Remove /service-worker.js to get the base directory
   const basePath = swPath.substring(0, swPath.lastIndexOf('/'));
+
   return basePath || '';
 };
 
@@ -105,6 +108,7 @@ serviceWorker.addEventListener('install', (event: ExtendableEventLike) => {
       .open(CACHE_NAME)
       .then((cache) => {
         console.log('Service Worker: Caching initial assets');
+
         // Force reload to ensure we have the latest version during installation
         return cache.addAll(ASSETS_TO_CACHE.map((url) => new Request(url, { cache: 'reload' })));
       })
@@ -124,6 +128,7 @@ serviceWorker.addEventListener('activate', (event: ExtendableEventLike) => {
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
             console.log('Service Worker: Deleting old cache', cacheName);
+
             return caches.delete(cacheName);
           }
         })
@@ -134,11 +139,14 @@ serviceWorker.addEventListener('activate', (event: ExtendableEventLike) => {
           return Promise.all(
             requests.map((request) => {
               const url = new URL(request.url);
+
               if (ASSET_URLS.has(url.toString())) {
                 return;
               }
+
               if (url.origin === self.location.origin && url.pathname.endsWith('.wasm')) {
                 console.log('Service Worker: Removing stale asset', request.url);
+
                 return cache.delete(request);
               }
             })
@@ -170,6 +178,7 @@ serviceWorker.addEventListener('fetch', (event: FetchEventLike) => {
   if (url.origin !== self.location.origin) {
     // For cross-origin requests, try network first, no caching
     event.respondWith(fetch(request));
+
     return;
   }
 
@@ -180,6 +189,7 @@ serviceWorker.addEventListener('fetch', (event: FetchEventLike) => {
         .then((response) => {
           if (!response.ok) {
             const navigationCachePath = getNavigationCachePath(BASE_PATH, url.pathname);
+
             if (!navigationCachePath) {
               return response;
             }
@@ -196,15 +206,17 @@ serviceWorker.addEventListener('fetch', (event: FetchEventLike) => {
           caches
             .open(CACHE_NAME)
             .then((cache) => {
-              cache.put(navigationCachePath ?? request, responseToCache);
+              return cache.put(navigationCachePath ?? request, responseToCache);
             })
             .catch((error) => {
               console.error('Service Worker: Failed to cache navigation response', error);
             });
+
           return response;
         })
         .catch(() => {
           const navigationRedirectPath = getNavigationRedirectPath(BASE_PATH, url.pathname);
+
           if (navigationRedirectPath) {
             return Response.redirect(new URL(navigationRedirectPath, self.location.origin).toString());
           }
@@ -217,6 +229,7 @@ serviceWorker.addEventListener('fetch', (event: FetchEventLike) => {
               }
 
               const navigationCachePath = getNavigationCachePath(BASE_PATH, url.pathname);
+
               if (navigationCachePath) {
                 return cache.match(navigationCachePath).then((cachedPageResponse) => {
                   if (cachedPageResponse) {
@@ -232,6 +245,7 @@ serviceWorker.addEventListener('fetch', (event: FetchEventLike) => {
           });
         })
     );
+
     return;
   }
 
@@ -246,7 +260,7 @@ serviceWorker.addEventListener('fetch', (event: FetchEventLike) => {
               caches
                 .open(CACHE_NAME)
                 .then((cache) => {
-                  cache.put(request, response.clone());
+                  return cache.put(request, response.clone());
                 })
                 .catch((error) => {
                   console.error('Service Worker: Failed to update cache in background', error);
@@ -256,6 +270,7 @@ serviceWorker.addEventListener('fetch', (event: FetchEventLike) => {
           .catch(() => {
             // Silently fail background update
           });
+
         return cachedResponse;
       }
 
@@ -272,7 +287,7 @@ serviceWorker.addEventListener('fetch', (event: FetchEventLike) => {
           caches
             .open(CACHE_NAME)
             .then((cache) => {
-              cache.put(request, responseToCache);
+              return cache.put(request, responseToCache);
             })
             .catch((error) => {
               console.error('Service Worker: Failed to cache response', error);
@@ -289,6 +304,7 @@ serviceWorker.addEventListener('fetch', (event: FetchEventLike) => {
               statusText: 'Service Unavailable'
             });
           }
+
           throw new Error('Network request failed and no cache available');
         });
     })

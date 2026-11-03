@@ -55,8 +55,18 @@ type WasmImportDefault = WasmImport | (() => WasmImport);
  * @param wasmImport - Direct value or function returning the value.
  * @returns Resolved WASM import.
  */
+/** Whether a `WasmImportDefault` defers its value behind a lazy function. */
+const isLazyWasmImport = (wasmImport: WasmImportDefault): wasmImport is () => WasmImport =>
+  typeof wasmImport === 'function';
+
+/**
+ * Resolve a lazy WASM import function to its concrete value.
+ *
+ * @param wasmImport - Direct value or function returning the value.
+ * @returns Resolved WASM import.
+ */
 const resolveWasmImport = (wasmImport: WasmImportDefault): WasmImport =>
-  typeof wasmImport === 'function' ? wasmImport() : wasmImport;
+  isLazyWasmImport(wasmImport) ? wasmImport() : wasmImport;
 
 // Initialize the WASM module eagerly when this module is imported
 await init(resolveWasmImport(wasm));

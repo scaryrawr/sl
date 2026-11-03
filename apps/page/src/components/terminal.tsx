@@ -13,6 +13,17 @@ const LINE_HEIGHT_MULTIPLIER = 1.2;
 /** Version tag for the localStorage font-metrics cache key; bump to invalidate stale measurements. */
 const CACHE_VERSION = 'v1';
 
+/** Character cell measurements cached in localStorage. */
+type FontMetrics = { width: number; height: number };
+
+/** Validate font metrics decoded from the localStorage cache before trusting them. */
+const isFontMetrics = (value: unknown): value is FontMetrics =>
+  value instanceof Object &&
+  'width' in value &&
+  'height' in value &&
+  typeof value.width === 'number' &&
+  typeof value.height === 'number';
+
 const styles = {
   window: {
     border: '1px solid black',
@@ -104,16 +115,18 @@ const Terminal = ({
   const terminalRef = externalRef ?? internalRef;
   const dimensionsRef = useRef<{ rows: number; cols: number } | null>(null);
   const initializedRef = useRef(false);
-  const charSizeRef = useRef<{ width: number; height: number } | null>(null);
+  const charSizeRef = useRef<FontMetrics | null>(null);
 
   // Use useLayoutEffect to measure and build rows synchronously before paint
   useLayoutEffect(() => {
     let disposed = false;
     const terminal = terminalRef.current;
+
     if (!terminal) return;
 
     const measureAndUpdate = () => {
       if (disposed) return;
+
       // Measure character size using Canvas API (no DOM manipulation, no forced reflow)
       if (!charSizeRef.current) {
         const computedStyle = window.getComputedStyle(terminal);
@@ -124,17 +137,15 @@ const Terminal = ({
 
         // Try to load from localStorage cache first
         const cacheKey = `sl-font-metrics-${CACHE_VERSION}-${fontFamily}-${fontSize}-${fontWeight}-${fontStyle}`;
+
         try {
           const cached = localStorage.getItem(cacheKey);
+
           if (cached) {
-            const parsed = JSON.parse(cached);
+            const parsed: unknown = JSON.parse(cached);
+
             // Validate structure
-            if (
-              typeof parsed.width === 'number' &&
-              typeof parsed.height === 'number' &&
-              parsed.width > 0 &&
-              parsed.height > 0
-            ) {
+            if (isFontMetrics(parsed) && parsed.width > 0 && parsed.height > 0) {
               // Check if Fira Mono is required and loaded
               if (fontFamily.startsWith('Fira Mono')) {
                 if (document.fonts.check(`${fontSize} "Fira Mono"`)) {
@@ -158,6 +169,7 @@ const Terminal = ({
           // Check if Fira Mono is specified and wait for it to load
           if (fontFamily.startsWith('Fira Mono')) {
             const fontLoaded = document.fonts.check(`${fontSize} "Fira Mono"`);
+
             if (!fontLoaded) {
               // Font not ready, use estimates and wait for font to load
               charSizeRef.current = { width: CHAR_WIDTH_ESTIMATE, height: CHAR_HEIGHT_ESTIMATE };
@@ -173,6 +185,7 @@ const Terminal = ({
                 .catch(() => {
                   // Font failed to load, keep using estimates
                 });
+
               return;
             }
           }
@@ -181,6 +194,7 @@ const Terminal = ({
           try {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
+
             if (ctx) {
               ctx.font = `${fontSize} ${fontFamily}`;
               const metrics = ctx.measureText('M'); // Use 'M' as it's typically widest in monospace
@@ -206,10 +220,12 @@ const Terminal = ({
                   try {
                     for (let i = localStorage.length - 1; i >= 0; i--) {
                       const key = localStorage.key(i);
+
                       if (key?.startsWith('sl-font-metrics-')) {
                         localStorage.removeItem(key);
                       }
                     }
+
                     // Retry after cleanup
                     localStorage.setItem(cacheKey, JSON.stringify(charSizeRef.current));
                   } catch {
@@ -235,12 +251,14 @@ const Terminal = ({
       const rows = Math.min(80, Math.floor(clientHeight / lineHeight));
 
       const prev = dimensionsRef.current;
+
       // Only rebuild if dimensions actually changed
       if (!prev || prev.rows !== rows || prev.cols !== cols) {
         dimensionsRef.current = { rows, cols };
 
         // Use DocumentFragment to batch all DOM writes
         const fragment = document.createDocumentFragment();
+
         for (let i = 0; i < rows; i++) {
           const row = document.createElement('div');
           row.textContent = '\xa0'.repeat(cols);
@@ -262,6 +280,7 @@ const Terminal = ({
         measureAndUpdate();
       }
     });
+
     resizeObserver.observe(terminal);
 
     return () => {
