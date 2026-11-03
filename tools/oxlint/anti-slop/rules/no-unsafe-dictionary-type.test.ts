@@ -18,6 +18,8 @@ tester.run('anti-slop/no-unsafe-dictionary-type', noUnsafeDictionaryTypeRule, {
     'type AlsoAllowed = Record<string, Result<Data, unknown>>;',
     'type Index<T> = Record<string, T>; type EntityIndex<T extends Entity> = Record<string, T>;',
     'type Safe = Index<Command>; type Index<T> = Record<string, T>;',
+    'type Second<A, B> = Record<string, B>; type Swap<A, B> = Second<B, A>; type Safe = Swap<string, unknown>;',
+    'type Index<T> = Record<string, T>; type Wrapped<T> = Index<Readonly<T>>; type Safe = Wrapped<Command>;',
     'type A = Map<string, unknown>; type B = ReadonlyMap<string, unknown>; type C = WeakMap<object, unknown>;',
     "import { Record } from './local'; type A = Record<string, unknown>;",
     'type Record<K, V> = { key: K; value: V }; type A = Record<string, unknown>;',
@@ -25,6 +27,9 @@ tester.run('anti-slop/no-unsafe-dictionary-type', noUnsafeDictionaryTypeRule, {
     'type NonNullable<T> = { value: T }; type A = Record<string, NonNullable<unknown>>;',
     'type Value<T> = T; type Index<T = Command, U = Value<T>> = Record<string, U>; type A = Index;',
     'interface Owner { readonly id: string } type A = Record<string, unknown & Owner>;',
+    'interface Value {} type Index<Value> = Record<string, Value>;',
+    'interface Value {} function outer() { type Value = { readonly id: string }; type A = Record<string, Value>; }',
+    'interface Value {} function outer() { interface Value { readonly id: string } type A = Record<string, Value>; }',
     'interface Owner { readonly id: string } interface Child extends Owner {} type A = Record<string, Child>;',
     'interface Owner { readonly id: string } interface Child extends Owner { readonly __brand?: never } type A = Record<string, Child>;',
     'interface Escape {} interface Escape { readonly id: string } type A = Record<string, Escape>;',
@@ -92,6 +97,14 @@ tester.run('anti-slop/no-unsafe-dictionary-type', noUnsafeDictionaryTypeRule, {
     { code: 'type Index<T = unknown> = Record<string, T>; type A = Index;', errors: 1 },
     {
       code: 'type Index<T, U = T> = Record<string, U>; type A = Index<string, unknown>;',
+      errors: 1
+    },
+    {
+      code: 'type Second<A, B> = Record<string, B>; type Swap<A, B> = Second<B, A>; type A = Swap<unknown, string>;',
+      errors: 1
+    },
+    {
+      code: 'type Index<T> = Record<string, T>; type Wrapped<T> = Index<Readonly<T>>; type A = Wrapped<unknown>;',
       errors: 1
     },
     { code: 'type Index<T, U = T> = Record<string, U>; type A = Index<unknown>;', errors: 1 },

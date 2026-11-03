@@ -56,6 +56,10 @@ tester.run('anti-slop/no-object-parameters', noObjectParametersRule, {
       errors: [error]
     },
     {
+      code: 'type Identity<T> = T; function consume(value: Identity<Identity<object>>) {}',
+      errors: [error]
+    },
+    {
       code: 'type Identity<T> = T; type Wrapped<T> = Identity<T>; function consume(value: Wrapped<object>) {}',
       errors: [error]
     }

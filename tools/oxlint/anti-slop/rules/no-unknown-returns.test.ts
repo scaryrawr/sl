@@ -43,6 +43,10 @@ tester.run('anti-slop/no-unknown-returns', noUnknownReturnsRule, {
       errors: [error]
     },
     {
+      code: 'type Identity<T> = T; function load(): Identity<Identity<unknown>> { return input; }',
+      errors: [error]
+    },
+    {
       code: 'type Identity<T> = T; type Wrapped<T> = Promise<Identity<T>>; function load(): Wrapped<unknown> { return promise; }',
       errors: [error]
     }

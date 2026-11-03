@@ -26,6 +26,10 @@ tester.run('anti-slop/no-unknown-type-aliases', noUnknownTypeAliasesRule, {
       errors: [error]
     },
     {
+      code: 'type Identity<T> = T; type Payload = Identity<Identity<unknown>>;',
+      errors: [error]
+    },
+    {
       code: 'type Identity<T> = T; type Wrapped<T> = Identity<T>; type Payload = Wrapped<unknown>;',
       errors: [error]
     },

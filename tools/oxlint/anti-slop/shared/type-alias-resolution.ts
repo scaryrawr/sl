@@ -5,13 +5,15 @@ import { lexicalTypeParameterNames } from './lexical-type-parameters.ts';
 type VisitorKeys = Readonly<Record<string, readonly string[]>>;
 type TypeScope = ESTree.Node;
 
-type TypeBinding = {
+export type TypeBinding = {
   readonly alias: ESTree.TSTypeAliasDeclaration | null;
+  readonly declaration: ESTree.Node;
   readonly name: string;
   readonly scope: TypeScope;
 };
 
 type Substitution = {
+  readonly resolvingAliases: ReadonlySet<ESTree.TSTypeAliasDeclaration>;
   readonly substitutions: Substitutions;
   readonly type: ESTree.TSType;
 };
@@ -83,7 +85,7 @@ function collectTypeBindings(
   const declared = declaredTypeBinding(node);
   if (declared !== null) {
     const bindings = bindingsByName.get(declared.name) ?? [];
-    bindings.push({ ...declared, scope: enclosingTypeScope(node) });
+    bindings.push({ ...declared, declaration: node, scope: enclosingTypeScope(node) });
     bindingsByName.set(declared.name, bindings);
     if (declared.alias !== null) aliases.push(declared.alias);
   }
@@ -149,14 +151,25 @@ function nearestTypeBindings(
   return nearest;
 }
 
+/** Resolve the nearest visible type declarations, unless a type parameter shadows them. */
+export function visibleTypeBindings(
+  name: string,
+  use: ESTree.Node,
+  environment: TypeAliasEnvironment
+): readonly TypeBinding[] | null {
+  return lexicalTypeParameterNames(use, environment.visitorKeys).has(name)
+    ? null
+    : nearestTypeBindings(name, use, environment);
+}
+
 /** Resolve the nearest visible alias with this name, respecting lexical shadowing. */
 export function visibleTypeAlias(
   name: string,
   use: ESTree.Node,
   environment: TypeAliasEnvironment
 ): ESTree.TSTypeAliasDeclaration | null {
-  if (lexicalTypeParameterNames(use, environment.visitorKeys).has(name)) return null;
-  const bindings = nearestTypeBindings(name, use, environment);
+  const bindings = visibleTypeBindings(name, use, environment);
+  if (bindings === null) return null;
   return bindings.length === 1 ? (bindings[0]?.alias ?? null) : null;
 }
 
@@ -175,7 +188,8 @@ function typeReferenceName(type: ESTree.TSTypeReference): string | null {
 function aliasSubstitutions(
   alias: ESTree.TSTypeAliasDeclaration,
   reference: ESTree.TSTypeReference,
-  base: Substitutions
+  base: Substitutions,
+  resolvingAliases: ReadonlySet<ESTree.TSTypeAliasDeclaration>
 ): Substitutions | null {
   const parameters = alias.typeParameters?.params ?? [];
   const arguments_ = reference.typeArguments?.params ?? [];
@@ -186,6 +200,7 @@ function aliasSubstitutions(
     if (argument === null || argument === undefined) return null;
     const argumentSubstitutions = explicitArgument === undefined ? next : base;
     next.set(parameter.name.name, {
+      resolvingAliases: new Set(resolvingAliases),
       type: argument,
       substitutions: new Map(argumentSubstitutions)
     });
@@ -209,11 +224,11 @@ export function resolvedTypeMatches(
       if (name !== null) {
         const substitution = substitutions.get(name);
         if (substitution !== undefined && !current.typeArguments?.params.length) {
-          return evaluate(substitution.type, substitution.substitutions, resolvingAliases);
+          return evaluate(substitution.type, substitution.substitutions, substitution.resolvingAliases);
         }
         const alias = visibleTypeAlias(name, current, environment);
         if (alias !== null && !resolvingAliases.has(alias)) {
-          const nextSubstitutions = aliasSubstitutions(alias, current, substitutions);
+          const nextSubstitutions = aliasSubstitutions(alias, current, substitutions, resolvingAliases);
           if (nextSubstitutions !== null) {
             const nextResolving = new Set(resolvingAliases);
             nextResolving.add(alias);
