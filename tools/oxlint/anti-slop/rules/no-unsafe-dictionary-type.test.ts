@@ -43,10 +43,33 @@ tester.run('anti-slop/no-unsafe-dictionary-type', noUnsafeDictionaryTypeRule, {
     'type Identity<T> = T; type Bag = Record<string, Identity<Identity<Command>>>;',
     'type Loop<T> = Loop<T>; type Bag = Record<string, Loop<unknown>>;',
     'const C = class Record { value: Record<string, unknown> };',
-    'class Record<K, V> { value: V } type Bag = Record<string, unknown>;'
+    'class Record<K, V> { value: V } type Bag = Record<string, unknown>;',
+    "type Keys<K> = { [K in 'a' | 'b']: K }; type Safe = Keys<unknown>;",
+    "type Keys<K> = { [K in 'a' | 'b']: K }; const safe: Keys<unknown> = { a: 'a', b: 'b' };",
+    'type Value = Command; type Identity<Value> = Value; type Bag = Record<string, Identity<Value>>;',
+    'type Value = object; type Identity<Value> = Value; function local<Value>() { type Bag = Record<string, Identity<Value>>; }',
+    'type Index<T = Command> = Record<string, T>; const x: Index = {};'
   ],
   invalid: [
     { code: 'type A = Record<string, unknown>;', errors: [error] },
+    { code: 'type Index<T = unknown> = Record<string, T>; const x: Index = {};', errors: [error] },
+    { code: 'type Index<T = unknown> = Record<string, T>; declare function load(): Index;', errors: [error] },
+    {
+      code: 'type Value = object; type Identity<Value> = Value; type Bag = Record<string, Identity<Value>>;',
+      errors: [error]
+    },
+    {
+      code: 'interface Value {} type Identity<Value> = Value; type Bag = Record<string, Identity<Value>>;',
+      errors: [error]
+    },
+    {
+      code: 'type Value = object; type RootValue = Value; function local() { type Value = RootValue; type Bag = Record<string, Value>; }',
+      errors: [error]
+    },
+    {
+      code: "type Keys<K> = { [K in 'a' | 'b']: unknown }; type Unsafe = Keys<string>;",
+      errors: 2
+    },
     { code: 'const C = class Record {}; type Bag = Record<string, unknown>;', errors: [error] },
     {
       code: 'type Identity<T> = T; type Bag = Record<string, Identity<Identity<unknown>>>;',

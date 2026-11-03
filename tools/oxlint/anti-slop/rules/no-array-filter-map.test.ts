@@ -21,10 +21,26 @@ tester.run('anti-slop/no-array-filter-map', noArrayFilterMapRule, {
     'const users = []; function collect(users) { return users.filter(active).map(email); }',
     'let users = []; users = iterator; users.filter(active).map(email);',
     'const users = []; users[method](active).map(email);',
-    'const first = second; const second = first; first.filter(active).map(email);'
+    'const first = second; const second = first; first.filter(active).map(email);',
+    'type Array<T> = IteratorObject<T>; function collect(users: Array<User>) { return users.filter(active).map(email); }',
+    'interface ReadonlyArray<T> extends IteratorObject<T> {} function collect(users: ReadonlyArray<User>) { return users.filter(active).map(email); }',
+    "import { Array } from './iterators'; function collect(users: Array<User>) { return users.filter(active).map(email); }",
+    "import { ReadonlyArray } from './iterators'; function collect(users: ReadonlyArray<User>) { return users.filter(active).map(email); }"
   ],
   invalid: [
     { code: '[].filter(active).map(email);', errors: [error] },
+    {
+      code: 'type Array<T> = IteratorObject<T>; function collect(users: User[]) { return users.filter(active).map(email); }',
+      errors: [error]
+    },
+    {
+      code: 'type ReadonlyArray<T> = IteratorObject<T>; function collect(users: readonly [User]) { return users.filter(active).map(email); }',
+      errors: [error]
+    },
+    {
+      code: 'function local() { type Array<T> = IteratorObject<T>; } function collect(users: Array<User>) { return users.filter(active).map(email); }',
+      errors: [error]
+    },
     {
       code: '[].map(user => user.active ? user.email : undefined).filter(email => email !== undefined);',
       errors: [error]

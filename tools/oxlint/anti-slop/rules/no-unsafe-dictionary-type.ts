@@ -69,11 +69,8 @@ function isInsideTypeAliasDeclaration(node: ESTree.Node): boolean {
 function isPlainAliasConsumerUse(node: ESTree.TSType, environment: TypeEnvironment): boolean {
   if (node.type !== 'TSTypeReference' || node.typeArguments?.params.length) return false;
   const name = typeReferenceName(node);
-  return (
-    name !== null &&
-    visibleTypeAlias(name, node, environment.typeAliases) !== null &&
-    !isInsideTypeAliasDeclaration(node)
-  );
+  const alias = name === null ? null : visibleTypeAlias(name, node, environment.typeAliases);
+  return alias !== null && (alias.typeParameters?.params.length ?? 0) === 0 && !isInsideTypeAliasDeclaration(node);
 }
 
 function isInsideTypeParameterConstraint(node: ESTree.TSType): boolean {

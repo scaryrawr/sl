@@ -1,5 +1,7 @@
 import type { ESTree, Scope, SourceCode, Variable } from '@oxlint/plugins';
 
+import { createTypeAliasEnvironment, hasVisibleTypeBinding } from './type-alias-resolution.ts';
+
 /** Unwrap syntax-only wrappers when inspecting array methods and accumulator references. */
 export function unwrapArrayExpression(node: ESTree.Node): ESTree.Node {
   while (
@@ -42,16 +44,17 @@ export function arrayMethodTarget(node: ESTree.Node): { readonly name: string; r
   return null;
 }
 
-function isArrayAnnotation(type: ESTree.TSType): boolean {
+function isArrayAnnotation(type: ESTree.TSType, sourceCode: SourceCode): boolean {
   if (type.type === 'TSArrayType' || type.type === 'TSTupleType') return true;
-  if (type.type === 'TSParenthesizedType') return isArrayAnnotation(type.typeAnnotation);
+  if (type.type === 'TSParenthesizedType') return isArrayAnnotation(type.typeAnnotation, sourceCode);
   if (type.type === 'TSTypeOperator' && type.operator === 'readonly') {
-    return isArrayAnnotation(type.typeAnnotation);
+    return isArrayAnnotation(type.typeAnnotation, sourceCode);
   }
   return (
     type.type === 'TSTypeReference' &&
     type.typeName.type === 'Identifier' &&
-    (type.typeName.name === 'Array' || type.typeName.name === 'ReadonlyArray')
+    (type.typeName.name === 'Array' || type.typeName.name === 'ReadonlyArray') &&
+    !hasVisibleTypeBinding(type.typeName.name, type, createTypeAliasEnvironment(sourceCode.ast, sourceCode.visitorKeys))
   );
 }
 
@@ -78,7 +81,7 @@ export function isKnownArrayExpression(
   if (variable.references.some((reference) => reference.isWrite() && !reference.init)) return false;
   for (const identifier of variable.identifiers) {
     const annotation = identifier.typeAnnotation?.typeAnnotation;
-    if (annotation !== undefined) return isArrayAnnotation(annotation);
+    if (annotation !== undefined) return isArrayAnnotation(annotation, sourceCode);
   }
   for (const definition of variable.defs) {
     if (
