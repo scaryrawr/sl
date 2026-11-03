@@ -126,4 +126,5 @@ const Home = () => {
 };
 
 export type { Action, State };
+
 export default Home;

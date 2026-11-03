@@ -1,6 +1,12 @@
 import { useEffect } from 'preact/hooks';
 
-import SlTerminal, { TrainType, type TrainTypeValue } from './slTerminal';
+import SlTerminal, { parseTrainType } from './slTerminal';
+
+/** Validate a single decoded message entry as a display string. */
+const isMessageLine = (value: unknown): value is string => typeof value === 'string';
+
+/** Validate a decoded `messages` query parameter as a list of display strings. */
+const isMessageList = (value: unknown): value is string[] => Array.isArray(value) && value.every(isMessageLine);
 
 /**
  * Parse the `messages` query parameter into an array of strings.
@@ -13,9 +19,12 @@ import SlTerminal, { TrainType, type TrainTypeValue } from './slTerminal';
  */
 const parseMessages = (messagesParam: string | null): string[] => {
   try {
-    return JSON.parse(decodeURIComponent(messagesParam ?? '[]')) as string[];
+    const parsed: unknown = JSON.parse(decodeURIComponent(messagesParam ?? '[]'));
+
+    return isMessageList(parsed) ? parsed : [];
   } catch (error) {
     console.warn('Failed to parse messages parameter:', error);
+
     return [];
   }
 };
@@ -45,7 +54,7 @@ const EmbedTerminal = () => {
   const accident = searchParams.get('accident') === 'true';
   const fly = searchParams.get('fly') === 'true';
   const smoke = searchParams.get('smoke') !== 'false';
-  const trainType = (searchParams.get('trainType') as TrainTypeValue | null) ?? TrainType.D51;
+  const trainType = parseTrainType(searchParams.get('trainType'));
   const messages = parseMessages(searchParams.get('messages'));
   // `||` so empty query params (e.g. `backgroundColor=`) fall back to the defaults
   const fontColor = searchParams.get('fontColor') || '#0f0';

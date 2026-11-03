@@ -19,6 +19,15 @@ const TrainType = {
 } as const satisfies Record<string, TrainTypeValue>;
 
 /**
+ * Parse a raw string (query parameter, select value) into a train type.
+ *
+ * @param raw - Untrusted train type string, or `null` when absent.
+ * @returns The matching train type, falling back to {@link TrainType.D51}.
+ */
+const parseTrainType = (raw: string | null): TrainTypeValue =>
+  Object.values(TrainType).find((type) => type === raw) ?? TrainType.D51;
+
+/**
  * Props for the {@link SlTerminal} component.
  */
 type SlProps = {
@@ -45,6 +54,7 @@ type SlProps = {
 /** Lazy-loaded WASM module promise; initializes the panic hook before resolving. */
 const slPromise = import('../websl').then((module) => {
   module.set_panic_hook();
+
   return module;
 });
 
@@ -70,10 +80,13 @@ const useSlAnimation = (props: {
 
   const clear = useCallback(() => {
     const terminal = terminalRef.current;
+
     if (!terminal || terminal.children.length === 0) return;
 
     const cols = terminal.children[0].textContent?.length ?? 0;
+
     for (const row of Array.from(terminal.children)) {
+      // SAFETY: Terminal renders every child of the grid as a row <div> element.
       const el = row as HTMLElement;
       el.textContent = '\xa0'.repeat(cols);
     }
@@ -86,9 +99,11 @@ const useSlAnimation = (props: {
 
     // Check for reduced motion preference - show static fallback if preferred
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     if (prefersReducedMotion) {
       // Display static train when animation is disabled
       const terminal = terminalRef.current;
+
       if (terminal && terminal.children.length > 0) {
         // Standard steam locomotive ASCII art (used for both D51 and C51)
         const standardTrain = [
@@ -132,7 +147,9 @@ const useSlAnimation = (props: {
 
         // Render static train centered both vertically and horizontally
         staticTrain.forEach((line, idx) => {
+          // SAFETY: Terminal renders every child of the grid as a row <div> element.
           const row = terminal.children[startRow + idx] as HTMLElement | undefined;
+
           if (row) {
             const cols = row.textContent?.length ?? 0;
             const padding = Math.max(0, Math.floor((cols - line.length) / 2));
@@ -141,7 +158,9 @@ const useSlAnimation = (props: {
         });
 
         // Add accessibility message explaining why animation is disabled
+        // SAFETY: Terminal renders every child of the grid as a row <div> element.
         const msgRow = terminal.children[startRow + staticTrain.length] as HTMLElement | undefined;
+
         if (msgRow) {
           const msg = 'Static view - Animation disabled due to reduced motion preference';
           const cols = msgRow.textContent?.length ?? 0;
@@ -160,12 +179,15 @@ const useSlAnimation = (props: {
     const runWasm = async () => {
       try {
         const sl = await slPromise;
+
         if (disposed) return;
 
         const terminal = terminalRef.current;
+
         if (!terminal || terminal.children.length === 0) return;
 
         const options = new sl.Options(accident, fly, smoke);
+
         const trains: Record<TrainTypeValue, typeof sl.add_c51> = {
           [TrainType.C51]: sl.add_c51,
           [TrainType.D51]: sl.add_d51,
@@ -181,15 +203,20 @@ const useSlAnimation = (props: {
 
           const cols = terminal.children[0].textContent?.length ?? 0;
           const rows = terminal.children.length;
+
           const display = new sl.Display(cols, rows, (y: number, x: number, str: string) => {
+            // SAFETY: Terminal renders every child of the grid as a row <div> element.
             const row = terminal.children[y] as HTMLElement | undefined;
+
             if (!row || !row.textContent) return;
 
             // Use array-based approach for better performance
             const textArray = Array.from(row.textContent);
+
             for (let i = 0; i < str.length && x + i < cols; i++) {
               textArray[x + i] = str[i];
             }
+
             row.textContent = textArray.join('');
           });
 
@@ -198,7 +225,11 @@ const useSlAnimation = (props: {
             xRef.current = cols;
           }
 
-          if (!trains[trainType](--(xRef.current as number), messages, display, options)) {
+          const nextX = (xRef.current ?? 0) - 1;
+
+          xRef.current = nextX;
+
+          if (!trains[trainType](nextX, messages, display, options)) {
             clear();
             xRef.current = cols;
           }
@@ -212,11 +243,15 @@ const useSlAnimation = (props: {
         animationFrameId = requestAnimationFrame(animate);
       } catch (error) {
         console.error('Failed to load WASM module', error);
+
         if (disposed) return;
         const message = 'Failed to load animation. Please refresh the page to try again.';
         const terminal = terminalRef.current;
+
         if (!terminal || terminal.children.length === 0) return;
+        // SAFETY: Terminal renders every child of the grid as a row <div> element.
         const row = terminal.children[0] as HTMLElement | undefined;
+
         if (!row) return;
         const cols = row.textContent?.length ?? 0;
         const padding = Math.max(0, Math.floor((cols - message.length) / 2));
@@ -225,7 +260,7 @@ const useSlAnimation = (props: {
       }
     };
 
-    runWasm();
+    void runWasm();
 
     return () => {
       disposed = true;
@@ -272,6 +307,8 @@ const SlTerminal = ({
   );
 };
 
-export { TrainType };
+export { TrainType, parseTrainType };
+
 export type { TrainTypeValue };
+
 export default SlTerminal;

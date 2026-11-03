@@ -18,6 +18,7 @@
   "license": "MIT",
   "author": "Mike Wallio",
   "main": "index.js",
+  "type": "module",
   "workspaces": [
     "apps/*"
   ],
@@ -51,7 +52,8 @@
     "typecheck:page": "bun run --cwd apps/page typecheck"
   },
   "devDependencies": {
-    "oxlint": "^1.90.0",
+    "@oxlint/plugins": "1.90.0",
+    "oxlint": "1.90.0",
     "oxlint-tsgolint": "^7.0.2005",
     "typescript": "^5.9.3"
   },

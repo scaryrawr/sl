@@ -23,6 +23,7 @@ const libDir = path.join(root, 'lib');
 // Step 1: Build the main entry points (index.tsx and embed.tsx)
 // This generates the WASM file with a content hash
 console.log('Building main entry points...');
+
 const mainBuild = Bun.spawn(
   [
     'bun',
@@ -54,6 +55,7 @@ if (mainBuild.exitCode !== 0) {
 
 // Step 2: Find the generated WASM file (newest by mtime to avoid stale artifacts)
 console.log('Finding WASM file...');
+
 const files = await readdir(libDir);
 const wasmFiles = files.filter((file) => file.endsWith('.wasm'));
 
@@ -64,13 +66,16 @@ if (wasmFiles.length === 0) {
 
 // Select newest WASM file by modification time to avoid picking stale artifacts
 let wasmFile = wasmFiles[0];
+
 if (wasmFiles.length > 1) {
   const stats = await Promise.all(
     wasmFiles.map(async (file) => {
       const stat = await Bun.file(path.join(libDir, file)).stat();
+
       return { file, mtime: stat?.mtime ?? 0 };
     })
   );
+
   stats.sort(
     (a, b) => (b.mtime instanceof Date ? b.mtime.getTime() : 0) - (a.mtime instanceof Date ? a.mtime.getTime() : 0)
   );
@@ -96,6 +101,7 @@ await writeFile(serviceWorkerTemp, serviceWorkerContent);
 
 // Step 4: Build the service worker with the injected filename
 console.log('Building service worker...');
+
 const swBuild = Bun.spawn(
   [
     'bun',
@@ -129,18 +135,25 @@ const swTempMap = path.join(libDir, 'service-worker.tmp.js.map');
 const swFinalMap = path.join(libDir, 'service-worker.js.map');
 
 await copyFile(swTempOutput, swFinalOutput);
+
 await copyFile(swTempMap, swFinalMap);
 
 // Clean up temp files
 await unlink(serviceWorkerTemp);
+
 await unlink(swTempOutput);
+
 await unlink(swTempMap);
 
 // Step 6: Copy static files
 console.log('Copying static files...');
+
 await copyFile(path.join(root, 'index.html'), path.join(libDir, 'index.html'));
+
 await copyFile(path.join(root, 'embed.html'), path.join(libDir, 'embed.html'));
+
 await copyFile(path.join(root, 'favicon.svg'), path.join(libDir, 'favicon.svg'));
+
 await copyFile(path.join(root, 'manifest.json'), path.join(libDir, 'manifest.json'));
 
 console.log('Build complete!');

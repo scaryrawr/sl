@@ -31,12 +31,12 @@ type CommandResult = {
 const commandText = (command: string[]) => command.join(' ');
 
 /** Convert any error value to a readable string. */
-const getErrorMessage = (error: unknown) => {
-  if (error instanceof Error) {
-    return error.message;
+const getErrorMessage = (cause: unknown) => {
+  if (cause instanceof Error) {
+    return cause.message;
   }
 
-  return String(error);
+  return String(cause);
 };
 
 /**
@@ -117,6 +117,7 @@ const commandFailureMessage = (command: string[], result: CommandResult) =>
  */
 const requireCommand = (tool: string, versionCommand: string[]) => {
   const result = run(versionCommand);
+
   if (!result.success) {
     fail(missingToolMessage(tool, result.error || result.stderr.trim()));
   }
@@ -154,6 +155,7 @@ const ensureWasmTarget = () => {
 
   console.log(`Installing Rust target ${WASM_TARGET}...`);
   const addResult = run(['rustup', 'target', 'add', WASM_TARGET], true);
+
   if (!addResult.success) {
     fail(commandFailureMessage(['rustup', 'target', 'add', WASM_TARGET], addResult));
   }
@@ -177,6 +179,7 @@ const ensureWasmPack = () => {
 
   console.log('Installing wasm-pack...');
   const installResult = run(['cargo', 'install', 'wasm-pack'], true);
+
   if (!installResult.success) {
     fail(commandFailureMessage(['cargo', 'install', 'wasm-pack'], installResult));
   }
@@ -184,8 +187,11 @@ const ensureWasmPack = () => {
 
 // Main execution: check prerequisites and install if requested
 requireCommand('cargo', ['cargo', '--version']);
+
 requireCommand('rustup', ['rustup', '--version']);
+
 ensureWasmTarget();
+
 ensureWasmPack();
 
 if (installMode) {

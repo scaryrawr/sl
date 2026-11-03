@@ -31,6 +31,7 @@ const resolvePathname = (pathname) => {
 const isPathSafe = (resolvedPath) => {
   const normalizedPath = path.resolve(resolvedPath);
   const normalizedLib = path.resolve(libDir) + path.sep;
+
   return normalizedPath.startsWith(normalizedLib);
 };
 
@@ -45,17 +46,20 @@ const server = Bun.serve({
     }
 
     const filePath = resolvePathname(url.pathname);
+
     if (!filePath || !isPathSafe(filePath)) {
       return new Response('Not found', { status: 404 });
     }
 
     const file = Bun.file(filePath);
+
     if (!(await file.exists())) {
       return new Response('Not found', { status: 404 });
     }
 
     const headers = new Headers();
     const contentType = contentTypes.get(path.extname(filePath));
+
     if (contentType) {
       headers.set('Content-Type', contentType);
     }

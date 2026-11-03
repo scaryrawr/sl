@@ -1,7 +1,7 @@
 import type { JSX } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
-import { TrainType, type TrainTypeValue } from '../slTerminal';
+import { parseTrainType, TrainType } from '../slTerminal';
 import type { Action, State } from './Home';
 
 /**
@@ -74,7 +74,7 @@ const Form = ({ state, dispatch }: FormProps) => {
 
   const handleTrainTypeChange = useCallback(
     (e: JSX.TargetedEvent<HTMLSelectElement>) => {
-      dispatch({ type: 'SET_TRAIN_TYPE', payload: e.currentTarget.value as TrainTypeValue });
+      dispatch({ type: 'SET_TRAIN_TYPE', payload: parseTrainType(e.currentTarget.value) });
     },
     [dispatch]
   );

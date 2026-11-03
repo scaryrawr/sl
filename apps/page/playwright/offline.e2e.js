@@ -24,6 +24,7 @@ test('loads the home page offline from the bare project path', async ({ context,
 
   page.on('request', (request) => {
     const url = new URL(request.url());
+
     if (origin && url.origin === origin && url.pathname !== '/sl' && !url.pathname.startsWith('/sl/')) {
       requestedOutsideProjectPath.push(url.pathname);
     }
@@ -57,6 +58,7 @@ test('loads the home page offline from the bare project path', async ({ context,
   const frame = page
     .frames()
     .find((candidate) => candidate !== page.mainFrame() && candidate.url() === `${origin}/sl/`);
+
   if (!frame) {
     throw new Error('Offline navigation frame did not load the canonical /sl/ URL');
   }
