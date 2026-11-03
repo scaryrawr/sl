@@ -18,6 +18,13 @@ tester.run('anti-slop/no-unknown-returns', noUnknownReturnsRule, {
     'function cause(): { cause: unknown } { return { cause: input }; }',
     'type Result = { value: unknown }; function load(): Result { return result; }',
     'function load(): Promise<User> { return promise; }',
+    'interface Promise<T> { value: T } declare function load(): Promise<unknown>;',
+    'class PromiseLike<T> { value: T } declare function load(): PromiseLike<unknown>;',
+    "import { Promise } from './local'; declare function load(): Promise<unknown>;",
+    "import { PromiseLike } from './local'; declare function load(): PromiseLike<unknown>;",
+    'declare function load<Promise>(): Promise<unknown>;',
+    'interface Promise<T> { value: T } type Wrapped<T> = Promise<T>; declare function load(): Wrapped<unknown>;',
+    'const Local = class Promise {}; declare function load(): Local;',
     'type Identity<T> = T; function load(): Identity<User> { return user; }',
     'type Value = unknown; function outer() { type Value = User; function load(): Value { return user; } }'
   ],
@@ -29,6 +36,12 @@ tester.run('anti-slop/no-unknown-returns', noUnknownReturnsRule, {
     { code: 'declare function load(): unknown;', errors: [error] },
     { code: 'function load(): string | unknown { return input; }', errors: [error] },
     { code: 'function load(): Promise<unknown> { return promise; }', errors: [error] },
+    { code: 'declare function load(): PromiseLike<unknown>;', errors: [error] },
+    { code: 'const C = class Promise {}; declare function load(): Promise<unknown>;', errors: [error] },
+    {
+      code: 'function local() { interface Promise<T> { value: T } } declare function load(): Promise<unknown>;',
+      errors: [error]
+    },
     { code: 'type UnknownValue = unknown; function load(): UnknownValue { return input; }', errors: [error] },
     {
       code: 'type Item = unknown; type Fallback<Input> = Input extends infer Item ? string : () => Item;',

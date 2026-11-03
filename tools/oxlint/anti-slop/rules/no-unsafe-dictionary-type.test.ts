@@ -39,10 +39,27 @@ tester.run('anti-slop/no-unsafe-dictionary-type', noUnsafeDictionaryTypeRule, {
     'type WithSchema<T extends Record<string, unknown>> = (schema: T) => void;',
     'function run<T extends Record<string, unknown>>(input: T): T { return input; }',
     'declare class Store<T extends Record<string, unknown>> { read(): T }',
-    'type Deep<T extends Readonly<Record<string, unknown>>> = T;'
+    'type Deep<T extends Readonly<Record<string, unknown>>> = T;',
+    'type Identity<T> = T; type Bag = Record<string, Identity<Identity<Command>>>;',
+    'type Loop<T> = Loop<T>; type Bag = Record<string, Loop<unknown>>;',
+    'const C = class Record { value: Record<string, unknown> };',
+    'class Record<K, V> { value: V } type Bag = Record<string, unknown>;'
   ],
   invalid: [
     { code: 'type A = Record<string, unknown>;', errors: [error] },
+    { code: 'const C = class Record {}; type Bag = Record<string, unknown>;', errors: [error] },
+    {
+      code: 'type Identity<T> = T; type Bag = Record<string, Identity<Identity<unknown>>>;',
+      errors: [error]
+    },
+    {
+      code: 'type Identity<T> = T; type Bag = Identity<Identity<Record<string, unknown>>>;',
+      errors: [error]
+    },
+    {
+      code: 'type Identity<T> = T; type Box<T, U = Identity<T>> = U; type Bag = Record<string, Box<Box<unknown>>>;',
+      errors: [error]
+    },
     { code: 'type A = { [key: string]: any };', errors: [error] },
     { code: 'type A = { [index: number]: Command; [key: string]: unknown | Command };', errors: 1 },
     { code: 'type A = { [K in PropertyKey]: object };', errors: [error] },

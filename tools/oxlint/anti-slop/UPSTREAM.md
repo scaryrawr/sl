@@ -16,4 +16,6 @@ customizations recorded below.
 
 ## Local customizations
 
-- None yet.
+- Type resolution respects lexical bindings, including class-expression names and shadowed built-in types.
+- Generic alias substitutions retain their original environments and recursion state so finite nested instantiations
+  resolve without treating them as recursive aliases.

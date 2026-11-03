@@ -85,7 +85,8 @@ function collectTypeBindings(
   const declared = declaredTypeBinding(node);
   if (declared !== null) {
     const bindings = bindingsByName.get(declared.name) ?? [];
-    bindings.push({ ...declared, declaration: node, scope: enclosingTypeScope(node) });
+    const scope = node.type === 'ClassExpression' ? node : enclosingTypeScope(node);
+    bindings.push({ ...declared, declaration: node, scope });
     bindingsByName.set(declared.name, bindings);
     if (declared.alias !== null) aliases.push(declared.alias);
   }
