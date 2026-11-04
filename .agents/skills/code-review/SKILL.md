@@ -34,6 +34,6 @@ Start from the diff: list the changed paths, then work through each section that
 ## Cross-cutting
 
 - Docs: user-visible behavior changes need `README.md` and `README.ja.md` updates.
-- Version: only `apps/sl/Cargo.toml` carries the version; flag version bumps in other manifests.
+- Version: `apps/sl/Cargo.toml` is the source of the CLI release version; do not duplicate that release version in other manifests. `libsl` and `websl` have independent package versions, so intentional library version bumps and matching dependency updates are valid.
 - Workflows (`.github/workflows/`): changes must keep all four build legs (Fedora, POSIX/macOS, Ubuntu, Windows) and the `sl-*` tag release gate intact.
 - Lockfiles (`Cargo.lock`, `bun.lock`) should only change with intentional dependency updates.
