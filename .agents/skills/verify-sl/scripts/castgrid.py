@@ -7,8 +7,8 @@ rebuilt without a complete VT emulator: every printable run is placed at the
 current cursor position and later writes simply overwrite earlier ones.
 
 This module is imported by extract-frames.py and check-invariants.py.
-Key insight: the asciicast event stream contains exactly one "o" event per
-sl animation step (one crossterm flush per step), so event index == step index.
+Sampling is defined on cumulative output bytes, not event counts, so goldens
+survive any change in how the recorder chunks the byte stream.
 """
 
 import json
@@ -72,6 +72,11 @@ class _Grid:
                 self._flush()
                 self.col = max(0, self.col - 1)
                 index += 1
+            elif char == "\x00":
+                # sl writes NUL-padded 256-byte car buffers; terminals ignore NUL
+                # without moving the cursor, so do the same.
+                self._flush()
+                index += 1
             else:
                 self._run += char
                 index += 1
@@ -118,25 +123,40 @@ class _Grid:
         return ["".join(row).rstrip() for row in self.cells]
 
 
-def grid_from_cast(path, sample_every=1):
-    """Return one N x M string frame per sampled event of the cast."""
+def sampled_frames(path, count=12):
+    """Reconstruct `count` evenly spread grids from the cast's output byte stream.
+
+    Asciicast "o" events are transport chunks: one sl draw can span several events
+    and terminal flush boundaries shift between runs, so event indices are NOT a
+    stable notion of an animation step. Sampling instead triggers at fixed
+    cumulative output-byte offsets, which depend only on the deterministic byte
+    stream sl produces - identical grids regardless of how the recorder chunks it.
+
+    Returns (header, steps, frames) where steps are the byte offsets of the
+    sampled snapshots (always including the final offset).
+    """
     header, events = load_cast(path)
     grid = _Grid(header["term"]["cols"], header["term"]["rows"])
+    total = sum(len(data) for _delay, data in events)
+    if total == 0:
+        raise ValueError("cast contains no output; capture is empty or corrupt")
+    step_size = max(1, total // count)
+    thresholds = list(range(step_size, total, step_size)) + [total]
     frames = []
-    for index, (_delay, data) in enumerate(events):
+    steps = []
+    consumed = 0
+    next_threshold = 0
+    for _delay, data in events:
         grid.feed(data)
-        if index % sample_every == 0:
+        consumed += len(data)
+        while next_threshold < len(thresholds) and consumed >= thresholds[next_threshold]:
+            steps.append(thresholds[next_threshold])
             frames.append(grid.snapshot())
-    return frames
+            next_threshold += 1
+    return header, steps, frames
 
 
-def final_frame(path):
-    """Return the single grid after the whole recording."""
-    return grid_from_cast(path, sample_every=10**9)[-1]
-
-
-def even_sample(frames, count):
-    """Return evenly spread frame indices over the run, always including the last."""
-    if count >= len(frames):
-        return list(range(len(frames)))
-    return sorted({round(step * (len(frames) - 1) / (count - 1)) for step in range(count)})
+def full_stream(path):
+    """Return (header, total_output_bytes, whole-run reconstruction grid)."""
+    header, steps, frames = sampled_frames(path, count=1)
+    return header, steps[-1], frames[-1]

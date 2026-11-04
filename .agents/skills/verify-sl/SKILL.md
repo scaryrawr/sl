@@ -58,7 +58,7 @@ python3 .agents/skills/verify-sl/scripts/check-invariants.py "$cast/sl.cast" --s
 python3 .agents/skills/verify-sl/scripts/extract-frames.py "$cast/sl.cast" --golden .agents/skills/verify-sl/goldens/d51.json
 ```
 
-How it works: `run.sl` pipes `fixtures/cars.txt` into the binary with stdin forced off-tty by `script`, so car labels are deterministic regardless of the working directory; asciinema records the PTY; asciinema v3 emits exactly **one output event per animation step**, so `castgrid.py` rebuilds a full screen per step (sl only emits cursor-move + printable text + erase-display, which the mini-grid understands). Goldens are size-bound: always record at the default `--term 80x24`, or pass the same `--term` to both record and golden flows.
+How it works: `run.sl` pipes `fixtures/cars.txt` into the binary with stdin forced off-tty by `script`, so car labels are deterministic regardless of the working directory; asciinema records the PTY. Asciicast events are transport chunks (a draw can span events, and chunking shifts between runs), so `castgrid.py` samples at fixed **cumulative output-byte offsets** - identical grids regardless of chunking - and reconstructs full screens (sl only emits cursor-move, NUL-padded car writes, printable text, and erase-display, which the mini-grid understands). Goldens are size-bound: always record at the default `--term 80x24`, or pass the same `--term` to both record and golden flows.
 
 ### Web (scenarios: `embed`, `embed-logo`, `embed-accident`, `embed-fly`, `reduced-motion`, `home-form`)
 
@@ -66,7 +66,7 @@ How it works: `run.sl` pipes `fixtures/cars.txt` into the binary with stdin forc
 bun .agents/skills/verify-sl/scripts/web-verify.mjs embed
 ```
 
-The embedded page is configured purely by URL query params (`trainType`, `accident`, `fly`, `smoke`, `messages` as an encoded JSON array), so every check drives the real user surface. Determinism: `stepPatch` (installed before the bundle loads) queues every `requestAnimationFrame` and 60 ms `setTimeout` callback, and `__slPump(n)` advances exactly n train columns - no timing races. `reduced-motion` uses the chromium context option `reducedMotion: "reduce"` (launch options do NOT apply it) to verify the static accessibility fallback. `home-form` exercises the interactive form: train-type select, messages textarea, checkboxes.
+The embedded page is configured purely by URL query params (`trainType`, `accident`, `fly`, `smoke`, `messages` as an encoded JSON array), so every check drives the real user surface. Determinism: `stepPatch` (installed before the bundle loads) queues the app's `requestAnimationFrame` callbacks (the 60 ms `setTimeout` that only reschedules is executed synchronously), so `__slPump(n)` advances exactly n train columns - no timing races. `reduced-motion` uses the chromium context option `reducedMotion: "reduce"` (launch options do NOT apply it) to verify the static accessibility fallback. `home-form` exercises the interactive form: train-type select, messages textarea, checkboxes.
 
 ## Evidence
 
@@ -77,7 +77,7 @@ Everything lands in `.agents/skills/verify-sl/evidence/<timestamp>-<scenario>/` 
 
 Proof standards:
 - Exercise the real user path: the CLI binary through a PTY (never libsl unit functions), the built site through a browser (never wasm setters).
-- Capture the motion, not just a screen: CLI goldens diff 12 evenly-spread full-screen frames across a complete run; web asserts >20 distinct frames.
+- Capture the motion, not just a screen: CLI goldens diff ~12 evenly-spread full-screen frames (fixed byte-offset sampling) across a complete run; web asserts >20 distinct frames.
 - Verify the effects, not just the art: car labels must render, scroll right-to-left, and the train must exit and clear the screen; accident mode must show `Help!` and non-accident runs must not (`(O)` alone is not an accident marker - it is part of the logo sprite).
 - No mocks anywhere; wasm and sprites are the shipped ones.
 

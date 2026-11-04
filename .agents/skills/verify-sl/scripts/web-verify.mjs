@@ -87,15 +87,18 @@ if (!(await portOpen())) {
   }
 }
 
-const browser = await chromium.launch({ headless: true });
-const context = await browser.newContext({
-  viewport: { width: 1280, height: 900 },
-  ...(scenario === "reduced-motion" ? { reducedMotion: "reduce" } : {}),
-});
-
+let browser = null;
+let context = null;
 const results = [];
 const check = (name, ok) => results.push([name, ok]);
 try {
+  // Launch inside the cleanup scope: a missing/incomplete browser must still
+  // kill the verification server this run started.
+  browser = await chromium.launch({ headless: true });
+  context = await browser.newContext({
+    viewport: { width: 1280, height: 900 },
+    ...(scenario === "reduced-motion" ? { reducedMotion: "reduce" } : {}),
+  });
   const page = await context.newPage();
   if (!config.home) await page.addInitScript(stepPatch);
 
@@ -205,8 +208,8 @@ try {
     }
   }
 } finally {
-  await context.close();
-  await browser.close();
+  if (context) await context.close();
+  if (browser) await browser.close();
   if (server) server.kill();
 }
 
@@ -233,13 +236,20 @@ async function expectText(page, text, timeoutMs) {
 }
 
 function stepPatch() {
+  // The app drives itself with animate -> setTimeout(60) -> requestAnimationFrame
+  // -> animate. Queue ONLY the rAF callbacks (each one is one animation step);
+  // the 60 ms timeout purely reschedules, so run it synchronously. A pump then
+  // advances exactly one column instead of alternating draw/scheduling pumps.
   window.__slQueue = [];
   window.__slPump = (count) => {
     let pumped = 0;
     for (let n = 0; n < count; n += 1) {
       const pending = window.__slQueue.splice(0, window.__slQueue.length);
       if (pending.length === 0) break;
-      for (const callback of pending) callback(0);
+      // Consume exactly one queued animate(); any others (none expected) run too.
+      const animate = pending.shift();
+      for (const scheduler of pending) scheduler();
+      animate(0);
       pumped += 1;
     }
     return pumped;
@@ -251,7 +261,7 @@ function stepPatch() {
   const realSetTimeout = window.setTimeout.bind(window);
   window.setTimeout = (callback, delay, ...rest) => {
     if (delay === 60) {
-      window.__slQueue.push(callback);
+      callback();
       return 0;
     }
     return realSetTimeout(callback, delay, ...rest);

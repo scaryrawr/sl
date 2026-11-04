@@ -24,10 +24,14 @@ if [ -n "${PLAYWRIGHT_PORT:-4173}" ] && curl -sf -o /dev/null --max-time 2 "http
 else
   report "verification server not answering on ${PLAYWRIGHT_PORT:-4173} (web-verify.mjs starts its own)" ok
 fi
-hs_dir=$(ls -d "$HOME/Library/Caches/ms-playwright"/chromium_headless_shell-* 2>/dev/null | head -1)
-if [ -n "$hs_dir" ] && ls "$hs_dir"/chrome-headless-shell-mac-*/chrome-headless-shell >/dev/null 2>&1; then
+# Resolve the headless shell through Playwright itself (dry-run reports the
+# platform-correct, PLAYWRIGHT_BROWSERS_PATH-aware install location).
+hs_dir=$(cd "$repo_root/apps/page" && bunx playwright install chromium-headless-shell --dry-run 2>/dev/null \
+  | grep -A1 "Headless Shell" | grep "Install location" | sed 's/.*Install location: *//' | head -1)
+hs_bin=$(find "$hs_dir" -name chrome-headless-shell -type f 2>/dev/null | head -1)
+if [ -n "$hs_bin" ] && [ -x "$hs_bin" ]; then
   report "playwright chromium headless shell present" ok
 else
-  report "playwright headless shell missing/incomplete -> bun run --cwd apps/page playwright:install (see SKILL.md Launch if extraction hangs)" fail
+  report "playwright chromium missing/incomplete -> bun run --cwd apps/page playwright:install (see SKILL.md Launch if extraction hangs)" fail
 fi
 exit "$fail"

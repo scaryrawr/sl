@@ -13,7 +13,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from castgrid import grid_from_cast  # noqa: E402
+from castgrid import sampled_frames  # noqa: E402
 
 # Distinctive substrings taken from the sprite constants in libraries/libsl/src/.
 ART = {
@@ -24,9 +24,12 @@ ART = {
 ART["d51-accident"] = ART["d51"]
 ART["fly"] = ART["d51"]
 # Wheel animation needs BOTH alternating engine frames present across the run.
+# Each pair above occurs in exactly ONE engine sprite frame (verified against
+# libraries/libsl/src/{d51,c51,logo}.rs), so seeing BOTH in a recording proves the
+# wheels actually changed pose; a frozen train cannot pass.
 WHEEL_ANIMATION = {
     "d51": ["\\O=====O=====O=====O_/", "O=====O=====O=====O   |"],
-    "c51": ["O=======O=======O", "\\_/  \\____/  \\____/"],
+    "c51": ["/~\\____|___|/~\\_|  O=======O=======O", "/~\\____|___|/~\\_|    O=======O=======O "],
     "logo": ["/O========O", "\\_O========O"],
 }
 WHEEL_ANIMATION["d51-accident"] = WHEEL_ANIMATION["d51"]
@@ -39,7 +42,11 @@ def main():
     parser.add_argument("--scenario", required=True, choices=sorted(ART))
     args = parser.parse_args()
 
-    frames = grid_from_cast(args.cast)
+    # Sample densely (but byte-offset-stably) so short-lived art is not missed.
+    _header, _steps, frames = sampled_frames(args.cast, count=400)
+    if len(frames) < 2:
+        print("FAIL cast produced no frames (empty capture)")
+        sys.exit(1)
     full = "\n".join("\n".join(frame) for frame in frames)
     first, last = frames[0], frames[-1]
     content_rows = [index for index, row in enumerate(first) if row.strip()]

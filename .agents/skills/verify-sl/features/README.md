@@ -14,7 +14,7 @@ This directory is the maintained source for verifying sl's protected user-facing
 - Start every recipe from the baseline state unless its preconditions say otherwise.
 - Prefer stable handles: CLI flags and recorded casts; web query params and ARIA names (`[role="img"][aria-label*="Animated ASCII art"]`, `#train-type-select`, `#messages-textarea`, `#fly-checkbox`).
 - Treat every command as literal. Keep quoted fixture names (`VERIFCAR-A`) unchanged - they are the probe strings.
-- One asciicast event equals one CLI animation step; never sample by wall-clock time.
+- Sample CLI frames at cumulative output-byte offsets; asciicast events are transport chunks, so never count events or sample by wall-clock time.
 - Keep `evidence/` artifacts after cleanup; commit goldens only with the change that intentionally alters art.
 
 ## Proof and skip reporting
