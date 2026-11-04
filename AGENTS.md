@@ -20,7 +20,7 @@ Monorepo for the `sl` terminal train. Rust workspace plus a Bun workspace for th
 
 ## Gotchas
 
-- `apps/sl/build.rs` generates shell completions and `completions/sl.1` only when `COMPLETION_DIR` is set (CI: `COMPLETION_DIR="$(pwd)/completions" cargo build --release`). After CLI flag changes, regenerate that way and commit the diff in `completions/`; otherwise the vendored files go stale.
+- `apps/sl/build.rs` generates shell completions and `completions/sl.1` only when `COMPLETION_DIR` is set. After CLI flag changes, run `cargo clean -p sl`, then `COMPLETION_DIR="$(pwd)/completions" cargo build --release`, and commit the diff in `completions/`. Cleaning forces regeneration if a prior build ran without `COMPLETION_DIR`, since the build script does not track changes to that variable.
 - Single version source: `apps/sl/Cargo.toml` (currently 6.1.5); `sl.spec` derives its version from git.
 - Releases trigger on `sl-*` tags and require all four platform builds (Fedora, Ubuntu/macOS POSIX, Windows) in `.github/workflows/build.yml`.
 - Keep docs in sync: `README.md` and `README.ja.md`, plus Japanese man page `sl.1.ja`.
