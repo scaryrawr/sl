@@ -17,7 +17,7 @@ Start from the diff: list the changed paths, then work through each section that
 
 - Respect the `build.rs` `include!("src/cli.rs")` constraint: no `//!` inner docs or `mod` declarations in `src/cli.rs`.
 - Flagged flag changes: check backward compatibility and whether `--help`/`-V` still work (`cargo run -- -h`).
-- Required companion updates for any clap flag change: regenerated `completions/` (build with `COMPLETION_DIR="$(pwd)/completions"`), `README.md`, `README.ja.md`, and `sl.1.ja` where relevant. Missing regenerated completions is an actionable finding — CI bakes the committed `completions/` into packages.
+- Required companion updates for any clap flag change: regenerated `completions/` (follow the regeneration instructions in `AGENTS.md`), `README.md`, `README.ja.md`, and `sl.1.ja` where relevant. Missing regenerated completions leaves the vendored artifacts stale, even though Ubuntu and Fedora CI regenerate them before packaging.
 
 ## WASM (`libraries/websl/`)
 
