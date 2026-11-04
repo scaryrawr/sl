@@ -28,7 +28,7 @@ const scenario = process.argv[2];
 const SCENARIOS = {
   embed: {
     query: "?trainType=d51&messages=%5B%22VERIFCAR-A%22%2C%22VERIFCAR-B%22%5D&accident=false",
-    cars: ["VERIFCAR-", "VERIFCAR-B"],
+    cars: ["VERIFCAR-A", "VERIFCAR-B"],
     art: "_D _|",
     steps: 320,
   },
@@ -196,12 +196,24 @@ try {
       check("accident: people cry for help", blob.includes("Help!"));
     }
     if (config.fly) {
-      const frameRows = (frame) => frame.split("\n").map((row) => row.trim());
-      const lowEarly = frames.slice(5, 60).some((frame) => {
-        const rows = frameRows(frame);
-        return rows.slice(20).some((row) => row) && !rows.slice(0, 6).some((row) => row);
-      });
-      check("fly: train starts low on screen", lowEarly);
+      // Track the locomotive head row across the run: a flying train RISES,
+      // so the head must climb at least 10 rows. A centered stationary-height
+      // D51 (which also has empty top rows and content near the bottom) cannot
+      // pass this.
+      const headRow = (frame) => {
+        const rows = frame.split("\n");
+        for (let i = 0; i < rows.length; i += 1) if (rows[i].includes("_D _|")) return i;
+        return null;
+      };
+      const seen = frames.map(headRow).filter((row) => row !== null);
+      // The embed loops: one run ends where the head row jumps back down.
+      // Measure the climb of the first unbroken run.
+      const run = [];
+      for (const row of seen) {
+        if (run.length && row > run[run.length - 1]) break;
+        run.push(row);
+      }
+      check("fly: train rises across the run", run.length > 50 && run[0] - run[run.length - 1] >= 10);
     }
     if (!config.accident) {
       check("no accident figures without accident mode", !blob.includes("Help!"));

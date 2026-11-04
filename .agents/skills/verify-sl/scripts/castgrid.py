@@ -132,6 +132,10 @@ def sampled_frames(path, count=12):
     cumulative output-byte offsets, which depend only on the deterministic byte
     stream sl produces - identical grids regardless of how the recorder chunks it.
 
+    Each snapshot is taken at the EXACT threshold byte: events are sliced so the
+    grid has consumed precisely `threshold` bytes, never the whole event that
+    happens to cross it.
+
     Returns (header, steps, frames) where steps are the byte offsets of the
     sampled snapshots (always including the final offset).
     """
@@ -142,17 +146,26 @@ def sampled_frames(path, count=12):
         raise ValueError("cast contains no output; capture is empty or corrupt")
     step_size = max(1, total // count)
     thresholds = list(range(step_size, total, step_size)) + [total]
-    frames = []
-    steps = []
-    consumed = 0
-    next_threshold = 0
+    prefixes = []
+    prefix = 0
     for _delay, data in events:
-        grid.feed(data)
-        consumed += len(data)
-        while next_threshold < len(thresholds) and consumed >= thresholds[next_threshold]:
-            steps.append(thresholds[next_threshold])
-            frames.append(grid.snapshot())
-            next_threshold += 1
+        prefix += len(data)
+        prefixes.append(prefix)
+    frames, steps = [], []
+    cursor = (0, 0)  # (event index, byte offset within that event's text)
+    consumed = 0  # bytes fed before cursor's event started
+    for threshold in thresholds:
+        # Fast-forward whole events that end strictly before the threshold.
+        while prefixes[cursor[0]] < threshold:
+            grid.feed(events[cursor[0]][1][cursor[1]:])
+            consumed = prefixes[cursor[0]]
+            cursor = (cursor[0] + 1, 0)
+        # Feed the event containing the threshold, cut at the exact byte.
+        data = events[cursor[0]][1]
+        grid.feed(data[cursor[1]:threshold - consumed])
+        steps.append(threshold)
+        frames.append(grid.snapshot())
+        cursor = (cursor[0], threshold - consumed)
     return header, steps, frames
 
 

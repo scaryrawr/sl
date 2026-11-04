@@ -47,7 +47,7 @@ def main():
             "frames": frames,
         }
         if not os.path.exists(args.golden):
-            os.makedirs(os.path.dirname(args.golden), exist_ok=True)
+            os.makedirs(os.path.dirname(args.golden) or ".", exist_ok=True)
             with open(args.golden, "w") as handle:
                 json.dump(payload, handle, indent=1)
             print("created golden %s (%d frames)" % (args.golden, len(frames)))

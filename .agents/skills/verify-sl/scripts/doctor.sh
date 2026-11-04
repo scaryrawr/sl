@@ -7,10 +7,12 @@ repo_root="$(cd "$skill_dir/../../.." && pwd)"
 fail=0
 report() { [ "$2" = ok ] && echo "OK   $1" || { echo "FAIL $1"; fail=1; }; }
 
-if [ -x "$repo_root/target/release/sl" ]; then
-  report "sl binary present ($("$repo_root/target/release/sl" -V))" ok
-else
+if [ ! -x "$repo_root/target/release/sl" ]; then
   report "sl binary missing -> cargo build --release --manifest-path apps/sl/Cargo.toml" fail
+elif ! sl_version=$("$repo_root/target/release/sl" -V 2>/dev/null); then
+  report "sl binary present but failing to run (try: cargo build --release --manifest-path apps/sl/Cargo.toml)" fail
+else
+  report "sl binary present ($sl_version)" ok
 fi
 for tool in asciinema script python3 bun; do
   command -v "$tool" >/dev/null && report "$tool installed" ok || report "$tool missing" fail

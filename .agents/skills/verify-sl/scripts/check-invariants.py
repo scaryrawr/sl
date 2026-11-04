@@ -93,13 +93,22 @@ def main():
     # The head edge is the '_' of row art; instead prove leftward travel by the
     # car-label position moving from right to left over the recording.
     label = cars[0][:7]
-    columns = []
-    for frame in frames:
-        blob = "\n".join(frame)
-        pos = blob.find(label)
-        if pos >= 0:
-            columns.append(pos)
-    moved_left = len(columns) > 20 and columns[-1] < columns[0] - 40
+    # Position is (row, column) within the frame; a flattened blob offset would
+    # let per-row rstrip() noise masquerade as horizontal movement.
+    def label_position(frame):
+        for row_index, row in enumerate(frame):
+            column = row.find(label)
+            if column >= 0:
+                return (row_index, column)
+        return None
+
+    positions = [p for p in (label_position(frame) for frame in frames) if p is not None]
+    moved_left = len(positions) > 20 and positions[0][1] - positions[-1][1] >= 40
+    if args.scenario != "fly":
+        # Flat scroll: the label must hold one sprite row, otherwise the column
+        # delta could come from comparing different rows. In fly mode the train
+        # legitimately rises, so only the horizontal delta is meaningful.
+        moved_left = moved_left and positions[0][0] == positions[-1][0]
     results.append(("car label travels right-to-left", moved_left))
 
     width = max((len(name) for name in ["train exits left (final screen empty)"] + [r[0] for r in results]), default=10)
