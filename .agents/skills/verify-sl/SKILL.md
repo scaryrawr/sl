@@ -100,3 +100,5 @@ Regenerating goldens after an intentional art change: rerun `extract-frames.py .
 ## Helpers
 
 All in `scripts/`, invoked as shown above: `doctor.sh`, `record-cast.sh`, `castgrid.py` (library), `extract-frames.py`, `check-invariants.py`, `web-verify.mjs`. Feature-by-feature journeys live in `features/`.
+
+To regenerate the human-review GIFs committed under `recordings/` (CLI casts via `agg`, live web demo via `web-record.mjs`), run `scripts/record-gifs.sh` after verification passes. It needs `agg` and `ffmpeg` on PATH; capture is screenshot-based so Playwright's bundled ffmpeg artifact is not required.
