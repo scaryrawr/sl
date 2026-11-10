@@ -126,7 +126,7 @@ pub fn add_smoke<T: RenderTarget>(
         }
 
         if x >= 0 {
-            let kind = ((x / 4) % 2) as usize;
+            let kind = (((screen.columns - x.min(screen.columns)) / 4) % 2) as usize;
             if survivors.len() == MAX_PARTICLES {
                 survivors.remove(0);
             }
@@ -183,6 +183,33 @@ mod tests {
                 | "@"
                 | "O"
         )
+    }
+
+    #[test]
+    fn puff_style_keeps_its_screen_relative_phase() {
+        for (columns, x, expected) in [
+            (84, 76, "(   )"),
+            (84, 80, "(@@@"),
+            (85, 76, "(   )"),
+            (85, 80, "(@@@)"),
+            (88, 80, "(   )"),
+            (88, 84, "(@@@"),
+        ] {
+            let mut target = RecordingTarget { draws: Vec::new() };
+            add_smoke(
+                10,
+                x,
+                ScreenSize::new(columns, 24),
+                &mut target,
+                &mut Smoke::new(),
+            )
+            .unwrap();
+            assert_eq!(
+                target.draws,
+                [(10, x, String::from(expected))],
+                "smoke style at column {x} on a {columns}-column screen"
+            );
+        }
     }
 
     #[test]

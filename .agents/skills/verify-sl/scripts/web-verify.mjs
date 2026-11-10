@@ -188,18 +188,24 @@ try {
     const jointA = [];
     const jointB = [];
 
+    const pump = async () => {
+      const consumed = await page.evaluate(() => window.__slPump(1));
+
+      if (consumed !== 1) throw new Error("animation step was not consumed");
+    };
+
     // Both components import one websl module in one JavaScript realm.
     await mount(false);
 
     for (let step = 0; step < config.steps; step += 1) {
-      await page.evaluate(() => window.__slPump(1));
+      await pump();
       soloA.push(await readTrain("train-a"));
     }
 
     await mount(true);
 
     for (let step = 0; step < config.steps; step += 1) {
-      await page.evaluate(() => window.__slPump(1));
+      await pump();
       jointA.push(await readTrain("train-a"));
       jointB.push(await readTrain("train-b"));
     }
