@@ -54,11 +54,17 @@ Read-only: binary present and `-V`-able, asciinema/script/python3/bun installed,
 
 ```bash
 cast=$(.agents/skills/verify-sl/scripts/record-cast.sh d51)          # prints the evidence dir
-python3 .agents/skills/verify-sl/scripts/check-invariants.py "$cast/sl.cast" --scenario d51
-python3 .agents/skills/verify-sl/scripts/extract-frames.py "$cast/sl.cast" --golden .agents/skills/verify-sl/goldens/d51.json
+uv run --no-project python .agents/skills/verify-sl/scripts/check-invariants.py "$cast/sl.cast" --scenario d51
+uv run --no-project python .agents/skills/verify-sl/scripts/extract-frames.py "$cast/sl.cast" --golden .agents/skills/verify-sl/goldens/d51.json
 ```
 
-How it works: `run.sl` pipes `fixtures/cars.txt` into the binary with stdin forced off-tty by `script`, so car labels are deterministic regardless of the working directory; asciinema records the PTY. Asciicast events are transport chunks (a draw can span events, and chunking shifts between runs), so `castgrid.py` samples at fixed **cumulative output-byte offsets** - identical grids regardless of chunking - and reconstructs full screens (sl only emits cursor-move, NUL-padded car writes, printable text, and erase-display, which the mini-grid understands). Goldens are size-bound: always record at the default `--term 80x24`, or pass the same `--term` to both record and golden flows.
+How it works: `run.sl` pipes `fixtures/cars.txt` into the binary so labels do not depend on the working directory; asciinema records the PTY. `castgrid.py` reconstructs full screens and snapshots only at the CLI's **synchronized-output end markers**, never halfway through a redraw. Version-2 goldens own the selected zero-based frame indices: frame `i` corresponds to train column `cols - 1 - i` (including the final offscreen render attempt). Comparisons reuse those indices and require the complete animation frame count and final screen to match. Byte totals, redundant writes, recorder chunking, and timestamps are not golden expectations. Missing markers, partial frames, missing terminal cleanup, and resizing fail explicitly. Goldens are size-bound: always record at the default `--term 80x24`, or pass the same `--term` to both record and golden flows.
+
+The input reader remains asynchronous. Repeated captures must agree; if label admission changes, investigate it rather than updating expectations. Check `uv --version` before Python work. Parser/comparison regression tests use the standard library:
+
+```bash
+uv run --no-project python -m unittest discover -s .agents/skills/verify-sl/scripts -p 'test_*.py'
+```
 
 ### Web (scenarios: `embed`, `embed-logo`, `embed-accident`, `embed-fly`, `two-trains`, `reduced-motion`, `home-form`)
 
@@ -77,11 +83,11 @@ Everything lands in `.agents/skills/verify-sl/evidence/<timestamp>-<scenario>/` 
 
 Proof standards:
 - Exercise the real user path: the CLI binary through a PTY (never libsl unit functions), the built site through a browser (never wasm setters).
-- Capture the motion, not just a screen: CLI goldens diff ~12 evenly-spread full-screen frames (fixed byte-offset sampling) across a complete run; web asserts >20 distinct frames.
+- Capture the motion, not just a screen: CLI goldens compare 12 completed frames at baseline-owned indices across a complete run; invariants inspect every completed frame. Web asserts >20 distinct frames.
 - Verify the effects, not just the art: car labels must render, scroll right-to-left, and the train must exit and clear the screen; accident mode must show `Help!` and non-accident runs must not (`(O)` alone is not an accident marker - it is part of the logo sprite).
 - No mocks anywhere; wasm and sprites are the shipped ones.
 
-Regenerating goldens after an intentional art change: rerun `extract-frames.py ... --golden ... --update` for each size used, and commit the `goldens/` diff together with the sprite change.
+Do not regenerate goldens to fix verification failures. After an explicitly intended visual change, review differences at the same frame indices before running `extract-frames.py ... --golden ... --update`; unchanged train/car art must remain identical. When migrating a legacy byte-offset golden, capture the trusted base with the same synchronized-output boundaries, create the new-format golden at a fresh path, and compare the candidate against it. Legacy goldens deliberately cannot be silently overwritten with `--update`.
 
 ## Cleanup
 

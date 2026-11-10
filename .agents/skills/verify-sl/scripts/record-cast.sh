@@ -39,6 +39,6 @@ evidence_dir="$skill_dir/evidence/$(date +%Y%m%d-%H%M%S)-$scenario"
 mkdir -p "$evidence_dir"
 printf '#!/bin/sh\ncat "%s" | "%s" %s\n' "$skill_dir/fixtures/cars.txt" "$binary" "$flags" > "$evidence_dir/run.sl"
 chmod +x "$evidence_dir/run.sl"
-asciinema rec -q --headless --window-size "$term" --idle-time-limit 0.05 --overwrite \
+asciinema rec -q --headless --output-format asciicast-v2 --window-size "$term" --idle-time-limit 0.05 --overwrite \
   -c "$evidence_dir/run.sl" "$evidence_dir/sl.cast"
 echo "$evidence_dir"

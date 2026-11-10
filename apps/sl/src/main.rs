@@ -72,6 +72,7 @@ fn main() -> Result<(), Error> {
             names.push(name);
         }
 
+        stdout.queue(terminal::BeginSynchronizedUpdate)?;
         let mut renderer = TerminalRenderer {
             stdout: &mut stdout,
         };
@@ -82,6 +83,7 @@ fn main() -> Result<(), Error> {
         } else {
             add_d51(x, &names, screen, &mut renderer, &options, &mut smoke)
         };
+        stdout.queue(terminal::EndSynchronizedUpdate)?;
 
         match result {
             Ok(()) => {}

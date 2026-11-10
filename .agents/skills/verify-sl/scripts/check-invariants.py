@@ -13,7 +13,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from castgrid import sampled_frames  # noqa: E402
+from castgrid import completed_frames  # noqa: E402
 
 # Distinctive substrings taken from the sprite constants in libraries/libsl/src/.
 ART = {
@@ -42,14 +42,12 @@ def main():
     parser.add_argument("--scenario", required=True, choices=sorted(ART))
     args = parser.parse_args()
 
-    # Sample densely (but byte-offset-stably) so short-lived art is not missed.
-    _header, _steps, frames = sampled_frames(args.cast, count=400)
+    _header, frames, final_frame = completed_frames(args.cast)
     if len(frames) < 2:
         print("FAIL cast produced no frames (empty capture)")
         sys.exit(1)
     full = "\n".join("\n".join(frame) for frame in frames)
-    first, last = frames[0], frames[-1]
-    content_rows = [index for index, row in enumerate(first) if row.strip()]
+    last = final_frame
     results = []
 
     art = ART[args.scenario]
@@ -85,7 +83,7 @@ def main():
                 return len(stripped) - len(stripped.lstrip())
         return None
 
-    # Event 0 is just the cursor-hide; use the first frame that has content.
+    # Use the first completed frame that has content.
     head_start = next((leftmost(frame) for frame in frames if leftmost(frame) is not None), None)
     results.append(("train enters from the right edge", head_start is not None and head_start >= 60))
     tail_clear = not any(row.strip() for row in last)
@@ -115,21 +113,21 @@ def main():
     # finish aging out instead of freezing mid-puff in the top rows.
     def engine_present(frame):
         blob = "\n".join(frame)
-        return "H\\\\" in blob or "(_)" in blob or "I_I_" in blob
+        return "H\\\\" in blob or "(_)" in blob or "|+-+ |" in blob
 
     engine_seen = [engine_present(frame) for frame in frames]
-    if any(engine_seen):
-        last_engine = max(i for i, seen in enumerate(engine_seen) if seen)
-        # A puff lives 16 emissions (~64 columns), which spans roughly the
-        # first eighth of the post-engine byte range (the withdrawing train's
-        # long labels dominate the rest). Give the trail a quarter of the
-        # post-engine samples to expire, then demand clean top rows.
-        settle = max(1, (len(frames) - last_engine) * 3 // 4)
-        tail_rows_clear = all(
-            not any(ch in "(@)" for row in frame[:8] for ch in row)
-            for frame in frames[last_engine + settle:]
-        )
-        results.append(("smoke trail clears after the engine exits", tail_rows_clear))
+    if not any(engine_seen):
+        raise ValueError("capture has no identifiable engine for smoke lifecycle verification")
+    last_engine = max(i for i, seen in enumerate(engine_seen) if seen)
+    # A puff lives 16 emissions, one every four train columns.
+    settle = 16 * 4
+    if last_engine + settle >= len(frames):
+        raise ValueError("capture has no post-engine frames to verify smoke clearing")
+    tail_rows_clear = all(
+        not any(ch in "(@)" for row in frame[:8] for ch in row)
+        for frame in frames[last_engine + settle:]
+    )
+    results.append(("smoke trail clears after the engine exits", tail_rows_clear))
 
     width = max((len(name) for name in ["train exits left (final screen empty)"] + [r[0] for r in results]), default=10)
     failed = 0
