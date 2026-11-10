@@ -37,6 +37,8 @@
 //! ).unwrap();
 //! ```
 
+extern crate alloc;
+
 #[cfg(test)]
 extern crate std;
 

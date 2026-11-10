@@ -187,6 +187,9 @@ mod tests {
 
     const SCREEN: ScreenSize = ScreenSize::new(200, 24);
 
+    /// D51 funnel offset, from `TrainOffsets::funnel`.
+    const D51_FUNNEL: i32 = 7;
+
     /// Records every draw so tests can compare what a caller actually sees.
     struct RecordingTarget {
         draws: Vec<(i32, i32, String)>,
@@ -212,19 +215,37 @@ mod tests {
         }
     }
 
-    /// True when `value` is one of the smoke puff or eraser strings.
-    ///
-    /// Train sprites never contain spaces, so a drawn string with spaces can
-    /// only come from the smoke renderer.
-    fn is_smoke_draw(value: &str) -> bool {
-        value.contains(' ')
+    /// Puff strings from the module docs, both the `()` and `@` styles.
+    /// Train sprites never contain parentheses or `@` characters.
+    fn is_puff(value: &str) -> bool {
+        matches!(
+            value,
+            "(   )"
+                | "(    )"
+                | "(  )"
+                | "( )"
+                | "()"
+                | "(@@@)"
+                | "(@@@@)"
+                | "(@@)"
+                | "(@)"
+                | "@@"
+                | "@"
+        )
+    }
+
+    /// Puffs plus the space erasers that clear them. Erasers are pure spaces
+    /// of at most 6 columns; clipped train art can only produce a space
+    /// padding run of 6 at the engine's top row (row 6 on this screen).
+    fn is_smoke_draw(row: i32, value: &str) -> bool {
+        is_puff(value) || (row < 6 && value.chars().all(|c| c == ' ') && value.len() <= 6)
     }
 
     fn smoke_draws(target: &RecordingTarget) -> Vec<(i32, i32, String)> {
         target
             .draws
             .iter()
-            .filter(|draw| is_smoke_draw(&draw.2))
+            .filter(|draw| is_smoke_draw(draw.0, &draw.2))
             .cloned()
             .collect()
     }
@@ -247,21 +268,66 @@ mod tests {
     }
 
     #[test]
+    fn smoke_puffs_expire_within_16_emissions_behind_the_engine() {
+        let options = TrainOptions::default();
+
+        let mut target = RecordingTarget { draws: Vec::new() };
+        run_frames([181], &mut target, &options, &mut Smoke::new());
+        let first = smoke_draws(&target);
+        assert!(
+            first.iter().any(|draw| is_puff(&draw.2)),
+            "the first frame should already emit a puff, got {first:?}"
+        );
+
+        // The funnel emits every 4 columns, so a puff lives at most 64
+        // columns. Walk from the right edge to column 117 (17 emissions) and
+        // require the last frame's smoke to hug the funnel.
+        let mut smoke = Smoke::new();
+        let mut target = RecordingTarget { draws: Vec::new() };
+        let frames: Vec<i32> = (0..17).map(|i| 181 - i * 4).collect();
+        for x in &frames {
+            let _ = add_d51(
+                *x,
+                &[] as &[&str],
+                SCREEN,
+                &mut target,
+                &options,
+                &mut smoke,
+            );
+        }
+        let funnel_column = frames[frames.len() - 1] + D51_FUNNEL;
+        let late = smoke_draws(&target);
+        let stale = late
+            .iter()
+            .filter(|draw| draw.1 < funnel_column - 70)
+            .collect::<Vec<_>>();
+        assert!(
+            stale.is_empty(),
+            "no puff should survive 17 emissions behind the engine: {stale:?}"
+        );
+        assert!(
+            late.iter()
+                .any(|draw| is_puff(&draw.2) && draw.1 >= funnel_column - 3),
+            "fresh puffs near the funnel should still be visible: {late:?}"
+        );
+    }
+
+    #[test]
     fn a_train_with_its_own_smoke_is_unaffected_by_another_train() {
         let options = TrainOptions::default();
 
         let mut solo = RecordingTarget { draws: Vec::new() };
-        run_frames([180, 176, 172], &mut solo, &options, &mut Smoke::new());
+        run_frames([181, 177, 173], &mut solo, &options, &mut Smoke::new());
         let expected = smoke_draws(&solo);
         assert!(
-            expected.iter().any(|draw| draw.2.contains('(')),
+            expected.iter().any(|draw| is_puff(&draw.2)),
             "baseline frames should emit a smoke puff, got {expected:?}"
         );
 
         let mut b_smoke = Smoke::new();
         let mut mixed = RecordingTarget { draws: Vec::new() };
-        let xs_a = [180, 176, 172];
-        let xs_b = [168, 164, 160];
+        let xs_a = [181, 177, 173];
+        let xs_b = [169, 165, 161];
         let mut a_smoke = Smoke::new();
         for i in 0..xs_a.len() {
             let _ = add_d51(
@@ -297,14 +363,14 @@ mod tests {
         let options = TrainOptions::default();
 
         let mut solo = RecordingTarget { draws: Vec::new() };
-        run_frames([180, 176, 172], &mut solo, &options, &mut Smoke::new());
+        run_frames([181, 177, 173], &mut solo, &options, &mut Smoke::new());
         let expected = smoke_draws(&solo);
 
         let shared = Smoke::new();
         let mut both = RecordingTarget { draws: Vec::new() };
         let mut a_smoke = shared.clone();
         let mut b_smoke = shared;
-        for (xa, xb) in [(180, 168), (176, 164), (172, 160)] {
+        for (xa, xb) in [(181, 169), (177, 165), (173, 161)] {
             let _ = add_d51(
                 xa,
                 &[] as &[&str],
@@ -332,7 +398,7 @@ mod tests {
 
         let mut first = RecordingTarget { draws: Vec::new() };
         run_frames(
-            [180, 176, 172, 168],
+            [181, 177, 173, 169],
             &mut first,
             &options,
             &mut Smoke::new(),
@@ -340,7 +406,7 @@ mod tests {
 
         let mut second = RecordingTarget { draws: Vec::new() };
         run_frames(
-            [180, 176, 172, 168],
+            [181, 177, 173, 169],
             &mut second,
             &options,
             &mut Smoke::new(),

@@ -7,17 +7,20 @@
 //! All particle state lives in a caller-owned [`Smoke`] instance, so simultaneous
 //! trains (for example, multiple wasm renderings on one page) never share puffs.
 
-use core::cmp::min;
+use alloc::vec::Vec;
 
 use crate::{RenderTarget, ScreenSize};
 
 use super::mvaddstr::mvaddstr;
 
-/// Number of particle slots tracked by one [`Smoke`] instance.
+/// Upper bound on live particles held by one [`Smoke`] instance.
 const MAX_PARTICLES: usize = 1000;
 
+/// Number of animation frames a puff lives before it disappears.
+const PATTERN_LEN: usize = 16;
+
 /// Internal state tracked for each smoke particle.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 struct SmokeParticle {
     /// Current row position.
     y: i32,
@@ -29,35 +32,23 @@ struct SmokeParticle {
     kind: usize,
 }
 
-const IDLE_PARTICLE: SmokeParticle = SmokeParticle {
-    y: 0,
-    x: 0,
-    ptrn: 0,
-    kind: 0,
-};
-
 /// Per-train smoke particle state.
 ///
 /// Create one instance per animated train and pass it to every frame of that
 /// train's render calls. Two trains sharing a `RenderTarget` but keeping their
 /// own `Smoke` never interfere with each other's particles.
-#[derive(Clone)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Smoke {
-    particles: [SmokeParticle; MAX_PARTICLES],
+    /// Live particles, oldest first. Grows on demand and drains as puffs expire.
+    particles: Vec<SmokeParticle>,
 }
 
 impl Smoke {
     /// Creates smoke state with no live particles.
     pub fn new() -> Self {
         Self {
-            particles: [IDLE_PARTICLE; MAX_PARTICLES],
+            particles: Vec::new(),
         }
-    }
-}
-
-impl Default for Smoke {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -103,10 +94,9 @@ pub fn add_smoke<T: RenderTarget>(
     const DY: [i32; 16] = [2, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     const DX: [i32; 16] = [-2, -1, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3];
 
-    if x % 4 == 0 {
-        let particles = &mut smoke.particles;
-        let sum = (((screen.columns - (min(x, screen.columns))) / 4) % screen.columns) as usize;
-        for particle in &mut particles[..sum] {
+    if x >= 0 && x % 4 == 0 {
+        let mut survivors = Vec::with_capacity(smoke.particles.len() + 1);
+        for &particle in &smoke.particles {
             mvaddstr(
                 particle.y,
                 particle.x,
@@ -114,25 +104,36 @@ pub fn add_smoke<T: RenderTarget>(
                 screen,
                 target,
             )?;
-            particle.y -= DY[particle.ptrn];
-            particle.x += DX[particle.ptrn];
-            particle.ptrn += if particle.ptrn < 15 { 1 } else { 0 };
-            mvaddstr(
-                particle.y,
-                particle.x,
-                SMOKE[particle.kind][particle.ptrn],
-                screen,
-                target,
-            )?;
+            let particle = SmokeParticle {
+                y: particle.y - DY[particle.ptrn],
+                x: particle.x + DX[particle.ptrn],
+                ptrn: particle.ptrn + 1,
+                kind: particle.kind,
+            };
+            if particle.ptrn < PATTERN_LEN {
+                mvaddstr(
+                    particle.y,
+                    particle.x,
+                    SMOKE[particle.kind][particle.ptrn],
+                    screen,
+                    target,
+                )?;
+                survivors.push(particle);
+            }
         }
 
-        mvaddstr(y, x, SMOKE[sum % 2][0], screen, target)?;
-        particles[sum] = SmokeParticle {
+        let kind = ((x / 4) % 2) as usize;
+        if survivors.len() == MAX_PARTICLES {
+            survivors.remove(0);
+        }
+        survivors.push(SmokeParticle {
             y,
             x,
             ptrn: 0,
-            kind: sum % 2,
-        };
+            kind,
+        });
+        mvaddstr(y, x, SMOKE[kind][0], screen, target)?;
+        smoke.particles = survivors;
     }
 
     Ok(())
