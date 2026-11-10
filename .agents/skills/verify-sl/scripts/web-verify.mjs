@@ -52,6 +52,7 @@ const SCENARIOS = {
     fly: true,
     steps: 320,
   },
+  "two-trains": { twoTrains: true, steps: 140 },
   "reduced-motion": { query: "?trainType=d51", steps: 0 },
   "home-form": { home: true, steps: 900 },
 };
@@ -139,6 +140,85 @@ try {
     check("home: locomotive art animates", blob.includes("_D _|"));
     check("home: messages typed into form appear on cars", blob.includes("VERIFCAR-"));
     check("home: animation moved (distinct frames)", new Set(frames).size > 10);
+  } else if (config.twoTrains) {
+    const inject = () => {
+      if (document.getElementById('frame-a')) return;
+      const make = (id, query, left) => {
+        const f = document.createElement('iframe');
+        f.id = id;
+        f.src = '/sl/embed.html' + query;
+        f.style.cssText = 'width:630px;height:420px;position:absolute;left:' + left + 'px;border:0';
+        document.body.appendChild(f);
+      };
+      make('frame-a', '?trainType=d51&messages=%5B%22TWIN-A%22%5D', 0);
+      make('frame-b', '?trainType=logo&messages=%5B%22TWIN-B%22%5D', 640);
+    };
+    const embedFrames = async () => {
+      const pick = (tag) =>
+        page.frames().find((f) => f.url().includes(encodeURIComponent(tag)));
+      for (let attempt = 0; attempt < 60; attempt += 1) {
+        const a = pick('TWIN-A');
+        const b = pick('TWIN-B');
+        if (a && b) {
+          await a.waitForFunction('window.__slPump !== undefined', { timeout: 5000 });
+          await b.waitForFunction('window.__slPump !== undefined', { timeout: 5000 });
+          return [a, b];
+        }
+        await page.waitForTimeout(250);
+      }
+      throw new Error('two embed frames never became ready');
+    };
+    const pump = (frame) => frame.evaluate(() => window.__slPump(1));
+    const readFrameGrid = (frame) =>
+      frame.evaluate(() => {
+        const grid = document.querySelector('[role="img"][aria-label*="Animated ASCII art"]');
+        if (!grid) return '';
+        return Array.from(grid.children)
+          .map((row) => row.textContent ?? '')
+          .join('\n')
+          .replace(/\u00a0/g, ' ');
+      });
+
+    const soloA = [];
+    const jointA = [];
+    const jointB = [];
+    // Phase 1: both trains advance in lockstep, but only A's grid is sampled.
+    await page.goto(`${base}/sl/`, { waitUntil: 'networkidle' });
+    await page.evaluate(inject);
+    {
+      const [a, b] = await embedFrames();
+      for (let step = 0; step < config.steps; step += 1) {
+        await pump(a);
+        await pump(b);
+        soloA.push(await readFrameGrid(a));
+      }
+    }
+    // Phase 2: identical interleaving; sample both grids. If A's frames match
+    // phase 1 exactly, B's activity never leaked into A's rendering.
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.evaluate(inject);
+    {
+      const [a, b] = await embedFrames();
+      for (let step = 0; step < config.steps; step += 1) {
+        await pump(a);
+        jointA.push(await readFrameGrid(a));
+        await pump(b);
+        jointB.push(await readFrameGrid(b));
+      }
+    }
+    writeFileSync(
+      join(evidenceDir, 'frames.json'),
+      JSON.stringify({ soloA, jointA, jointB }, null, 1),
+    );
+    const blobA = jointA.join('\n');
+    const blobB = jointB.join('\n');
+    check('two-trains: both locomotives render', blobA.includes('_D _|') && blobB.includes('+------'));
+    check('two-trains: D51 frame shows smoke', blobA.includes('@') || blobA.includes('(  )'));
+    check('two-trains: logo frame shows smoke', blobB.includes('@') || blobB.includes('(  )'));
+    check(
+      'two-trains: running train B never alters train A frames',
+      soloA.length === jointA.length && soloA.every((frame, i) => frame === jointA[i]),
+    );
   } else if (scenario === "reduced-motion") {
     await page.goto(`${base}/sl/embed.html${config.query}`, { waitUntil: "networkidle" });
     const grid = page.locator('[role="img"][aria-label*="Animated ASCII art"]');

@@ -60,13 +60,13 @@ python3 .agents/skills/verify-sl/scripts/extract-frames.py "$cast/sl.cast" --gol
 
 How it works: `run.sl` pipes `fixtures/cars.txt` into the binary with stdin forced off-tty by `script`, so car labels are deterministic regardless of the working directory; asciinema records the PTY. Asciicast events are transport chunks (a draw can span events, and chunking shifts between runs), so `castgrid.py` samples at fixed **cumulative output-byte offsets** - identical grids regardless of chunking - and reconstructs full screens (sl only emits cursor-move, NUL-padded car writes, printable text, and erase-display, which the mini-grid understands). Goldens are size-bound: always record at the default `--term 80x24`, or pass the same `--term` to both record and golden flows.
 
-### Web (scenarios: `embed`, `embed-logo`, `embed-accident`, `embed-fly`, `reduced-motion`, `home-form`)
+### Web (scenarios: `embed`, `embed-logo`, `embed-accident`, `embed-fly`, `two-trains`, `reduced-motion`, `home-form`)
 
 ```bash
 bun .agents/skills/verify-sl/scripts/web-verify.mjs embed
 ```
 
-The embedded page is configured purely by URL query params (`trainType`, `accident`, `fly`, `smoke`, `messages` as an encoded JSON array), so every check drives the real user surface. Determinism: `stepPatch` (installed before the bundle loads) queues the app's `requestAnimationFrame` callbacks (the 60 ms `setTimeout` that only reschedules is executed synchronously), so `__slPump(n)` advances exactly n train columns - no timing races. `reduced-motion` uses the chromium context option `reducedMotion: "reduce"` (launch options do NOT apply it) to verify the static accessibility fallback. `home-form` exercises the interactive form: train-type select, messages textarea, checkboxes.
+The embedded page is configured purely by URL query params (`trainType`, `accident`, `fly`, `smoke`, `messages` as an encoded JSON array), so every check drives the real user surface. Determinism: `stepPatch` (installed before the bundle loads) queues the app's `requestAnimationFrame` callbacks (the 60 ms `setTimeout` that only reschedules is executed synchronously), so `__slPump(n)` advances exactly n train columns - no timing races. `reduced-motion` uses the chromium context option `reducedMotion: "reduce"` (launch options do NOT apply it) to verify the static accessibility fallback. `home-form` exercises the interactive form: train-type select, messages textarea, checkboxes. `two-trains` injects two iframes (D51 + logo) on one page and pumps them interleaved; it reloads and replays the same interleaving to assert train A's frames are byte-identical with and without train B running, which fails if any smoke state is shared across trains. Defect-proven: a shared-Smoke build flips the isolation check to FAIL (140/140 steps differ).
 
 ## Evidence
 
