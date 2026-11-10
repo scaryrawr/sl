@@ -151,8 +151,6 @@ try {
     const build = await Bun.build({
       entrypoints: [join(skillDir, "scripts", "two-trains.tsx")],
       target: "browser",
-      outdir: "verify-sl",
-      write: false,
       publicPath: "/verify-sl/",
       define: { "process.env.NODE_ENV": JSON.stringify("production") },
     });
