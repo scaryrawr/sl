@@ -4,7 +4,7 @@
 //! buffers and layout offsets, then renders the engine, coal car, passenger cars,
 //! optional smoke, and optional accident passengers onto a [`crate::RenderTarget`].
 
-use crate::{RenderError, RenderTarget, ScreenSize, TrainOptions};
+use crate::{RenderError, RenderTarget, ScreenSize, Smoke, TrainOptions};
 
 use super::add_man::add_man;
 use super::add_smoke::add_smoke;
@@ -47,6 +47,21 @@ pub struct TrainFrames<const HEIGHT: usize, const ANIMATIONS: usize> {
     pub car: [&'static str; HEIGHT],
 }
 
+/// Everything the renderer needs about the destination for one frame.
+///
+/// Bundles the draw target, screen geometry, animation flags, and the train's
+/// [`Smoke`] state so [`add_train`] takes them as a single unit.
+pub struct RenderContext<'a, U: RenderTarget> {
+    /// The render destination.
+    pub target: &'a mut U,
+    /// Dimensions of the drawable area.
+    pub screen: ScreenSize,
+    /// Animation flags (accident, fly, smoke).
+    pub options: &'a TrainOptions,
+    /// Particle state owned by this train (one instance per animation).
+    pub smoke: &'a mut Smoke,
+}
+
 /// Render a complete train (engine + coal car + passenger cars) at position `x`.
 ///
 /// The train is drawn using the provided [`TrainFrames`] and [`TrainOffsets`].
@@ -61,7 +76,8 @@ pub struct TrainFrames<const HEIGHT: usize, const ANIMATIONS: usize> {
 /// * `names` – Text labels to render inside each passenger car.
 /// * `screen` – Dimensions of the drawable area.
 /// * `target` – The render destination.
-/// * `options` – Animation flags (accident, fly, smoke).
+/// * `context` – Destination, geometry, animation flags, and smoke state
+///   (see [`RenderContext`]).
 ///
 /// # Returns
 ///
@@ -79,10 +95,15 @@ pub fn add_train<
     frames: &TrainFrames<HEIGHT, ANIMATIONS>,
     offsets: TrainOffsets<ENGINE_WINDOWS, CAR_WINDOWS>,
     names: &[T],
-    screen: ScreenSize,
-    target: &mut U,
-    options: &TrainOptions,
+    context: RenderContext<'_, U>,
 ) -> Result<(), RenderError<U::Error>> {
+    let RenderContext {
+        screen,
+        options,
+        target,
+        smoke,
+    } = context;
+
     if screen.columns <= 0 || screen.lines <= 0 {
         return Err(RenderError::Offscreen);
     }
@@ -199,7 +220,7 @@ pub fn add_train<
     }
 
     if options.smoke {
-        add_smoke(y - 1, x + offsets.funnel, screen, target).map_err(RenderError::Target)?;
+        add_smoke(y - 1, x + offsets.funnel, screen, target, smoke).map_err(RenderError::Target)?;
     }
 
     Ok(())

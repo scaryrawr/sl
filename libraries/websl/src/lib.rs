@@ -81,6 +81,33 @@ impl Options {
 }
 
 #[wasm_bindgen]
+/// Per-train smoke particle state.
+///
+/// Create one `Smoke` per animated train and pass the same instance to every
+/// frame of that train's render calls. Trains on the same page that each keep
+/// their own `Smoke` never share particles.
+pub struct Smoke {
+    inner: libsl::Smoke,
+}
+
+#[wasm_bindgen]
+impl Smoke {
+    #[wasm_bindgen(constructor)]
+    /// Creates smoke state with no live particles.
+    pub fn new() -> Smoke {
+        Smoke {
+            inner: libsl::Smoke::new(),
+        }
+    }
+}
+
+impl Default for Smoke {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[wasm_bindgen]
 /// Sets the panic hook for better error messages in the console.
 pub fn set_panic_hook() {
     utils::set_panic_hook();
@@ -95,17 +122,31 @@ pub fn set_panic_hook() {
 /// * `names` - An array of names to display on the train cars.
 /// * `display` - The display where the train will be rendered.
 /// * `options` - The options for the train animation.
+/// * `smoke` - This train's smoke state, or `undefined` when smoke is disabled.
 ///
 /// # Returns
 ///
 /// `true` if the train was added successfully, `false` if it moved offscreen.
 /// Render-target failures are thrown as JavaScript exceptions.
-pub fn add_d51(x: i32, names: &Array, display: &mut Display, options: &Options) -> bool {
+pub fn add_d51(
+    x: i32,
+    names: &Array,
+    display: &mut Display,
+    options: &Options,
+    smoke: &mut Smoke,
+) -> bool {
     let names = names_from_array(names);
     let screen = display.screen_size();
     let options = options.train_options();
 
-    render_result(libsl::add_d51(x, &names, screen, display, &options))
+    render_result(libsl::add_d51(
+        x,
+        &names,
+        screen,
+        display,
+        &options,
+        &mut smoke.inner,
+    ))
 }
 
 #[wasm_bindgen]
@@ -117,17 +158,31 @@ pub fn add_d51(x: i32, names: &Array, display: &mut Display, options: &Options) 
 /// * `names` - An array of names to display on the train cars.
 /// * `display` - The display where the train will be rendered.
 /// * `options` - The options for the train animation.
+/// * `smoke` - This train's smoke state, or `undefined` when smoke is disabled.
 ///
 /// # Returns
 ///
 /// `true` if the train was added successfully, `false` if it moved offscreen.
 /// Render-target failures are thrown as JavaScript exceptions.
-pub fn add_logo(x: i32, names: &Array, display: &mut Display, options: &Options) -> bool {
+pub fn add_logo(
+    x: i32,
+    names: &Array,
+    display: &mut Display,
+    options: &Options,
+    smoke: &mut Smoke,
+) -> bool {
     let names = names_from_array(names);
     let screen = display.screen_size();
     let options = options.train_options();
 
-    render_result(libsl::add_logo(x, &names, screen, display, &options))
+    render_result(libsl::add_logo(
+        x,
+        &names,
+        screen,
+        display,
+        &options,
+        &mut smoke.inner,
+    ))
 }
 
 #[wasm_bindgen]
@@ -139,17 +194,31 @@ pub fn add_logo(x: i32, names: &Array, display: &mut Display, options: &Options)
 /// * `names` - An array of names to display on the train cars.
 /// * `display` - The display where the train will be rendered.
 /// * `options` - The options for the train animation.
+/// * `smoke` - This train's smoke state, or `undefined` when smoke is disabled.
 ///
 /// # Returns
 ///
 /// `true` if the train was added successfully, `false` if it moved offscreen.
 /// Render-target failures are thrown as JavaScript exceptions.
-pub fn add_c51(x: i32, names: &Array, display: &mut Display, options: &Options) -> bool {
+pub fn add_c51(
+    x: i32,
+    names: &Array,
+    display: &mut Display,
+    options: &Options,
+    smoke: &mut Smoke,
+) -> bool {
     let names = names_from_array(names);
     let screen = display.screen_size();
     let options = options.train_options();
 
-    render_result(libsl::add_c51(x, &names, screen, display, &options))
+    render_result(libsl::add_c51(
+        x,
+        &names,
+        screen,
+        display,
+        &options,
+        &mut smoke.inner,
+    ))
 }
 
 fn names_from_array(names: &Array) -> Vec<String> {

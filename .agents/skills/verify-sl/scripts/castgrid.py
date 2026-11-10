@@ -7,18 +7,22 @@ rebuilt without a complete VT emulator: every printable run is placed at the
 current cursor position and later writes simply overwrite earlier ones.
 
 This module is imported by extract-frames.py and check-invariants.py.
-Sampling is defined on cumulative output bytes, not event counts, so goldens
-survive any change in how the recorder chunks the byte stream.
+Snapshots are taken only at synchronized-output end markers emitted by the CLI.
+Neither recorder chunks nor the number of terminal writes define a frame.
 """
 
 import json
 
 
 def load_cast(path):
-    """Return (header, events) from an asciicast v2 file; events are (delay, text)."""
+    """Return normalized terminal dimensions and output from asciicast v2/v3."""
     events = []
     with open(path, encoding="utf-8") as handle:
         header = json.loads(handle.readline())
+        if header["version"] == 2:
+            header["term"] = {"cols": header["width"], "rows": header["height"]}
+        elif header["version"] != 3:
+            raise ValueError("unsupported asciicast version")
         for line in handle:
             line = line.strip()
             if not line:
@@ -26,6 +30,8 @@ def load_cast(path):
             event = json.loads(line)
             if event[1] == "o":
                 events.append((event[0], event[2]))
+            elif event[1] == "r":
+                raise ValueError("terminal resized during capture")
     return header, events
 
 
@@ -40,6 +46,10 @@ class _Grid:
         self.col = 0
         self._run = ""
         self._esc = ""  # partial escape sequence held across chunk boundaries
+        self.frames = []
+        self.in_frame = False
+        self.cleanup_clear = False
+        self.finished = False
 
     def _flush(self):
         if not self._run:
@@ -51,11 +61,15 @@ class _Grid:
         self._run = ""
 
     def feed(self, text):
+        if self.finished and text:
+            raise ValueError("output after terminal cleanup")
         if self._esc:
             text = self._esc + text
             self._esc = ""
         index = 0
         while index < len(text):
+            if self.finished:
+                raise ValueError("output after terminal cleanup")
             char = text[index]
             if char == "\x1b":
                 self._flush()
@@ -78,6 +92,8 @@ class _Grid:
                 self._flush()
                 index += 1
             else:
+                if not self.in_frame:
+                    raise ValueError("text outside a synchronized frame")
                 self._run += char
                 index += 1
         self._flush()
@@ -110,12 +126,29 @@ class _Grid:
             return len(text)
         final = text[position]
         position += 1
-        if final in "Hf":
+        if params == "?2026" and final == "h":
+            if self.in_frame:
+                raise ValueError("nested synchronized frame")
+            self.in_frame = True
+            self.cleanup_clear = False
+        elif params == "?2026" and final == "l":
+            if not self.in_frame:
+                raise ValueError("synchronized frame ended without a begin marker")
+            self.frames.append(self.snapshot())
+            self.in_frame = False
+        elif params == "?25" and final == "h":
+            if self.in_frame or not self.frames or not self.cleanup_clear:
+                raise ValueError("cursor restored without completed frames and cleanup")
+            self.finished = True
+        elif final in "Hf":
+            if not self.in_frame:
+                raise ValueError("cursor move outside a synchronized frame")
             numbers = [int(part) for part in params.split(";") if part]
             self.row = (numbers[0] - 1) if len(numbers) >= 1 else 0
             self.col = (numbers[1] - 1) if len(numbers) >= 2 else 0
         elif final == "J" and params == "2":
             self.cells = [[" "] * self.cols for _ in range(self.rows)]
+            self.cleanup_clear = not self.in_frame
         # Cursor show/hide, SGR colors, and mode sets do not affect the character grid.
         return position
 
@@ -123,53 +156,12 @@ class _Grid:
         return ["".join(row).rstrip() for row in self.cells]
 
 
-def sampled_frames(path, count=12):
-    """Reconstruct `count` evenly spread grids from the cast's output byte stream.
-
-    Asciicast "o" events are transport chunks: one sl draw can span several events
-    and terminal flush boundaries shift between runs, so event indices are NOT a
-    stable notion of an animation step. Sampling instead triggers at fixed
-    cumulative output-byte offsets, which depend only on the deterministic byte
-    stream sl produces - identical grids regardless of how the recorder chunks it.
-
-    Each snapshot is taken at the EXACT threshold byte: events are sliced so the
-    grid has consumed precisely `threshold` bytes, never the whole event that
-    happens to cross it.
-
-    Returns (header, steps, frames) where steps are the byte offsets of the
-    sampled snapshots (always including the final offset).
-    """
+def completed_frames(path):
+    """Return (header, completed animation grids, final grid) or reject truncation."""
     header, events = load_cast(path)
     grid = _Grid(header["term"]["cols"], header["term"]["rows"])
-    total = sum(len(data) for _delay, data in events)
-    if total == 0:
-        raise ValueError("cast contains no output; capture is empty or corrupt")
-    step_size = max(1, total // count)
-    thresholds = list(range(step_size, total, step_size)) + [total]
-    prefixes = []
-    prefix = 0
     for _delay, data in events:
-        prefix += len(data)
-        prefixes.append(prefix)
-    frames, steps = [], []
-    cursor = (0, 0)  # (event index, byte offset within that event's text)
-    consumed = 0  # bytes fed before cursor's event started
-    for threshold in thresholds:
-        # Fast-forward whole events that end strictly before the threshold.
-        while prefixes[cursor[0]] < threshold:
-            grid.feed(events[cursor[0]][1][cursor[1]:])
-            consumed = prefixes[cursor[0]]
-            cursor = (cursor[0] + 1, 0)
-        # Feed the event containing the threshold, cut at the exact byte.
-        data = events[cursor[0]][1]
-        grid.feed(data[cursor[1]:threshold - consumed])
-        steps.append(threshold)
-        frames.append(grid.snapshot())
-        cursor = (cursor[0], threshold - consumed)
-    return header, steps, frames
-
-
-def full_stream(path):
-    """Return (header, total_output_bytes, whole-run reconstruction grid)."""
-    header, steps, frames = sampled_frames(path, count=1)
-    return header, steps[-1], frames[-1]
+        grid.feed(data)
+    if grid._esc or grid.in_frame or not grid.frames or not grid.finished:
+        raise ValueError("incomplete capture: need completed synchronized frames and terminal cleanup")
+    return header, grid.frames, grid.snapshot()

@@ -33,7 +33,13 @@ import init, {
    */
   Options,
   /** Install a Rust panic hook so panics print readable messages to the console. */
-  set_panic_hook
+  set_panic_hook,
+  /**
+   * Per-train smoke particle state. Create one `Smoke` per animated train and
+   * pass the same instance to every frame of that train's render calls so
+   * simultaneous trains never share smoke particles.
+   */
+  Smoke
 } from '../../../libraries/websl/pkg/websl.js';
 import wasm from '../../../libraries/websl/pkg/websl_bg.wasm' with { type: 'file' };
 
@@ -71,4 +77,4 @@ const resolveWasmImport = (wasmImport: WasmImportDefault): WasmImport =>
 // Initialize the WASM module eagerly when this module is imported
 await init(resolveWasmImport(wasm));
 
-export { add_c51, add_d51, add_logo, Display, Options, set_panic_hook };
+export { add_c51, add_d51, add_logo, Display, Options, set_panic_hook, Smoke };

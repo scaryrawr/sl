@@ -10,12 +10,12 @@
  * grid can be sampled after each step. No timing races.
  *
  * Usage: bun web-verify.mjs embed | embed-logo | embed-accident | embed-fly
- *            | reduced-motion | home-form
+ *            | two-trains | embed-logo-loop | reduced-motion | home-form
  * Exit 0 = all checks pass. Evidence (frames JSON + screenshots) is written
  * under evidence/<timestamp>-web-<label>/.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
@@ -52,6 +52,8 @@ const SCENARIOS = {
     fly: true,
     steps: 320,
   },
+  "two-trains": { twoTrains: true, steps: 140 },
+  "embed-logo-loop": { query: "?trainType=logo&messages=%5B%5D", loop: true, steps: 320 },
   "reduced-motion": { query: "?trainType=d51", steps: 0 },
   "home-form": { home: true, steps: 900 },
 };
@@ -100,6 +102,12 @@ try {
     ...(scenario === "reduced-motion" ? { reducedMotion: "reduce" } : {}),
   });
   const page = await context.newPage();
+
+  page.on("pageerror", (error) => console.error(error));
+  page.on("console", (message) => {
+    if (message.type() === "error") console.error(message.text());
+  });
+
   if (!config.home) await page.addInitScript(stepPatch);
 
   if (config.home) {
@@ -139,6 +147,107 @@ try {
     check("home: locomotive art animates", blob.includes("_D _|"));
     check("home: messages typed into form appear on cars", blob.includes("VERIFCAR-"));
     check("home: animation moved (distinct frames)", new Set(frames).size > 10);
+  } else if (config.twoTrains) {
+    const build = await Bun.build({
+      entrypoints: [join(skillDir, "scripts", "two-trains.tsx")],
+      target: "browser",
+      publicPath: "/verify-sl/",
+      define: { "process.env.NODE_ENV": JSON.stringify("production") },
+    });
+
+    if (!build.success) throw new AggregateError(build.logs, "two-trains harness build failed");
+
+    const assets = new Map(build.outputs.map((output) => [basename(output.path), output]));
+
+    await page.route("**/verify-sl/**", async (route) => {
+      const asset = assets.get(basename(new URL(route.request().url()).pathname));
+
+      if (!asset) throw new Error("missing two-trains harness asset");
+
+      await route.fulfill({ body: Buffer.from(await asset.arrayBuffer()), contentType: asset.type });
+    });
+    await page.route("**/sl/verify-two-trains", (route) =>
+      route.fulfill({ contentType: "text/html", body: "<!doctype html><html><body></body></html>" }));
+
+    const mount = async (withSecondTrain) => {
+      await page.goto(`${base}/sl/verify-two-trains`);
+      await page.evaluate(async (withB) => {
+        const harness = await import("/verify-sl/two-trains.js");
+        harness.mount(withB);
+      }, withSecondTrain);
+      await page.waitForFunction(
+        (count) => window.__slQueue.length === count,
+        withSecondTrain ? 2 : 1,
+        { polling: 10 },
+      );
+    };
+
+    const readTrain = (id) => page.locator(`#${id} [role="img"]`).evaluate((grid) =>
+      Array.from(grid.children).map((row) => row.textContent ?? "").join("\n").replace(/\u00a0/g, " "));
+    const soloA = [];
+    const jointA = [];
+    const jointB = [];
+
+    const pump = async () => {
+      const consumed = await page.evaluate(() => window.__slPump(1));
+
+      if (consumed !== 1) throw new Error("animation step was not consumed");
+    };
+
+    // Both components import one websl module in one JavaScript realm.
+    await mount(false);
+
+    for (let step = 0; step < config.steps; step += 1) {
+      await pump();
+      soloA.push(await readTrain("train-a"));
+    }
+
+    await mount(true);
+
+    for (let step = 0; step < config.steps; step += 1) {
+      await pump();
+      jointA.push(await readTrain("train-a"));
+      jointB.push(await readTrain("train-b"));
+    }
+
+    writeFileSync(
+      join(evidenceDir, 'frames.json'),
+      JSON.stringify({ soloA, jointA, jointB }, null, 1),
+    );
+    const blobA = jointA.join('\n');
+    const blobB = jointB.join('\n');
+    check('two-trains: both locomotives render', blobA.includes('_D _|') && blobB.includes('+------'));
+    check('two-trains: D51 frame shows smoke', blobA.includes('@') || blobA.includes('(  )'));
+    check('two-trains: logo frame shows smoke', blobB.includes('@') || blobB.includes('(  )'));
+    check(
+      'two-trains: running train B never alters train A frames',
+      soloA.length === jointA.length && soloA.every((frame, i) => frame === jointA[i]),
+    );
+  } else if (config.loop) {
+    await page.goto(`${base}/sl/embed.html${config.query}`, { waitUntil: "networkidle" });
+    await page.waitForFunction(() => window.__slQueue.length > 0, null, { polling: 10 });
+
+    const frames = [];
+    let seenTrain = false;
+    let restart = null;
+
+    for (let step = 0; step < config.steps; step += 1) {
+      await page.evaluate(() => window.__slPump(1));
+
+      const text = await readGrid(page);
+
+      frames.push(text);
+
+      if (text.trim()) seenTrain = true;
+      else if (seenTrain && restart === null) restart = step + 1;
+
+      if (restart !== null && frames.length >= restart + 24) break;
+    }
+
+    writeFileSync(join(evidenceDir, "frames.json"), JSON.stringify({ frames, restart }, null, 1));
+    check("logo loop: second cycle reached", restart !== null && frames.length >= restart + 24);
+    check("logo loop: fresh cycle has no previous smoke", restart !== null &&
+      frames.slice(0, 24).every((frame, index) => frame === frames[restart + index]));
   } else if (scenario === "reduced-motion") {
     await page.goto(`${base}/sl/embed.html${config.query}`, { waitUntil: "networkidle" });
     const grid = page.locator('[role="img"][aria-label*="Animated ASCII art"]');
@@ -258,10 +367,7 @@ function stepPatch() {
     for (let n = 0; n < count; n += 1) {
       const pending = window.__slQueue.splice(0, window.__slQueue.length);
       if (pending.length === 0) break;
-      // Consume exactly one queued animate(); any others (none expected) run too.
-      const animate = pending.shift();
-      for (const scheduler of pending) scheduler();
-      animate(0);
+      for (const animate of pending) animate(0);
       pumped += 1;
     }
     return pumped;
