@@ -187,6 +187,7 @@ const useSlAnimation = (props: {
         if (!terminal || terminal.children.length === 0) return;
 
         const options = new sl.Options(accident, fly, smoke);
+        const trainSmoke = new sl.Smoke();
 
         const trains: Record<TrainTypeValue, typeof sl.add_c51> = {
           [TrainType.C51]: sl.add_c51,
@@ -229,7 +230,7 @@ const useSlAnimation = (props: {
 
           xRef.current = nextX;
 
-          if (!trains[trainType](nextX, messages, display, options)) {
+          if (!trains[trainType](nextX, messages, display, options, trainSmoke)) {
             clear();
             xRef.current = cols;
           }

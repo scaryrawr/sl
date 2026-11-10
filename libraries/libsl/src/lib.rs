@@ -15,7 +15,7 @@
 //! # Example
 //!
 //! ```ignore
-//! use libsl::{add_d51, RenderTarget, ScreenSize, TrainOptions};
+//! use libsl::{add_d51, RenderTarget, ScreenSize, Smoke, TrainOptions};
 //!
 //! struct Terminal;
 //! impl RenderTarget for Terminal {
@@ -33,6 +33,7 @@
 //!     ScreenSize::new(80, 24),
 //!     &mut term,
 //!     &TrainOptions::default(),
+//!     &mut Smoke::new(),
 //! ).unwrap();
 //! ```
 
@@ -111,6 +112,7 @@ pub enum RenderError<TargetError> {
     Target(TargetError),
 }
 
+pub use add_smoke::Smoke;
 pub use c51::add_c51;
 pub use d51::add_d51;
 pub use logo::add_logo;

@@ -3,6 +3,9 @@
 //! Smoke particles rise and drift from the funnel position, fading from a large
 //! shape to a single character and then disappearing. Two visual styles alternate
 //! between smoke puffs `()` and `@`-based puffs.
+//!
+//! All particle state lives in a caller-owned [`Smoke`] instance, so simultaneous
+//! trains (for example, multiple wasm renderings on one page) never share puffs.
 
 use core::cmp::min;
 
@@ -10,9 +13,12 @@ use crate::{RenderTarget, ScreenSize};
 
 use super::mvaddstr::mvaddstr;
 
+/// Number of particle slots tracked by one [`Smoke`] instance.
+const MAX_PARTICLES: usize = 1000;
+
 /// Internal state tracked for each smoke particle.
 #[derive(Copy, Clone, Debug)]
-struct Smokes {
+struct SmokeParticle {
     /// Current row position.
     y: i32,
     /// Current column position.
@@ -23,13 +29,37 @@ struct Smokes {
     kind: usize,
 }
 
-/// Persistent storage for up to 1000 smoke particles.
-static mut SMOKES: [Smokes; 1000] = [Smokes {
+const IDLE_PARTICLE: SmokeParticle = SmokeParticle {
     y: 0,
     x: 0,
     ptrn: 0,
     kind: 0,
-}; 1000];
+};
+
+/// Per-train smoke particle state.
+///
+/// Create one instance per animated train and pass it to every frame of that
+/// train's render calls. Two trains sharing a `RenderTarget` but keeping their
+/// own `Smoke` never interfere with each other's particles.
+#[derive(Clone)]
+pub struct Smoke {
+    particles: [SmokeParticle; MAX_PARTICLES],
+}
+
+impl Smoke {
+    /// Creates smoke state with no live particles.
+    pub fn new() -> Self {
+        Self {
+            particles: [IDLE_PARTICLE; MAX_PARTICLES],
+        }
+    }
+}
+
+impl Default for Smoke {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 /// Render smoke particles rising from the train's funnel at position `(y, x)`.
 ///
@@ -43,6 +73,7 @@ static mut SMOKES: [Smokes; 1000] = [Smokes {
 /// * `x` – Column of the smoke funnel.
 /// * `screen` – Dimensions of the drawable area.
 /// * `target` – The render destination.
+/// * `smoke` – Particle state owned by the rendered train.
 ///
 /// # Returns
 ///
@@ -52,6 +83,7 @@ pub fn add_smoke<T: RenderTarget>(
     x: i32,
     screen: ScreenSize,
     target: &mut T,
+    smoke: &mut Smoke,
 ) -> Result<(), T::Error> {
     const SMOKE: [[&str; 16]; 2] = [
         [
@@ -72,34 +104,35 @@ pub fn add_smoke<T: RenderTarget>(
     const DX: [i32; 16] = [-2, -1, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3];
 
     if x % 4 == 0 {
-        unsafe {
-            let sum = (((screen.columns - (min(x, screen.columns))) / 4) % screen.columns) as usize;
-            for i in 0..sum {
-                mvaddstr(
-                    SMOKES[i].y,
-                    SMOKES[i].x,
-                    ERASER[SMOKES[i].ptrn],
-                    screen,
-                    target,
-                )?;
-                SMOKES[i].y -= DY[SMOKES[i].ptrn];
-                SMOKES[i].x += DX[SMOKES[i].ptrn];
-                SMOKES[i].ptrn += if SMOKES[i].ptrn < 15 { 1 } else { 0 };
-                mvaddstr(
-                    SMOKES[i].y,
-                    SMOKES[i].x,
-                    SMOKE[SMOKES[i].kind][SMOKES[i].ptrn],
-                    screen,
-                    target,
-                )?;
-            }
-
-            mvaddstr(y, x, SMOKE[sum % 2][0], screen, target)?;
-            SMOKES[sum].y = y;
-            SMOKES[sum].x = x;
-            SMOKES[sum].ptrn = 0;
-            SMOKES[sum].kind = sum % 2;
+        let particles = &mut smoke.particles;
+        let sum = (((screen.columns - (min(x, screen.columns))) / 4) % screen.columns) as usize;
+        for particle in &mut particles[..sum] {
+            mvaddstr(
+                particle.y,
+                particle.x,
+                ERASER[particle.ptrn],
+                screen,
+                target,
+            )?;
+            particle.y -= DY[particle.ptrn];
+            particle.x += DX[particle.ptrn];
+            particle.ptrn += if particle.ptrn < 15 { 1 } else { 0 };
+            mvaddstr(
+                particle.y,
+                particle.x,
+                SMOKE[particle.kind][particle.ptrn],
+                screen,
+                target,
+            )?;
         }
+
+        mvaddstr(y, x, SMOKE[sum % 2][0], screen, target)?;
+        particles[sum] = SmokeParticle {
+            y,
+            x,
+            ptrn: 0,
+            kind: sum % 2,
+        };
     }
 
     Ok(())
