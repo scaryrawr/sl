@@ -231,6 +231,7 @@ mod tests {
                 | "(@)"
                 | "@@"
                 | "@"
+                | "O"
         )
     }
 
@@ -279,35 +280,40 @@ mod tests {
             "the first frame should already emit a puff, got {first:?}"
         );
 
-        // The funnel emits every 4 columns, so a puff lives at most 64
-        // columns. Walk from the right edge to column 117 (17 emissions) and
-        // require the last frame's smoke to hug the funnel.
+        // Keep the first puff's rightward drift on screen. After its lifetime,
+        // the final frame must match a run that never emitted that first puff.
+        let screen = ScreenSize::new(400, 24);
         let mut smoke = Smoke::new();
         let mut target = RecordingTarget { draws: Vec::new() };
-        let frames: Vec<i32> = (0..17).map(|i| 181 - i * 4).collect();
-        for x in &frames {
-            let _ = add_d51(
-                *x,
-                &[] as &[&str],
-                SCREEN,
-                &mut target,
-                &options,
-                &mut smoke,
-            );
+        let mut control_smoke = Smoke::new();
+        let mut control = RecordingTarget { draws: Vec::new() };
+        for emission in 0..18 {
+            let x = 181 - emission * 4;
+            target.draws.clear();
+            control.draws.clear();
+            add_d51(x, &[] as &[&str], screen, &mut target, &options, &mut smoke).unwrap();
+            if emission > 0 {
+                add_d51(
+                    x,
+                    &[] as &[&str],
+                    screen,
+                    &mut control,
+                    &options,
+                    &mut control_smoke,
+                )
+                .unwrap();
+            }
         }
-        let funnel_column = frames[frames.len() - 1] + D51_FUNNEL;
         let late = smoke_draws(&target);
-        let stale = late
-            .iter()
-            .filter(|draw| draw.1 < funnel_column - 70)
-            .collect::<Vec<_>>();
-        assert!(
-            stale.is_empty(),
-            "no puff should survive 17 emissions behind the engine: {stale:?}"
+        assert_eq!(
+            late,
+            smoke_draws(&control),
+            "expired puff still draws or erases"
         );
+        let funnel_column = 181 - 17 * 4 + D51_FUNNEL;
         assert!(
             late.iter()
-                .any(|draw| is_puff(&draw.2) && draw.1 >= funnel_column - 3),
+                .any(|draw| is_puff(&draw.2) && draw.1 == funnel_column),
             "fresh puffs near the funnel should still be visible: {late:?}"
         );
     }
@@ -326,6 +332,7 @@ mod tests {
 
         let mut b_smoke = Smoke::new();
         let mut mixed = RecordingTarget { draws: Vec::new() };
+        let mut b_target = RecordingTarget { draws: Vec::new() };
         let xs_a = [181, 177, 173];
         let xs_b = [169, 165, 161];
         let mut a_smoke = Smoke::new();
@@ -342,20 +349,13 @@ mod tests {
                 xs_b[i],
                 &[] as &[&str],
                 SCREEN,
-                &mut mixed,
+                &mut b_target,
                 &options,
                 &mut b_smoke,
             );
         }
 
-        // B renders at the same rows and shares the target, so its own smoke
-        // and art draws are present too; A's draws must still match its solo run.
-        let a_draws: Vec<(i32, i32, String)> = mixed
-            .draws
-            .into_iter()
-            .filter(|draw| expected.contains(draw))
-            .collect();
-        assert_eq!(a_draws, expected);
+        assert_eq!(smoke_draws(&mixed), expected);
     }
 
     #[test]
@@ -366,26 +366,18 @@ mod tests {
         run_frames([181, 177, 173], &mut solo, &options, &mut Smoke::new());
         let expected = smoke_draws(&solo);
 
-        let shared = Smoke::new();
+        let mut shared = Smoke::new();
         let mut both = RecordingTarget { draws: Vec::new() };
-        let mut a_smoke = shared.clone();
-        let mut b_smoke = shared;
+        let mut b_target = RecordingTarget { draws: Vec::new() };
         for (xa, xb) in [(181, 169), (177, 165), (173, 161)] {
-            let _ = add_d51(
-                xa,
-                &[] as &[&str],
-                SCREEN,
-                &mut both,
-                &options,
-                &mut a_smoke,
-            );
+            let _ = add_d51(xa, &[] as &[&str], SCREEN, &mut both, &options, &mut shared);
             let _ = add_d51(
                 xb,
                 &[] as &[&str],
                 SCREEN,
-                &mut both,
+                &mut b_target,
                 &options,
-                &mut b_smoke,
+                &mut shared,
             );
         }
 

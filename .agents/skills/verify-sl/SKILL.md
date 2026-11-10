@@ -66,13 +66,15 @@ The input reader remains asynchronous. Repeated captures must agree; if label ad
 uv run --no-project python -m unittest discover -s .agents/skills/verify-sl/scripts -p 'test_*.py'
 ```
 
-### Web (scenarios: `embed`, `embed-logo`, `embed-accident`, `embed-fly`, `two-trains`, `reduced-motion`, `home-form`)
+### Web (scenarios: `embed`, `embed-logo`, `embed-accident`, `embed-fly`, `two-trains`, `embed-logo-loop`, `reduced-motion`, `home-form`)
 
 ```bash
 bun .agents/skills/verify-sl/scripts/web-verify.mjs embed
 ```
 
-The embedded page is configured purely by URL query params (`trainType`, `accident`, `fly`, `smoke`, `messages` as an encoded JSON array), so every check drives the real user surface. Determinism: `stepPatch` (installed before the bundle loads) queues the app's `requestAnimationFrame` callbacks (the 60 ms `setTimeout` that only reschedules is executed synchronously), so `__slPump(n)` advances exactly n train columns - no timing races. `reduced-motion` uses the chromium context option `reducedMotion: "reduce"` (launch options do NOT apply it) to verify the static accessibility fallback. `home-form` exercises the interactive form: train-type select, messages textarea, checkboxes. `two-trains` injects two iframes (D51 + logo) on one page and pumps them interleaved; it reloads and replays the same interleaving to assert train A's frames are byte-identical with and without train B running, which fails if any smoke state is shared across trains. Defect-proven: a shared-Smoke build flips the isolation check to FAIL (140/140 steps differ).
+The embedded page is configured purely by URL query params (`trainType`, `accident`, `fly`, `smoke`, `messages` as an encoded JSON array), so every check drives the real user surface. Determinism: `stepPatch` (installed before the bundle loads) queues the app's `requestAnimationFrame` callbacks (the 60 ms `setTimeout` that only reschedules is executed synchronously), so `__slPump(n)` advances exactly n train columns. `reduced-motion` uses the chromium context option `reducedMotion: "reduce"` to verify the static accessibility fallback. `home-form` exercises the interactive form: train-type select, messages textarea, checkboxes.
+
+`two-trains` bundles the real `SlTerminal` component twice in one document, sharing one initialized websl module. It records A alone, then reloads and records A and B advancing together; A's complete frame sequence must match exactly. Separate iframes cannot prove this because they have separate WASM instances. `two-trains.tsx` changes only Preact's effect scheduling so setup does not enter the controlled animation queue. `embed-logo-loop` drives the real no-passenger logo embed through a restart and compares the first 24 frames of both cycles. Defect-proven: sharing one Smoke makes the isolation comparison fail; omitting the restart reset makes the logo-cycle comparison fail.
 
 ## Evidence
 
