@@ -21,6 +21,7 @@ The locomotive scrolls right-to-left across the terminal with its wheels turning
 Preconditions: doctor passes; binary and page built.
 
 - **D51 CLI.** Run `.agents/skills/verify-sl/scripts/record-cast.sh d51`, then `check-invariants.py <dir>/sl.cast --scenario d51` and `extract-frames.py <dir>/sl.cast --golden .agents/skills/verify-sl/goldens/d51.json`. All invariants pass and 12 golden frames match byte-for-byte.
+- **Smoke trail ages out.** `check-invariants.py` also proves `smoke settles after the engine exits`: once the engine has left the screen, no `(@)` puff remains in the top rows for the rest of the cast (a frozen trail stuck at the right edge fails this).
 - **C51 / logo / fly CLI.** Same pair of commands with scenario `c51`, `logo`, `fly`; the invariant names differ (wheel patterns, fly starts low).
 - **Web variants.** Run `bun .agents/skills/verify-sl/scripts/web-verify.mjs embed|embed-logo|embed-fly`; `frames.json` shows the variant's art (`_D _|`, `+------`) and >20 distinct frames.
 - **Home select switch.** Covered in `web-demo.md`.

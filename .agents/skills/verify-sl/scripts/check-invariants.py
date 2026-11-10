@@ -111,6 +111,26 @@ def main():
         moved_left = moved_left and positions[0][0] == positions[-1][0]
     results.append(("car label travels right-to-left", moved_left))
 
+    # Smoke lifecycle: once the engine has left the screen, its trail must
+    # finish aging out instead of freezing mid-puff in the top rows.
+    def engine_present(frame):
+        blob = "\n".join(frame)
+        return "H\\\\" in blob or "(_)" in blob or "I_I_" in blob
+
+    engine_seen = [engine_present(frame) for frame in frames]
+    if any(engine_seen):
+        last_engine = max(i for i, seen in enumerate(engine_seen) if seen)
+        # A puff lives 16 emissions (~64 columns), which spans roughly the
+        # first eighth of the post-engine byte range (the withdrawing train's
+        # long labels dominate the rest). Give the trail a quarter of the
+        # post-engine samples to expire, then demand clean top rows.
+        settle = max(1, (len(frames) - last_engine) * 3 // 4)
+        tail_rows_clear = all(
+            not any(ch in "(@)" for row in frame[:8] for ch in row)
+            for frame in frames[last_engine + settle:]
+        )
+        results.append(("smoke trail clears after the engine exits", tail_rows_clear))
+
     width = max((len(name) for name in ["train exits left (final screen empty)"] + [r[0] for r in results]), default=10)
     failed = 0
     for name, ok in results:
