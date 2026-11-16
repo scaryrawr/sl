@@ -13,9 +13,6 @@ use crate::{RenderTarget, ScreenSize};
 
 use super::mvaddstr::mvaddstr;
 
-/// Upper bound on live particles held by one [`Smoke`] instance.
-const MAX_PARTICLES: usize = 1000;
-
 /// Number of animation frames a puff lives before it disappears.
 const PATTERN_LEN: usize = 16;
 
@@ -34,9 +31,7 @@ struct SmokeParticle {
 
 /// Per-train smoke particle state.
 ///
-/// Create one instance per animated train and pass it to every frame of that
-/// train's render calls. Two trains sharing a `RenderTarget` but keeping their
-/// own `Smoke` never interfere with each other's particles.
+/// Keep one instance per animated train and reuse it across frames.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Smoke {
     /// Live particles, oldest first. Grows on demand and drains as puffs expire.
@@ -57,9 +52,9 @@ impl Smoke {
 /// Every 4 frames (`x % 4 == 0`) each live particle advances one step upward
 /// and to the side, cycling through 16 frames from a large puff down to a
 /// single character before disappearing. New puffs spawn only while the funnel
-/// column `x` is on screen; once it passes the left edge, existing particles
-/// keep aging so the trail finishes its lifecycle instead of freezing
-/// mid-puff.
+/// column `x` is between zero and the screen width (inclusive). Once it passes
+/// the left edge, existing particles keep aging so the trail finishes its
+/// lifecycle instead of freezing mid-puff.
 ///
 /// # Arguments
 ///
@@ -125,11 +120,8 @@ pub fn add_smoke<T: RenderTarget>(
             }
         }
 
-        if x >= 0 {
+        if x >= 0 && x <= screen.columns {
             let kind = (((screen.columns - x.min(screen.columns)) / 4) % 2) as usize;
-            if survivors.len() == MAX_PARTICLES {
-                survivors.remove(0);
-            }
             survivors.push(SmokeParticle {
                 y,
                 x,
@@ -165,8 +157,6 @@ mod tests {
         }
     }
 
-    /// Visible puff shapes from the SMOKE table. Erasers and the trailing
-    /// blank frame draw spaces or nothing, so they are excluded here.
     fn is_puff(value: &str) -> bool {
         matches!(
             value,
@@ -213,14 +203,41 @@ mod tests {
     }
 
     #[test]
+    fn pre_entry_emissions_do_not_add_visible_puffs() {
+        for columns in [86, 88] {
+            let screen = ScreenSize::new(columns, 24);
+            let mut smoke = Smoke::new();
+            let mut control_smoke = Smoke::new();
+            let mut target = RecordingTarget { draws: Vec::new() };
+            let mut control = RecordingTarget { draws: Vec::new() };
+
+            for x in [96, 92, 88, 84, 80, 76] {
+                target.draws.clear();
+                control.draws.clear();
+                add_smoke(10, x, screen, &mut target, &mut smoke).unwrap();
+                if x <= columns {
+                    add_smoke(10, x, screen, &mut control, &mut control_smoke).unwrap();
+                    assert_eq!(
+                        target.draws, control.draws,
+                        "pre-entry smoke changed the frame at column {x} on a {columns}-column screen"
+                    );
+                    if columns == 88 && x == 84 {
+                        assert!(
+                            target.draws.iter().any(|draw| draw.0 == 8 && draw.1 == 86),
+                            "the puff emitted at the screen boundary must drift into view"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
     fn puffs_finish_their_lifecycle_after_the_funnel_exits_left() {
         let screen = ScreenSize::new(80, 24);
         let mut smoke = Smoke::new();
         let mut target = RecordingTarget { draws: Vec::new() };
 
-        // Walk the funnel from column 16 down past the left edge. Puffs may
-        // spawn only at x >= 0, but every live puff must keep aging at each
-        // negative emission instead of freezing mid-pattern on screen.
         let mut puffs_per_emission = Vec::new();
         let mut offscreen_draws: Vec<(i32, i32, String)> = Vec::new();
         let mut x = 16;
@@ -234,16 +251,12 @@ mod tests {
             x -= 4;
         }
 
-        // Spawn phase (x = 16, 12, 8, 4, 0): visible puffs exist.
         assert!(
             puffs_per_emission[..5].iter().all(|&n| n > 0),
             "on-screen emissions should draw puffs, got {puffs_per_emission:?}"
         );
 
-        // Off-screen phase (x < 0): the trail must keep aging. A frozen
-        // trail (an `x >= 0` gate on the whole emission) would draw nothing
-        // at all here, so the first emissions after the funnel exits still
-        // draw puffs, while the pattern's 16-step lifetime then empties it.
+        // An offscreen funnel must stop spawning without freezing existing puffs.
         let after_exit = &puffs_per_emission[5..];
         assert!(
             after_exit[..4].iter().all(|&n| n > 0),
@@ -254,9 +267,7 @@ mod tests {
             "every puff should expire after the funnel exits: {puffs_per_emission:?}"
         );
 
-        // No new spawns off screen. A spawn is the only puff-shaped draw on
-        // the funnel row; aged puffs rise, and space runs on that row are
-        // just the final eraser clearing the last on-screen spawn.
+        // Only new puffs appear on the funnel row; older puffs have risen.
         assert!(
             !offscreen_draws.iter().any(|d| d.0 == 10 && is_puff(&d.2)),
             "no puff should spawn once the funnel is off screen: {offscreen_draws:?}"
@@ -265,8 +276,6 @@ mod tests {
 
     #[test]
     fn no_panic_when_funnel_column_goes_negative() {
-        // Regression: the slot scheme indexed a static array with a negative
-        // funnel column (usize::MAX). The particle list must accept any x.
         let screen = ScreenSize::new(80, 24);
         let mut smoke = Smoke::new();
         let mut target = RecordingTarget { draws: Vec::new() };

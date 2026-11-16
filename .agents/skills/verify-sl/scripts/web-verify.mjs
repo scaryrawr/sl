@@ -103,6 +103,12 @@ try {
   });
   const page = await context.newPage();
 
+  const pump = async () => {
+    const consumed = await page.evaluate(() => window.__slPump(1));
+
+    if (consumed !== 1) throw new Error("animation step was not consumed");
+  };
+
   page.on("pageerror", (error) => console.error(error));
   page.on("console", (message) => {
     if (message.type() === "error") console.error(message.text());
@@ -188,12 +194,6 @@ try {
     const jointA = [];
     const jointB = [];
 
-    const pump = async () => {
-      const consumed = await page.evaluate(() => window.__slPump(1));
-
-      if (consumed !== 1) throw new Error("animation step was not consumed");
-    };
-
     // Both components import one websl module in one JavaScript realm.
     await mount(false);
 
@@ -232,7 +232,7 @@ try {
     let restart = null;
 
     for (let step = 0; step < config.steps; step += 1) {
-      await page.evaluate(() => window.__slPump(1));
+      await pump();
 
       const text = await readGrid(page);
 
@@ -274,7 +274,8 @@ try {
   } else {
     await page.goto(`${base}/sl/embed.html${config.query}`, { waitUntil: "networkidle" });
     const grid = page.locator('[role="img"][aria-label*="Animated ASCII art"]');
-    await page.waitForFunction("window.__slPump !== undefined");
+    await page.waitForFunction(() => window.__slQueue.length > 0, null, { polling: 10 });
+
     if (process.env.WEB_VERIFY_DEBUG) {
       console.log("DEBUG", JSON.stringify(await page.evaluate(() => ({
         url: location.href,
@@ -285,7 +286,7 @@ try {
     const frames = [];
     let shot = false;
     for (let step = 0; step < config.steps; step += 1) {
-      await page.evaluate("window.__slPump(1)");
+      await pump();
       const text = await readGrid(page);
       frames.push(text);
       if (step === 100 && !shot) {

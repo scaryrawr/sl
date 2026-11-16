@@ -47,10 +47,7 @@ pub struct TrainFrames<const HEIGHT: usize, const ANIMATIONS: usize> {
     pub car: [&'static str; HEIGHT],
 }
 
-/// Everything the renderer needs about the destination for one frame.
-///
-/// Bundles the draw target, screen geometry, animation flags, and the train's
-/// [`Smoke`] state so [`add_train`] takes them as a single unit.
+/// Render destination and per-train state for one frame.
 pub struct RenderContext<'a, U: RenderTarget> {
     /// The render destination.
     pub target: &'a mut U,
@@ -74,8 +71,6 @@ pub struct RenderContext<'a, U: RenderTarget> {
 /// * `frames` – Sprite data for the engine, coal car, and passenger car.
 /// * `offsets` – Layout constants (window positions, funnel position, text width).
 /// * `names` – Text labels to render inside each passenger car.
-/// * `screen` – Dimensions of the drawable area.
-/// * `target` – The render destination.
 /// * `context` – Destination, geometry, animation flags, and smoke state
 ///   (see [`RenderContext`]).
 ///

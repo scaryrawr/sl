@@ -190,7 +190,6 @@ mod tests {
     /// D51 funnel offset, from `TrainOffsets::funnel`.
     const D51_FUNNEL: i32 = 7;
 
-    /// Records every draw so tests can compare what a caller actually sees.
     struct RecordingTarget {
         draws: Vec<(i32, i32, String)>,
     }
@@ -215,8 +214,6 @@ mod tests {
         }
     }
 
-    /// Puff strings from the module docs, both the `()` and `@` styles.
-    /// Train sprites never contain parentheses or `@` characters.
     fn is_puff(value: &str) -> bool {
         matches!(
             value,

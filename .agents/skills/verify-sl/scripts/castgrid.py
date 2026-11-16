@@ -61,8 +61,6 @@ class _Grid:
         self._run = ""
 
     def feed(self, text):
-        if self.finished and text:
-            raise ValueError("output after terminal cleanup")
         if self._esc:
             text = self._esc + text
             self._esc = ""

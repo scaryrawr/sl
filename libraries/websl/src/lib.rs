@@ -122,7 +122,7 @@ pub fn set_panic_hook() {
 /// * `names` - An array of names to display on the train cars.
 /// * `display` - The display where the train will be rendered.
 /// * `options` - The options for the train animation.
-/// * `smoke` - This train's smoke state, or `undefined` when smoke is disabled.
+/// * `smoke` - This train's smoke state, required even when smoke is disabled.
 ///
 /// # Returns
 ///
@@ -158,7 +158,7 @@ pub fn add_d51(
 /// * `names` - An array of names to display on the train cars.
 /// * `display` - The display where the train will be rendered.
 /// * `options` - The options for the train animation.
-/// * `smoke` - This train's smoke state, or `undefined` when smoke is disabled.
+/// * `smoke` - This train's smoke state, required even when smoke is disabled.
 ///
 /// # Returns
 ///
@@ -194,7 +194,7 @@ pub fn add_logo(
 /// * `names` - An array of names to display on the train cars.
 /// * `display` - The display where the train will be rendered.
 /// * `options` - The options for the train animation.
-/// * `smoke` - This train's smoke state, or `undefined` when smoke is disabled.
+/// * `smoke` - This train's smoke state, required even when smoke is disabled.
 ///
 /// # Returns
 ///
