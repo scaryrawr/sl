@@ -30,7 +30,7 @@ fi
 # platform-correct, PLAYWRIGHT_BROWSERS_PATH-aware install location).
 hs_dir=$(cd "$repo_root/apps/page" && bunx playwright install chromium-headless-shell --dry-run 2>/dev/null \
   | grep -A1 "Headless Shell" | grep "Install location" | sed 's/.*Install location: *//' | head -1)
-hs_bin=$(find "$hs_dir" -name chrome-headless-shell -type f 2>/dev/null | head -1)
+hs_bin=$(find -L "$hs_dir" -name chrome-headless-shell -type f 2>/dev/null | head -1)
 if [ -n "$hs_bin" ] && [ -x "$hs_bin" ]; then
   report "playwright chromium headless shell present" ok
 else

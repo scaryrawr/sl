@@ -2,6 +2,8 @@
 
 SL (Steam Locomotive) runs across your terminal when you type "sl" as you meant to type "ls". It's just a joke command.
 
+On terminals that support synchronized output, each animation redraw is presented as a complete frame.
+
 Copyright 1993,1998,2014 Toyoda Masashi (<mtoyoda@acm.org>)
 
 ![Terminal Demo](cars.gif)

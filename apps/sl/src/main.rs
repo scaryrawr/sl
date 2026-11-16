@@ -13,7 +13,9 @@ use crossterm::event::{read, Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::terminal::{Clear, ClearType};
 use crossterm::{cursor, terminal, ExecutableCommand, QueueableCommand};
 use filedescriptor::{Error, FileDescriptor};
-use libsl::{add_c51, add_d51, add_logo, RenderError, RenderTarget, ScreenSize, TrainOptions};
+use libsl::{
+    add_c51, add_d51, add_logo, RenderError, RenderTarget, ScreenSize, Smoke, TrainOptions,
+};
 use std::fs;
 use std::io::{stdin, stdout, BufRead, BufReader, IsTerminal, Stdin, Stdout, Write};
 use std::sync::mpsc::Receiver;
@@ -62,6 +64,7 @@ fn main() -> Result<(), Error> {
     let options = TrainOptions::new(args.accident, args.fly, true);
     let mut render_error = None;
 
+    let mut smoke = Smoke::new();
     let mut x = screen.columns - 1;
 
     loop {
@@ -69,16 +72,18 @@ fn main() -> Result<(), Error> {
             names.push(name);
         }
 
+        stdout.queue(terminal::BeginSynchronizedUpdate)?;
         let mut renderer = TerminalRenderer {
             stdout: &mut stdout,
         };
         let result = if args.logo {
-            add_logo(x, &names, screen, &mut renderer, &options)
+            add_logo(x, &names, screen, &mut renderer, &options, &mut smoke)
         } else if args.c51 {
-            add_c51(x, &names, screen, &mut renderer, &options)
+            add_c51(x, &names, screen, &mut renderer, &options, &mut smoke)
         } else {
-            add_d51(x, &names, screen, &mut renderer, &options)
+            add_d51(x, &names, screen, &mut renderer, &options, &mut smoke)
         };
+        stdout.queue(terminal::EndSynchronizedUpdate)?;
 
         match result {
             Ok(()) => {}

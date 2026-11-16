@@ -1,5 +1,5 @@
-use super::add_train::{add_train, TrainFrames, TrainOffsets, WindowOffsets};
-use crate::{RenderError, RenderTarget, ScreenSize, TrainOptions};
+use super::add_train::{add_train, RenderContext, TrainFrames, TrainOffsets, WindowOffsets};
+use crate::{RenderError, RenderTarget, ScreenSize, Smoke, TrainOptions};
 
 /// Adds a logo to the display.
 ///
@@ -10,6 +10,7 @@ use crate::{RenderError, RenderTarget, ScreenSize, TrainOptions};
 /// * `screen` - The drawable area available to the train.
 /// * `target` - The destination where train text will be drawn.
 /// * `options` - Options for customizing the train.
+/// * `smoke` - Particle state for this train's smoke animation.
 ///
 /// # Returns
 ///
@@ -20,6 +21,7 @@ pub fn add_logo<T: AsRef<str>, U: RenderTarget>(
     screen: ScreenSize,
     target: &mut U,
     options: &TrainOptions,
+    smoke: &mut Smoke,
 ) -> Result<(), RenderError<U::Error>> {
     const ENGINE: [[&str; 7]; 6] = [
         [
@@ -117,6 +119,15 @@ pub fn add_logo<T: AsRef<str>, U: RenderTarget>(
     };
 
     add_train(
-        x, &FRAMES, OFFSETS, names, screen, target, options,
+        x,
+        &FRAMES,
+        OFFSETS,
+        names,
+        RenderContext {
+            target,
+            screen,
+            options,
+            smoke,
+        },
     )
 }
