@@ -1,6 +1,6 @@
 ---
 name: verify-sl
-description: Drive the real sl app and prove its protected behavior - train animations (D51/C51/logo/fly), accident mode (people crying for help), and passenger-car labels - on both surfaces: the CLI/TUI binary (asciinema PTY captures with golden frames + invariants) and the web demo (Playwright chromium with per-step frame sampling). Use when changing libsl sprites/rendering, the websl wasm bridge, the CLI flags, or the demo site, or when asked to verify or regression-test that the trains still work.
+description: "Drive the real sl app and prove its protected behavior - train animations (D51/C51/logo/fly), accident mode (people crying for help), and passenger-car labels - on both surfaces: the CLI/TUI binary (asciinema PTY captures with golden frames + invariants) and the web demo (Playwright chromium with per-step frame sampling). Use when changing libsl sprites/rendering, the websl wasm bridge, the CLI flags, or the demo site, or when asked to verify or regression-test that the trains still work."
 ---
 
 # Verify sl
@@ -76,6 +76,7 @@ Everything lands in `.agents/skills/verify-sl/evidence/<timestamp>-<scenario>/` 
 - Web: `frames.json` (sampled grids, nbsp normalized to spaces), `terminal-step*.png` screenshots
 
 Proof standards:
+
 - Exercise the real user path: the CLI binary through a PTY (never libsl unit functions), the built site through a browser (never wasm setters).
 - Capture the motion, not just a screen: CLI goldens diff ~12 evenly-spread full-screen frames (fixed byte-offset sampling) across a complete run; web asserts >20 distinct frames.
 - Verify the effects, not just the art: car labels must render, scroll right-to-left, and the train must exit and clear the screen; accident mode must show `Help!` and non-accident runs must not (`(O)` alone is not an accident marker - it is part of the logo sprite).
