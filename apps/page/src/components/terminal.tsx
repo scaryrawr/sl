@@ -146,14 +146,7 @@ const Terminal = ({
 
             // Validate structure
             if (isFontMetrics(parsed) && parsed.width > 0 && parsed.height > 0) {
-              // Check if Fira Mono is required and loaded
-              if (fontFamily.startsWith('Fira Mono')) {
-                if (document.fonts.check(`${fontSize} "Fira Mono"`)) {
-                  charSizeRef.current = parsed;
-                }
-              } else {
-                charSizeRef.current = parsed;
-              }
+              charSizeRef.current = parsed;
             }
           }
         } catch {
@@ -166,31 +159,7 @@ const Terminal = ({
         }
 
         if (!charSizeRef.current) {
-          // Check if Fira Mono is specified and wait for it to load
-          if (fontFamily.startsWith('Fira Mono')) {
-            const fontLoaded = document.fonts.check(`${fontSize} "Fira Mono"`);
-
-            if (!fontLoaded) {
-              // Font not ready, use estimates and wait for font to load
-              charSizeRef.current = { width: CHAR_WIDTH_ESTIMATE, height: CHAR_HEIGHT_ESTIMATE };
-              // Remeasure once font is loaded
-              document.fonts
-                .load(`${fontSize} "Fira Mono"`)
-                .then(() => {
-                  if (!disposed) {
-                    charSizeRef.current = null;
-                    measureAndUpdate();
-                  }
-                })
-                .catch(() => {
-                  // Font failed to load, keep using estimates
-                });
-
-              return;
-            }
-          }
-
-          // Font is ready or not needed, measure accurately
+          // Measure the resolved font
           try {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
