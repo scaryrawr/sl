@@ -40,5 +40,6 @@ mod tests {
     #[test]
     fn non_ascii_keeps_unicode_display_width() {
         assert_eq!("SL \u{56f8}".width(), 5);
+        assert_eq!("SL \u{1f682} caf\u{e9}".width(), 10);
     }
 }
