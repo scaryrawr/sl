@@ -16,6 +16,29 @@ pub trait UnicodeWidthStr {
 
 impl UnicodeWidthStr for str {
     fn width(&self) -> usize {
+        if self
+            .as_bytes()
+            .iter()
+            .all(|byte| byte.is_ascii_graphic() || *byte == b' ')
+        {
+            return self.len();
+        }
+
         unicode_display_width::width(self) as usize
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::UnicodeWidthStr;
+
+    #[test]
+    fn printable_ascii_uses_one_cell_per_byte() {
+        assert_eq!("SL train |/\\ 123".width(), 16);
+    }
+
+    #[test]
+    fn non_ascii_keeps_unicode_display_width() {
+        assert_eq!("SL \u{56f8}".width(), 5);
     }
 }
