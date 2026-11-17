@@ -22,8 +22,9 @@ for (let index = 3; index < process.argv.length; index += 1) {
 }
 
 if (!Number.isInteger(runs) || runs < 5) throw new Error("--runs must be an integer >= 5");
-if (!Number.isInteger(sampleMs) || sampleMs < 1000) {
-  throw new Error("--sample-ms must be an integer >= 1000");
+if (!Number.isInteger(sampleMs) || sampleMs < 2000) {
+
+  throw new Error("--sample-ms must be an integer >= 2000");
 }
 
 const scenarios = {
@@ -63,11 +64,13 @@ const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
 const evidenceDir = join(skillDir, "evidence", `${stamp}-web-${scenario}`);
 mkdirSync(evidenceDir, { recursive: true });
 
-const browser = await chromium.launch({ headless: true });
 const samples = [];
 const pageErrors = [];
 
+let browser = null;
+
 try {
+  browser = await chromium.launch({ headless: true });
   for (let run = 0; run < runs; run += 1) {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
@@ -95,8 +98,11 @@ try {
     await context.close();
   }
 } finally {
-  await browser.close();
-  if (server) server.kill();
+  try {
+    if (browser) await browser.close();
+  } finally {
+    if (server) server.kill();
+  }
 }
 
 if (pageErrors.length > 0) throw new Error(`page errors: ${JSON.stringify(pageErrors)}`);
@@ -118,6 +124,7 @@ function measureAnimationCallbacks() {
     frameIntervalsMs: [],
     longTasksMs: [],
     lastTimestamp: null,
+    locomotiveArtSeen: false,
   };
   const nativeRequestAnimationFrame = window.requestAnimationFrame.bind(window);
   window.requestAnimationFrame = (callback) =>
@@ -131,6 +138,9 @@ function measureAnimationCallbacks() {
         return callback(timestamp);
       } finally {
         state.callbackDurationsMs.push(performance.now() - started);
+        const grid = document.querySelector('[role="img"][aria-label*="Animated ASCII art"]');
+        const gridText = grid?.textContent ?? "";
+        state.locomotiveArtSeen ||= /_D _\||\+------/.test(gridText);
       }
     });
   const observer = new PerformanceObserver((list) => {
@@ -143,12 +153,14 @@ function measureAnimationCallbacks() {
       state.frameIntervalsMs.length = 0;
       state.longTasksMs.length = 0;
       state.lastTimestamp = null;
+      state.locomotiveArtSeen = false;
     },
     snapshot() {
       return {
         callbackDurationsMs: [...state.callbackDurationsMs],
         frameIntervalsMs: [...state.frameIntervalsMs],
         longTasksMs: [...state.longTasksMs],
+        locomotiveArtSeen: state.locomotiveArtSeen,
       };
     },
   };
@@ -157,8 +169,9 @@ function measureAnimationCallbacks() {
 function summarizeRun(sample) {
   const rendered =
     sample.callbackDurationsMs.length >= 20 &&
-    !sample.gridText.includes("Failed to load animation") &&
-    /_D _\||\+------/.test(sample.gridText);
+    sample.locomotiveArtSeen &&
+    !sample.gridText.includes("Failed to load animation");
+
   if (!rendered) throw new Error("work/output check failed: animation did not render enough frames");
   return {
     frames: sample.callbackDurationsMs.length,

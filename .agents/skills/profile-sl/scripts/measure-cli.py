@@ -16,14 +16,13 @@ from pathlib import Path
 
 
 def run(binary: Path, columns: int, rows: int, args: list[str]) -> dict[str, float | int | str]:
+    dimension = struct.pack("HHHH", rows, columns, 0, 0)
     child_pid, parent_fd = pty.fork()
     if child_pid == 0:
+        fcntl.ioctl(0, termios.TIOCSWINSZ, dimension)
         os.execv(str(binary), [str(binary), *args])
 
     os.set_blocking(parent_fd, True)
-    termios.tcflush(parent_fd, termios.TCOFLUSH)
-    dimension = struct.pack("HHHH", rows, columns, 0, 0)
-    fcntl.ioctl(parent_fd, termios.TIOCSWINSZ, dimension)
 
     digest = hashlib.sha256()
     byte_count = 0
