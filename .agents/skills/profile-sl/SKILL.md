@@ -21,7 +21,7 @@ surface that contains the whole path.
 | Surface | What it exercises | Primary metric | Guard |
 | --- | --- | --- | --- |
 | `libsl` | one renderer call through `add_d51`, `add_c51`, or `add_logo` into a deterministic in-memory `RenderTarget` | render calls/second or CPU time per fixed number of frames | same emitted draw operations and complete output |
-| CLI | optimized `target/release/sl` in a fixed 80x24 PTY | CPU time per complete traversal; also output correctness and peak RSS when relevant | invoke `verify-sl` for the matching scenario |
+| CLI | optimized `target/release/sl` in a fixed 80x24 PTY | CPU time per complete traversal; output correctness | invoke `verify-sl` for the matching scenario |
 | WASM/native boundary | `websl::add_*`, JavaScript array conversion, and callback crossing | browser callback cost and allocation/GC behavior | same frames and labels |
 | Web demo | production-built `/sl/embed.html` under normal browser time | animation callback p50/p95, frame interval p50/p95, and long-task count/duration | `verify-sl` plus no page errors |
 
@@ -177,8 +177,9 @@ rewrite.
      evidence/baseline-sl evidence/candidate-sl --runs 7 --sl-arg=--files
    ```
 
-   This command alternates binary runs, reports the child process's `wait4` CPU time and peak RSS,
-   fixes the PTY at 80x24, and rejects differing PTY output hashes.
+   This command alternates binary runs, reports the child process's `wait4` CPU time, fixes the PTY
+   at 80x24, and rejects differing PTY output hashes. For memory measurements, use an external
+   launcher that measures the exec'd target rather than the forked Python child's inherited RSS.
 6. Confirm work and output. A rejected/errored frame, unloaded WASM module, or timeout is not a
    faster sample. Check exit status, callback count, output hash/frame count, and visible train
    art. Use `verify-sl` after any rendering, bridge, or animation-loop candidate:
@@ -187,8 +188,16 @@ rewrite.
    uv --version
    uv run --no-project python -m unittest discover \
      -s .agents/skills/verify-sl/scripts -p 'test_*.py'
+   cast=$(.agents/skills/verify-sl/scripts/record-cast.sh d51)
+   uv run --no-project python .agents/skills/verify-sl/scripts/check-invariants.py \
+     "$cast/sl.cast" --scenario d51
+   uv run --no-project python .agents/skills/verify-sl/scripts/extract-frames.py \
+     "$cast/sl.cast" --golden .agents/skills/verify-sl/goldens/d51.json
    bun .agents/skills/verify-sl/scripts/web-verify.mjs embed
    ```
+
+   Replace `d51` with the matching CLI scenario and golden when the candidate affects C51, logo,
+   accident, fly, or another protected rendering path.
 
 7. Check the end-to-end share. A helper that costs 5% of one complete frame cannot yield a
    30% end-to-end improvement.

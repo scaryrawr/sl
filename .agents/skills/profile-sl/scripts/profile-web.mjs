@@ -43,21 +43,27 @@ const isServerReady = () =>
     .then((response) => response.ok)
     .catch(() => false);
 
-let server = null;
+if (await isServerReady()) {
+  throw new Error(`refusing to profile an existing server on ${base}`);
+}
+
+const server = Bun.spawn([process.execPath, "playwright-server.mjs"], {
+  cwd: join(repoRoot, "apps/page"),
+  env: { ...process.env, PLAYWRIGHT_PORT: String(port) },
+  stdout: "ignore",
+  stderr: "inherit",
+});
+for (let attempt = 0; attempt < 60 && !(await isServerReady()); attempt += 1) {
+  if (server.exitCode !== null) {
+    throw new Error(`performance server exited before answering on ${base}`);
+  }
+
+  await Bun.sleep(500);
+}
+
 if (!(await isServerReady())) {
-  server = Bun.spawn([process.execPath, "playwright-server.mjs"], {
-    cwd: join(repoRoot, "apps/page"),
-    env: { ...process.env, PLAYWRIGHT_PORT: String(port) },
-    stdout: "ignore",
-    stderr: "inherit",
-  });
-  for (let attempt = 0; attempt < 60 && !(await isServerReady()); attempt += 1) {
-    await Bun.sleep(500);
-  }
-  if (!(await isServerReady())) {
-    server.kill();
-    throw new Error(`performance server did not answer on ${base} within 30s`);
-  }
+  server.kill();
+  throw new Error(`performance server did not answer on ${base} within 30s`);
 }
 
 const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
@@ -101,7 +107,7 @@ try {
   try {
     if (browser) await browser.close();
   } finally {
-    if (server) server.kill();
+    server.kill();
   }
 }
 

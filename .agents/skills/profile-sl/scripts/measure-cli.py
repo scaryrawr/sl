@@ -51,14 +51,13 @@ def run(binary: Path, columns: int, rows: int, args: list[str]) -> dict[str, flo
         "wall_s": elapsed,
         "cpu_s": usage.ru_utime + usage.ru_stime,
         "bytes": byte_count,
-        "max_rss": usage.ru_maxrss,
         "sha256": digest.hexdigest(),
     }
 
 
 def summarize(samples: list[dict[str, float | int | str]]) -> dict[str, object]:
     numeric = {}
-    for key in ("wall_s", "cpu_s", "bytes", "max_rss"):
+    for key in ("wall_s", "cpu_s", "bytes"):
         values = [float(sample[key]) for sample in samples]
         numeric[key] = {
             "median": statistics.median(values),
