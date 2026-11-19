@@ -219,16 +219,27 @@ const useSlAnimation = (props: {
 
           const display = new sl.Display(cols, rows, (y: number, x: number, str: string) => {
             let buf = rowBuffers.get(y);
+
             if (!buf) {
               // SAFETY: Terminal renders every child of the grid as a row <div> element.
               const row = terminal.children[y] as HTMLElement | undefined;
+
               if (!row || !row.textContent) return;
+
               buf = Array.from(row.textContent);
               rowBuffers.set(y, buf);
             }
 
-            for (let i = 0; i < str.length && x + i < cols; i++) {
-              buf[x + i] = str[i];
+            // Iterate by code point (not UTF-16 index) so supplementary-plane
+            // characters (e.g. "𝒜") are written as single elements, matching
+            // the Array.from() buffer layout.
+            let col = x;
+
+            for (const ch of str) {
+              if (col >= cols) break;
+
+              buf[col] = ch;
+              col += 1;
             }
           });
 
@@ -252,8 +263,10 @@ const useSlAnimation = (props: {
           for (const [rowIdx, buf] of rowBuffers) {
             // SAFETY: Terminal renders every child of the grid as a row <div> element.
             const row = terminal.children[rowIdx] as HTMLElement | undefined;
+
             if (row) row.textContent = buf.join('');
           }
+
           rowBuffers.clear();
 
           // Use setTimeout + RAF pattern to reduce callback overhead
