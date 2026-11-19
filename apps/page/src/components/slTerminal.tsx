@@ -227,8 +227,13 @@ const useSlAnimation = (props: {
               rowBuffers.set(y, buf);
             }
 
-            for (let i = 0; i < str.length && x + i < cols; i++) {
-              buf[x + i] = str[i];
+            // Iterate by code point (not UTF-16 index) so supplementary-plane
+            // characters (e.g. "𝒜") are written as single elements, matching
+            // the Array.from() buffer layout.
+            for (const ch of str) {
+              if (x >= cols) break;
+              buf[x] = ch;
+              x += 1;
             }
           });
 
