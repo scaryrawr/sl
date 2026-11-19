@@ -213,20 +213,23 @@ const useSlAnimation = (props: {
           const cols = terminal.children[0].textContent?.length ?? 0;
           const rows = terminal.children.length;
 
+          // Batch DOM writes per row: one Array.from + join per row instead of
+          // per draw_str call. This eliminates ~4 000 array allocations per frame.
+          const rowBuffers = new Map<number, string[]>();
+
           const display = new sl.Display(cols, rows, (y: number, x: number, str: string) => {
-            // SAFETY: Terminal renders every child of the grid as a row <div> element.
-            const row = terminal.children[y] as HTMLElement | undefined;
-
-            if (!row || !row.textContent) return;
-
-            // Use array-based approach for better performance
-            const textArray = Array.from(row.textContent);
-
-            for (let i = 0; i < str.length && x + i < cols; i++) {
-              textArray[x + i] = str[i];
+            let buf = rowBuffers.get(y);
+            if (!buf) {
+              // SAFETY: Terminal renders every child of the grid as a row <div> element.
+              const row = terminal.children[y] as HTMLElement | undefined;
+              if (!row || !row.textContent) return;
+              buf = Array.from(row.textContent);
+              rowBuffers.set(y, buf);
             }
 
-            row.textContent = textArray.join('');
+            for (let i = 0; i < str.length && x + i < cols; i++) {
+              buf[x + i] = str[i];
+            }
           });
 
           if ((xRef.current ?? 0) > cols) {
@@ -244,6 +247,14 @@ const useSlAnimation = (props: {
             xRef.current = cols;
             resetSmoke();
           }
+
+          // Flush all buffered row writes to the DOM (one write per row).
+          for (const [rowIdx, buf] of rowBuffers) {
+            // SAFETY: Terminal renders every child of the grid as a row <div> element.
+            const row = terminal.children[rowIdx] as HTMLElement | undefined;
+            if (row) row.textContent = buf.join('');
+          }
+          rowBuffers.clear();
 
           // Use setTimeout + RAF pattern to reduce callback overhead
           timeoutId = window.setTimeout(() => {
