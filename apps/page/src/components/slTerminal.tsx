@@ -125,6 +125,7 @@ const useSlAnimation = (props: {
     let timeoutId: number | undefined;
     let disposed = false;
     let releaseSmoke: (() => void) | undefined;
+    let releaseDisplay: (() => void) | undefined;
 
     // Check for reduced motion preference - show static fallback if preferred
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -286,12 +287,20 @@ const useSlAnimation = (props: {
 
         const ensureDisplay = (cols: number, rows: number) => {
           if (!display || displayCols !== cols || displayRows !== rows) {
+            // Free the previous display before replacing it so the WASM
+            // callback and state it owns do not leak across resizes.
+            display?.free();
             display = new sl.Display(cols, rows, displayCallback);
             displayCols = cols;
             displayRows = rows;
           }
 
           return display;
+        };
+
+        releaseDisplay = () => {
+          display?.free();
+          display = null;
         };
 
         const animate = () => {
@@ -364,6 +373,7 @@ const useSlAnimation = (props: {
       cancelAnimationFrame(animationFrameId);
       clearTimeout(timeoutId);
       releaseSmoke?.();
+      releaseDisplay?.();
       clear();
     };
   }, [accident, fly, trainType, messages, smoke, clear]);
