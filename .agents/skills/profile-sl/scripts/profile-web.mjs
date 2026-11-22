@@ -16,12 +16,14 @@ let sampleMs = 5000;
 
 for (let index = 3; index < process.argv.length; index += 1) {
   const argument = process.argv[index];
+
   if (argument === "--runs") runs = Number.parseInt(process.argv[++index] ?? "", 10);
   else if (argument === "--sample-ms") sampleMs = Number.parseInt(process.argv[++index] ?? "", 10);
   else throw new Error(`unknown argument: ${argument}`);
 }
 
 if (!Number.isInteger(runs) || runs < 5) throw new Error("--runs must be an integer >= 5");
+
 if (!Number.isInteger(sampleMs) || sampleMs < 2000) {
 
   throw new Error("--sample-ms must be an integer >= 2000");
@@ -33,11 +35,14 @@ const scenarios = {
   "embed-accident": "?trainType=d51&messages=%5B%22PERFCAR-A%22%5D&accident=true",
   "embed-fly": "?trainType=d51&messages=%5B%22PERFCAR-A%22%5D&fly=true",
 };
+
 const query = scenarios[scenario];
+
 if (!query) throw new Error(`unknown scenario: ${scenario} (choose ${Object.keys(scenarios).join(", ")})`);
 
 const port = Number(process.env.PLAYWRIGHT_PORT ?? 4173);
 const base = `http://127.0.0.1:${port}`;
+
 const isServerReady = () =>
   fetch(`${base}/sl/`)
     .then((response) => response.ok)
@@ -53,6 +58,7 @@ const server = Bun.spawn([process.execPath, "playwright-server.mjs"], {
   stdout: "ignore",
   stderr: "inherit",
 });
+
 for (let attempt = 0; attempt < 60 && !(await isServerReady()); attempt += 1) {
   if (server.exitCode !== null) {
     throw new Error(`performance server exited before answering on ${base}`);
@@ -68,6 +74,7 @@ if (!(await isServerReady())) {
 
 const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
 const evidenceDir = join(skillDir, "evidence", `${stamp}-web-${scenario}`);
+
 mkdirSync(evidenceDir, { recursive: true });
 
 const samples = [];
@@ -77,6 +84,7 @@ let browser = null;
 
 try {
   browser = await chromium.launch({ headless: true });
+
   for (let run = 0; run < runs; run += 1) {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
@@ -86,13 +94,16 @@ try {
     await page.waitForTimeout(1000);
     await page.evaluate(() => window.__slPerformance.reset());
     await page.waitForTimeout(sampleMs);
+
     const sample = await page.evaluate(() => {
       const grid = document.querySelector('[role="img"][aria-label*="Animated ASCII art"]');
+
       return {
         ...window.__slPerformance.snapshot(),
         gridText: grid?.textContent ?? "",
       };
     });
+
     samples.push({
       ...summarizeRun(sample),
       raw: {
@@ -112,6 +123,7 @@ try {
 }
 
 if (pageErrors.length > 0) throw new Error(`page errors: ${JSON.stringify(pageErrors)}`);
+
 const report = {
   scenario,
   runs,
@@ -120,8 +132,11 @@ const report = {
   summary: summarizeRuns(samples),
   samples,
 };
+
 writeFileSync(join(evidenceDir, "results.json"), JSON.stringify(report, null, 2));
+
 console.log(evidenceDir);
+
 console.log(JSON.stringify(report.summary, null, 2));
 
 function measureAnimationCallbacks() {
@@ -132,14 +147,17 @@ function measureAnimationCallbacks() {
     lastTimestamp: null,
     locomotiveArtSeen: false,
   };
+
   const nativeRequestAnimationFrame = window.requestAnimationFrame.bind(window);
   window.requestAnimationFrame = (callback) =>
     nativeRequestAnimationFrame((timestamp) => {
       if (state.lastTimestamp !== null) {
         state.frameIntervalsMs.push(timestamp - state.lastTimestamp);
       }
+
       state.lastTimestamp = timestamp;
       const started = performance.now();
+
       try {
         return callback(timestamp);
       } finally {
@@ -149,9 +167,11 @@ function measureAnimationCallbacks() {
         state.locomotiveArtSeen ||= /_D _\||\+------/.test(gridText);
       }
     });
+
   const observer = new PerformanceObserver((list) => {
     for (const entry of list.getEntries()) state.longTasksMs.push(entry.duration);
   });
+
   observer.observe({ entryTypes: ["longtask"] });
   window.__slPerformance = {
     reset() {
@@ -179,6 +199,7 @@ function summarizeRun(sample) {
     !sample.gridText.includes("Failed to load animation");
 
   if (!rendered) throw new Error("work/output check failed: animation did not render enough frames");
+
   return {
     frames: sample.callbackDurationsMs.length,
     callbackP50Ms: percentile(sample.callbackDurationsMs, 0.5),
@@ -190,29 +211,29 @@ function summarizeRun(sample) {
   };
 }
 
-function summarizeRuns(samples) {
+function summarizeRuns(runSamples) {
   return {
-    frames: range(samples.map((sample) => sample.frames)),
-    callbackP50Ms: range(samples.map((sample) => sample.callbackP50Ms)),
-    callbackP95Ms: range(samples.map((sample) => sample.callbackP95Ms)),
-    intervalP50Ms: range(samples.map((sample) => sample.intervalP50Ms)),
-    intervalP95Ms: range(samples.map((sample) => sample.intervalP95Ms)),
-    longTaskCount: range(samples.map((sample) => sample.longTaskCount)),
-    longTaskP95Ms: range(samples.map((sample) => sample.longTaskP95Ms)),
+    frames: range(runSamples.map((sample) => sample.frames)),
+    callbackP50Ms: range(runSamples.map((sample) => sample.callbackP50Ms)),
+    callbackP95Ms: range(runSamples.map((sample) => sample.callbackP95Ms)),
+    intervalP50Ms: range(runSamples.map((sample) => sample.intervalP50Ms)),
+    intervalP95Ms: range(runSamples.map((sample) => sample.intervalP95Ms)),
+    longTaskCount: range(runSamples.map((sample) => sample.longTaskCount)),
+    longTaskP95Ms: range(runSamples.map((sample) => sample.longTaskP95Ms)),
   };
 }
 
 function percentile(values, quantile) {
   if (values.length === 0) return null;
 
-  const sorted = [...values].sort((left, right) => left - right);
+  const sorted = values.toSorted((left, right) => left - right);
   const index = Math.max(0, Math.ceil(sorted.length * quantile) - 1);
 
   return sorted[index];
 }
 
 function range(values) {
-  const sorted = values.filter((value) => value !== null).sort((left, right) => left - right);
+  const sorted = values.filter((value) => value !== null).toSorted((left, right) => left - right);
 
   if (sorted.length === 0) return { median: null, min: null, max: null };
 
