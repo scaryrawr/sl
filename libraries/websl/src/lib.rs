@@ -1,6 +1,8 @@
 mod utils;
 
 use js_sys::{Array, Function};
+use std::cell::RefCell;
+use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -141,7 +143,7 @@ pub fn add_d51(
 
     render_result(libsl::add_d51(
         x,
-        &names,
+        names.as_slice(),
         screen,
         display,
         &options,
@@ -177,7 +179,7 @@ pub fn add_logo(
 
     render_result(libsl::add_logo(
         x,
-        &names,
+        names.as_slice(),
         screen,
         display,
         &options,
@@ -213,7 +215,7 @@ pub fn add_c51(
 
     render_result(libsl::add_c51(
         x,
-        &names,
+        names.as_slice(),
         screen,
         display,
         &options,
@@ -221,11 +223,33 @@ pub fn add_c51(
     ))
 }
 
-fn names_from_array(names: &Array) -> Vec<String> {
-    names
-        .iter()
-        .map(|x| x.as_string().unwrap())
-        .collect::<Vec<String>>()
+// Cache of the parsed car labels for the most recently seen `names` array.
+//
+// The animation loop passes the same array reference every frame, so the parsed
+// strings are reused instead of re-allocating a `Vec<String>` per call.
+//
+// Identity is compared with `Object.is` semantics (the `PartialEq` derived for
+// `Array`): callers must not mutate the array in place between frames — pass a
+// fresh array when the labels change.
+thread_local! {
+    static NAMES_CACHE: RefCell<(Option<Array>, Rc<Vec<String>>)> =
+        RefCell::new((None, Rc::new(Vec::new())));
+}
+
+fn names_from_array(names: &Array) -> Rc<Vec<String>> {
+    NAMES_CACHE.with(|cache| {
+        let mut cache = cache.borrow_mut();
+        let same = cache
+            .0
+            .as_ref()
+            .map(|cached| cached == names)
+            .unwrap_or(false);
+        if !same {
+            cache.1 = Rc::new(names.iter().map(|x| x.as_string().unwrap()).collect());
+            cache.0 = Some(names.clone());
+        }
+        Rc::clone(&cache.1)
+    })
 }
 
 fn render_result(result: Result<(), libsl::RenderError<JsValue>>) -> bool {

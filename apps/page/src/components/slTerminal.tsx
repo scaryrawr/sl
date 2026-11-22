@@ -93,6 +93,13 @@ const useSlAnimation = (props: {
   const terminalRef = useRef<HTMLDivElement | null>(null);
   const xRef = useRef<number | null>(null);
 
+  // Persistent animation grid: one code-point array per row, initialized from the
+  // DOM once and re-initialized whenever the terminal's row elements are replaced
+  // (resize). The grid stays the source of truth across frames so per-frame work is
+  // O(touched rows) without re-parsing textContent on every row.
+  const gridRef = useRef<{ firstRow: Element; rows: string[][] } | null>(null);
+  const dirtyRowsRef = useRef(new Set<number>());
+
   const clear = useCallback(() => {
     const terminal = terminalRef.current;
 
@@ -105,6 +112,12 @@ const useSlAnimation = (props: {
       const el = row as HTMLElement;
       el.textContent = '\xa0'.repeat(cols);
     }
+
+    // Keep the persistent grid consistent with the cleared DOM.
+    gridRef.current = {
+      firstRow: terminal.children[0],
+      rows: Array.from(terminal.children).map(() => Array(cols).fill('\xa0'))
+    };
   }, []);
 
   useEffect(() => {
@@ -222,42 +235,73 @@ const useSlAnimation = (props: {
           xRef.current = cellCount(terminal.children[0]);
         }
 
+        // Read the persistent grid, re-initializing from the DOM only when the
+        // terminal's row elements were replaced (resize).
+        const getGrid = () => {
+          const firstRow = terminal.children[0];
+          const existing = gridRef.current;
+
+          if (
+            existing &&
+            existing.firstRow === firstRow &&
+            existing.rows.length === terminal.children.length
+          ) {
+            return existing;
+          }
+
+          const rows = Array.from(terminal.children).map((row) =>
+            Array.from((row as HTMLElement).textContent ?? '')
+          );
+          const fresh = { firstRow, rows };
+          gridRef.current = fresh;
+          return fresh;
+        };
+
+        const displayCallback = (y: number, x: number, str: string) => {
+          const grid = gridRef.current;
+
+          if (!grid || y < 0 || y >= grid.rows.length) return;
+
+          const buf = grid.rows[y];
+          dirtyRowsRef.current.add(y);
+
+          // Iterate by code point so every cell advances once, matching the
+          // Array.from() buffer layout and the cellCount() grid width.
+          let col = x;
+
+          for (const ch of str) {
+            if (col >= buf.length) break;
+
+            buf[col] = ch;
+            col += 1;
+          }
+        };
+
+        // Reuse one Display per animation (recreating only when the grid size
+        // changes, e.g. after a resize) instead of allocating a new wasm
+        // instance on every frame.
+        let display: InstanceType<typeof sl.Display> | null = null;
+        let displayCols = -1;
+        let displayRows = -1;
+
+        const ensureDisplay = (cols: number, rows: number) => {
+          if (!display || displayCols !== cols || displayRows !== rows) {
+            display = new sl.Display(cols, rows, displayCallback);
+            displayCols = cols;
+            displayRows = rows;
+          }
+
+          return display;
+        };
+
         const animate = () => {
           if (disposed) return;
 
-          const cols = cellCount(terminal.children[0]);
-          const rows = terminal.children.length;
-
-          // Batch DOM writes per row: one Array.from, join and textContent write
-          // per touched row per frame instead of one per draw_str call. Measured
-          // over a full D51 traversal on a 120x11 grid (263 frames): 5 694 arrays,
-          // strings and DOM writes -> 2 389, i.e. ~22 -> ~9 per frame.
-          const rowBuffers = new Map<number, string[]>();
-
-          const display = new sl.Display(cols, rows, (y: number, x: number, str: string) => {
-            let buf = rowBuffers.get(y);
-
-            if (!buf) {
-              // SAFETY: Terminal renders every child of the grid as a row <div> element.
-              const row = terminal.children[y] as HTMLElement | undefined;
-
-              if (!row || !row.textContent) return;
-
-              buf = Array.from(row.textContent);
-              rowBuffers.set(y, buf);
-            }
-
-            // Iterate by code point so every cell advances once, matching both
-            // the Array.from() buffer layout and the cellCount() grid width.
-            let col = x;
-
-            for (const ch of str) {
-              if (col >= cols) break;
-
-              buf[col] = ch;
-              col += 1;
-            }
-          });
+          const grid = getGrid();
+          const rows = grid.rows.length;
+          const cols = grid.rows[0]?.length ?? 0;
+          const display = ensureDisplay(cols, rows);
+          dirtyRowsRef.current.clear();
 
           if ((xRef.current ?? 0) > cols) {
             clear();
@@ -275,15 +319,17 @@ const useSlAnimation = (props: {
             resetSmoke();
           }
 
-          // Flush all buffered row writes to the DOM (one write per row).
-          for (const [rowIdx, buf] of rowBuffers) {
-            // SAFETY: Terminal renders every child of the grid as a row <div> element.
-            const row = terminal.children[rowIdx] as HTMLElement | undefined;
+          // Flush the rows touched this frame (one textContent write per row).
+          const liveGrid = gridRef.current;
 
-            if (row) row.textContent = buf.join('');
+          if (liveGrid && liveGrid.firstRow === grid.firstRow) {
+            for (const rowIdx of dirtyRowsRef.current) {
+              // SAFETY: Terminal renders every child of the grid as a row <div> element.
+              const row = terminal.children[rowIdx] as HTMLElement | undefined;
+
+              if (row) row.textContent = liveGrid.rows[rowIdx].join('');
+            }
           }
-
-          rowBuffers.clear();
 
           // Use setTimeout + RAF pattern to reduce callback overhead
           timeoutId = window.setTimeout(() => {
