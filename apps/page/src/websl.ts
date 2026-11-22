@@ -9,11 +9,29 @@
  * @module websl
  */
 import init, {
-  /** Render a C51-class steam locomotive on the display. */
+  /**
+   * Render a C51-class steam locomotive on the display.
+   *
+   * The `names` array is cached by identity and is not re-read on later calls,
+   * so do not mutate it in place between calls — pass a fresh array when the
+   * labels change.
+   */
   add_c51,
-  /** Render a D51-class steam locomotive on the display. */
+  /**
+   * Render a D51-class steam locomotive on the display.
+   *
+   * The `names` array is cached by identity and is not re-read on later calls,
+   * so do not mutate it in place between calls — pass a fresh array when the
+   * labels change.
+   */
   add_d51,
-  /** Render the small logo train on the display. */
+  /**
+   * Render the small logo train on the display.
+   *
+   * The `names` array is cached by identity and is not re-read on later calls,
+   * so do not mutate it in place between calls — pass a fresh array when the
+   * labels change.
+   */
   add_logo,
   /**
    * Backing store for the terminal grid. Holds character dimensions and the
