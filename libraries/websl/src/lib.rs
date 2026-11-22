@@ -121,7 +121,10 @@ pub fn set_panic_hook() {
 /// # Arguments
 ///
 /// * `x` - The x-coordinate of the train.
-/// * `names` - An array of names to display on the train cars.
+/// * `names` - An array of names to display on the train cars. The parsed
+///   labels are cached by array identity and not re-read on later calls, so
+///   do not mutate the array in place between calls — pass a fresh array when
+///   the labels change.
 /// * `display` - The display where the train will be rendered.
 /// * `options` - The options for the train animation.
 /// * `smoke` - This train's smoke state, required even when smoke is disabled.
@@ -157,7 +160,10 @@ pub fn add_d51(
 /// # Arguments
 ///
 /// * `x` - The x-coordinate of the train.
-/// * `names` - An array of names to display on the train cars.
+/// * `names` - An array of names to display on the train cars. The parsed
+///   labels are cached by array identity and not re-read on later calls, so
+///   do not mutate the array in place between calls — pass a fresh array when
+///   the labels change.
 /// * `display` - The display where the train will be rendered.
 /// * `options` - The options for the train animation.
 /// * `smoke` - This train's smoke state, required even when smoke is disabled.
@@ -193,7 +199,10 @@ pub fn add_logo(
 /// # Arguments
 ///
 /// * `x` - The x-coordinate of the train.
-/// * `names` - An array of names to display on the train cars.
+/// * `names` - An array of names to display on the train cars. The parsed
+///   labels are cached by array identity and not re-read on later calls, so
+///   do not mutate the array in place between calls — pass a fresh array when
+///   the labels change.
 /// * `display` - The display where the train will be rendered.
 /// * `options` - The options for the train animation.
 /// * `smoke` - This train's smoke state, required even when smoke is disabled.

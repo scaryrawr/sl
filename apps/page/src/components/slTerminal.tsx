@@ -204,6 +204,13 @@ const useSlAnimation = (props: {
       };
     }
 
+    // Invalidate the persistent grid once per animated effect so its first
+    // frame reads the current DOM. A prior reduced-motion render (or cleanup)
+    // may have left the DOM — and therefore the rows — different from the
+    // cached grid, and flushing a stale grid would erase cells outside the
+    // current draw range.
+    gridRef.current = null;
+
     const frameInterval = 60; // 60ms = ~16.67 FPS (reduced from 60 FPS for performance)
 
     const runWasm = async () => {
