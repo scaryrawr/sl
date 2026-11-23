@@ -35,7 +35,8 @@ Monorepo for the `sl` terminal train. Rust workspace plus a Bun workspace for th
   seeded on the hook's first run; delete that file to re-baseline after accepting new warnings. A run with skipped
   steps is incomplete: it neither seeds the baseline nor caches a verdict, so a restored tool is always re-checked.
   `SL_STOP_CHECK=off` skips one check, and re-running on an unchanged working tree reuses the cached verdict. The
-  fingerprint hashes git stdout only, so git advisory noise on stderr never destabilizes it.
+  fingerprint hashes git stdout only, so git advisory noise on stderr never destabilizes it; above 5000 tracked
+  files it hashes the changed paths and their contents rather than every file.
 - Project-local hooks only load for trusted projects, and Codex prompts once to trust `.codex/hooks.json`; commit
   changes to that file or `scripts/stop-check.ts` and re-approve the hook.
 

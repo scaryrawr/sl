@@ -121,6 +121,9 @@ const SNIPPET_LIMIT = 2400;
 /** Upper bound for the whole continuation prompt, so many failures cannot flood the hand-back. */
 const PROMPT_LIMIT = 6000;
 
+/** Above this tracked-file count the fingerprint hashes changed paths only, instead of every file. */
+const LARGE_TREE_FILE_LIMIT = 5000;
+
 /** Cap for tolerated pre-existing warnings. */
 const BASELINE_LIMIT = 400;
 
@@ -280,6 +283,14 @@ const hashFile = (hasher: ReturnType<typeof createHash>, directory: string, rela
   }
 };
 
+/** Path carried by a `git status --porcelain` line, following a rename to its destination. */
+const statusPath = (line: string) => {
+  const raw = line.slice(3).trim();
+  const target = raw.includes(' -> ') ? raw.split(' -> ')[1] : raw;
+
+  return target.replace(/^"|"$/g, '');
+};
+
 /** Content hash of the working tree plus the generated wasm bindings the demo site imports. */
 const workingTreeFingerprint = (root: string) => {
   const hasher = createHash('sha256');
@@ -299,15 +310,21 @@ const workingTreeFingerprint = (root: string) => {
   hasher.update(lastStdoutLine(head));
   const files = [...new Set([...nulSplit(tracked.stdout), ...nulSplit(others.stdout)])].toSorted();
 
-  if (files.length > 5000) {
+  if (files.length > LARGE_TREE_FILE_LIMIT) {
     const status = runStep(
       { label: 'git status', command: 'git', args: ['status', '--porcelain'], timeoutMs: 10000 },
       root
     );
 
-    status.stdout.split('\n').forEach((line) => {
-      hasher.update(line);
-    });
+    status.stdout
+      .split('\n')
+      .filter((line) => line.trim())
+      .forEach((line) => {
+        hasher.update(line);
+        // Porcelain lines carry paths but no content, so the changed files are hashed too: otherwise a content
+        // edit in a repository this large would reuse a stale verdict.
+        hashFile(hasher, root, statusPath(line));
+      });
   } else {
     files.forEach((relative) => {
       hashFile(hasher, root, relative);
