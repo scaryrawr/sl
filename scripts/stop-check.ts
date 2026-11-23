@@ -54,7 +54,10 @@ interface CheckStep {
 /** Result of one validation step. */
 interface RunResult {
   code: number;
+  /** stdout and stderr concatenated, because diagnostics may arrive on either stream. */
   output: string;
+  /** stdout alone, used where output is hashed or resolved rather than read as diagnostics. */
+  stdout: string;
   /** Non-empty when the step could not be evaluated, such as a missing tool or a timeout. */
   problem: string;
 }
@@ -71,6 +74,8 @@ interface Outcome {
   failures: Failure[];
   warnings: string[];
   notes: string[];
+  /** True when a step could not run, so the verdict and warning list are partial. */
+  incomplete: boolean;
 }
 
 /** Cached verdict and hand-back count for the current turn. */
@@ -79,6 +84,7 @@ interface TurnStateWire {
   fingerprint?: string;
   failures?: FailureWire[];
   blocks?: number;
+  incomplete?: boolean;
 }
 
 interface FailureWire {
@@ -92,6 +98,7 @@ interface TurnState {
   fingerprint: string;
   failures: Failure[];
   blocks: number;
+  incomplete: boolean;
 }
 
 /** Warnings tolerated because they predated this hook. */
@@ -110,6 +117,9 @@ const SHARED_DEADLINE_MS = 780000;
 
 /** Upper bound for each failing command excerpt in the continuation prompt. */
 const SNIPPET_LIMIT = 2400;
+
+/** Upper bound for the whole continuation prompt, so many failures cannot flood the hand-back. */
+const PROMPT_LIMIT = 6000;
 
 /** Cap for tolerated pre-existing warnings. */
 const BASELINE_LIMIT = 400;
@@ -151,6 +161,10 @@ const fallbackRoot = path.resolve(path.dirname(scriptPath), '..');
 
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 
+/** Keep text inside a limit so one long excerpt cannot dominate the hand-back. */
+const truncate = (text: string, limit: number) =>
+  text.length > limit ? `${text.slice(0, limit)}\n… truncated …` : text;
+
 const getErrorMessage = (cause: unknown) => {
   if (cause instanceof Error) {
     return cause.message;
@@ -187,7 +201,7 @@ const runStep = (step: CheckStep, cwd: string): RunResult => {
   const budgetMs = Math.min(step.timeoutMs, SHARED_DEADLINE_MS - (Date.now() - startedAt));
 
   if (budgetMs <= 0) {
-    return { code: 0, output: '', problem: 'shared check deadline exhausted before this step' };
+    return { code: 0, output: '', stdout: '', problem: 'shared check deadline exhausted before this step' };
   }
 
   const result = spawnSync(step.command, step.args, {
@@ -202,24 +216,42 @@ const runStep = (step: CheckStep, cwd: string): RunResult => {
     const code = (result.error as NodeJS.ErrnoException).code ?? '';
 
     if (code === 'ENOENT') {
-      return { code: 0, output: '', problem: `${step.command} is not installed here` };
+      return { code: 0, output: '', stdout: '', problem: `${step.command} is not installed here` };
     }
 
     if (code === 'ETIMEDOUT') {
       return {
         code: 1,
-        output: result.stdout ?? '',
+        output: `${result.stdout ?? ''}${result.stderr ?? ''}`,
+        stdout: result.stdout ?? '',
         problem: `${step.command} exceeded ${Math.round(budgetMs / 1000)}s`
       };
     }
 
-    return { code: 1, output: result.stdout ?? '', problem: `${step.command} could not run: ${result.error.message}` };
+    return {
+      code: 1,
+      output: `${result.stdout ?? ''}${result.stderr ?? ''}`,
+      stdout: result.stdout ?? '',
+      problem: `${step.command} could not run: ${result.error.message}`
+    };
   }
 
-  return { code: result.status ?? 1, output: `${result.stdout ?? ''}${result.stderr ?? ''}`, problem: '' };
+  return {
+    code: result.status ?? 1,
+    output: `${result.stdout ?? ''}${result.stderr ?? ''}`,
+    stdout: result.stdout ?? '',
+    problem: ''
+  };
 };
 
 const commandText = (step: CheckStep) => [step.command, ...step.args].join(' ');
+
+/** Final stdout line of a probe whose answer is one path or hash, ignoring any advisory output. */
+const lastStdoutLine = (result: RunResult) => {
+  const lines = result.stdout.split('\n').filter((line) => line.trim());
+
+  return lines.at(-1)?.trim() ?? '';
+};
 
 const repoRoot = (eventCwd: string) => {
   const probe = runStep(
@@ -227,8 +259,10 @@ const repoRoot = (eventCwd: string) => {
     eventCwd
   );
 
-  if (probe.code === 0 && probe.output.trim()) {
-    return path.resolve(probe.output.trim());
+  const root = lastStdoutLine(probe);
+
+  if (probe.code === 0 && root) {
+    return path.resolve(root);
   }
 
   return fallbackRoot;
@@ -262,8 +296,8 @@ const workingTreeFingerprint = (root: string) => {
     root
   );
 
-  hasher.update(head.output.trim());
-  const files = [...new Set([...nulSplit(tracked.output), ...nulSplit(others.output)])].toSorted();
+  hasher.update(lastStdoutLine(head));
+  const files = [...new Set([...nulSplit(tracked.stdout), ...nulSplit(others.stdout)])].toSorted();
 
   if (files.length > 5000) {
     const status = runStep(
@@ -271,7 +305,7 @@ const workingTreeFingerprint = (root: string) => {
       root
     );
 
-    status.output.split('\n').forEach((line) => {
+    status.stdout.split('\n').forEach((line) => {
       hasher.update(line);
     });
   } else {
@@ -404,9 +438,7 @@ const summarize = (output: string, tolerated: string[]) => {
     .filter((entry) => !entry.warning || (entry.key !== '' && !tolerated.includes(entry.key)))
     .flatMap((entry) => (entry.location ? [entry.line.trim(), entry.location] : [entry.line.trim()]));
 
-  const body = kept.join('\n');
-
-  return body.length > SNIPPET_LIMIT ? `${body.slice(0, SNIPPET_LIMIT)}\n… truncated …` : body;
+  return truncate(kept.join('\n'), SNIPPET_LIMIT);
 };
 
 /** Last lines of step output, used when a failing step printed nothing parsable as a diagnostic. */
@@ -414,7 +446,7 @@ const rawTail = (output: string) => {
   const lines = output.split('\n').filter((line) => line.trim());
 
   return lines.length
-    ? lines.slice(-15).join('\n')
+    ? truncate(lines.slice(-15).join('\n'), SNIPPET_LIMIT)
     : '(no output captured; nonzero exit with no diagnostics on stdout or stderr)';
 };
 
@@ -428,12 +460,14 @@ const evaluate = (root: string, tolerated: string[], seedBaseline: boolean): Out
   const failures: Failure[] = [];
   const warnings: string[] = [];
   const notes: string[] = [];
+  let incomplete = false;
 
   CHECKS.forEach((step) => {
     const result = runStep(step, root);
 
     if (result.problem) {
       notes.push(`${commandText(step)} → ${result.problem} (step skipped)`);
+      incomplete = true;
 
       return;
     }
@@ -455,13 +489,17 @@ const evaluate = (root: string, tolerated: string[], seedBaseline: boolean): Out
     warnings.push(...warningKeys(result.output));
 
     if (result.code === 0 && fresh.length) {
-      failuresForStep.push({ label: `${step.label} warnings`, command: commandText(step), excerpt: fresh.join('\n') });
+      failuresForStep.push({
+        label: `${step.label} warnings`,
+        command: commandText(step),
+        excerpt: truncate(fresh.join('\n'), SNIPPET_LIMIT)
+      });
     }
 
     failures.push(...failuresForStep);
   });
 
-  return { failures, warnings, notes };
+  return { failures, warnings, notes, incomplete };
 };
 
 const continuationPrompt = (failures: Failure[], notes: string[]) => {
@@ -490,7 +528,13 @@ const decodeTurnState = (wire: TurnStateWire | null): TurnState | null => {
     .filter((failure) => failure.label && failure.command && failure.excerpt)
     .map((failure) => ({ label: failure.label ?? '', command: failure.command ?? '', excerpt: failure.excerpt ?? '' }));
 
-  return { turnId: wire.turn_id, fingerprint: wire.fingerprint, failures, blocks: wire.blocks ?? 0 };
+  return {
+    turnId: wire.turn_id,
+    fingerprint: wire.fingerprint,
+    failures,
+    blocks: wire.blocks ?? 0,
+    incomplete: wire.incomplete === true
+  };
 };
 
 const handleEvent = async (event: StopEvent) => {
@@ -509,20 +553,28 @@ const handleEvent = async (event: StopEvent) => {
   const fingerprint = workingTreeFingerprint(root);
 
   // A missing baseline forces a fresh evaluation: reusing a cached verdict would seed the baseline from that
-  // verdict's empty warning list and make every tolerated warning look new.
+  // verdict's empty warning list and make every tolerated warning look new. An incomplete verdict (missing tool
+  // or exhausted deadline) is never reused either: a restored tool would stay unchecked, and seeding from a
+  // partial warning list would make untouched warnings look new.
   const repeat =
-    baseline !== null && state !== null && state.turnId === event.turnId && state.fingerprint === fingerprint;
+    baseline !== null && !state?.incomplete && state?.turnId === event.turnId && state.fingerprint === fingerprint;
 
   const outcome = repeat
-    ? { failures: state.failures, warnings: [], notes: [] }
+    ? { failures: state.failures, warnings: [], notes: [], incomplete: false }
     : evaluate(root, tolerated, baseline === null);
 
   // Hand-backs only accumulate inside one turn, so a new turn always starts with a fresh budget.
   const blocks = state !== null && state.turnId === event.turnId ? state.blocks : 0;
 
-  await writeJson(turnFile, { turn_id: event.turnId, fingerprint, failures: outcome.failures, blocks });
+  await writeJson(turnFile, {
+    turn_id: event.turnId,
+    fingerprint,
+    failures: outcome.failures,
+    blocks,
+    incomplete: outcome.incomplete
+  });
 
-  if (baseline === null) {
+  if (baseline === null && !outcome.incomplete) {
     await writeJson(baselineFile, { warnings: [...new Set(outcome.warnings)].toSorted().slice(0, BASELINE_LIMIT) });
   }
 
@@ -539,12 +591,23 @@ const handleEvent = async (event: StopEvent) => {
   if (blocks >= MAX_BLOCKS_PER_TURN || (event.stopHookActive && blocks === 0)) {
     const headline = outcome.failures.map((failure) => `${failure.command}: ${failure.excerpt.split('\n')[0]}`);
 
-    return { systemMessage: `sl stop check still fails, so this turn may finish:\n${headline.join('\n')}` };
+    return {
+      systemMessage: truncate(
+        `sl stop check still fails, so this turn may finish:\n${headline.join('\n')}`,
+        SNIPPET_LIMIT
+      )
+    };
   }
 
-  await writeJson(turnFile, { turn_id: event.turnId, fingerprint, failures: outcome.failures, blocks: blocks + 1 });
+  await writeJson(turnFile, {
+    turn_id: event.turnId,
+    fingerprint,
+    failures: outcome.failures,
+    blocks: blocks + 1,
+    incomplete: outcome.incomplete
+  });
 
-  return { decision: 'block', reason: continuationPrompt(outcome.failures, outcome.notes) };
+  return { decision: 'block', reason: truncate(continuationPrompt(outcome.failures, outcome.notes), PROMPT_LIMIT) };
 };
 
 if (pathToFileURL(process.argv[1] ?? '').href === import.meta.url) {

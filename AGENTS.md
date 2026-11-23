@@ -29,10 +29,13 @@ Monorepo for the `sl` terminal train. Rust workspace plus a Bun workspace for th
   so Codex never kills the hook mid-run; steps left over after the deadline are reported as skipped, not failed.
 - Failures - errors and any warning beyond the baseline - make the hook return
   `{"decision":"block","reason":...}`, so Codex hands the failing commands and diagnostics back to the agent
-  instead of ending the turn. It hands a turn back at most twice, then only warns.
+  instead of ending the turn. It hands a turn back at most twice, then only warns. Each excerpt is capped at 2400
+  characters and the whole hand-back prompt at 6000, so a wall of diagnostics cannot flood the context.
 - Warnings that predated the hook are tolerated through a baseline at `~/.codex/cache/sl-stop-check/baseline.json`,
-  seeded on the hook's first run; delete that file to re-baseline after accepting new warnings.
-  `SL_STOP_CHECK=off` skips one check, and re-running on an unchanged working tree reuses the cached verdict.
+  seeded on the hook's first run; delete that file to re-baseline after accepting new warnings. A run with skipped
+  steps is incomplete: it neither seeds the baseline nor caches a verdict, so a restored tool is always re-checked.
+  `SL_STOP_CHECK=off` skips one check, and re-running on an unchanged working tree reuses the cached verdict. The
+  fingerprint hashes git stdout only, so git advisory noise on stderr never destabilizes it.
 - Project-local hooks only load for trusted projects, and Codex prompts once to trust `.codex/hooks.json`; commit
   changes to that file or `scripts/stop-check.ts` and re-approve the hook.
 
