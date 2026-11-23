@@ -5,6 +5,7 @@ import Embed from './Embed';
 import Form from './Form';
 import Installation from './Installation';
 import Piping from './Piping';
+import Trains from './Trains';
 import Usage from './Usage';
 
 /**
@@ -75,8 +76,9 @@ const slReducer = (state: State, action: Action): State => {
 /**
  * Main home page component.
  *
- * Renders the SL demo with an interactive control form, usage documentation,
- * piping examples, embed instructions, and installation guides.
+ * Renders the SL demo with an interactive control form, a live demo for every
+ * supported train, usage documentation, piping examples, embed instructions, and
+ * installation guides.
  *
  * @returns The complete home page layout.
  */
@@ -117,6 +119,7 @@ const Home = () => {
           backgroundColor={state.backgroundColor}
         />
       </div>
+      <Trains />
       <Usage />
       <Piping />
       <Embed />
