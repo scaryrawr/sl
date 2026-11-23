@@ -383,6 +383,15 @@ const summarize = (output: string, tolerated: string[]) => {
   return body.length > SNIPPET_LIMIT ? `${body.slice(0, SNIPPET_LIMIT)}\n… truncated …` : body;
 };
 
+/** Last lines of step output, used when a failing step printed nothing parsable as a diagnostic. */
+const rawTail = (output: string) => {
+  const lines = output.split('\n').filter((line) => line.trim());
+
+  return lines.length
+    ? lines.slice(-15).join('\n')
+    : '(no output captured; nonzero exit with no diagnostics on stdout or stderr)';
+};
+
 /**
  * Run every validation step and report which ones failed.
  *
@@ -409,7 +418,7 @@ const evaluate = (root: string, tolerated: string[], seedBaseline: boolean): Out
       failuresForStep.push({
         label: step.label,
         command: commandText(step),
-        excerpt: summarize(result.output, tolerated) || `${commandText(step)} failed without reporting diagnostics`
+        excerpt: summarize(result.output, tolerated) || rawTail(result.output)
       });
     }
 
