@@ -27,18 +27,20 @@ Monorepo for the `sl` terminal train. Rust workspace plus a Bun workspace for th
   multi-line code frames.
 - Step budgets sum to 660s under a 780s shared deadline, inside the 900s `timeout` declared in `.codex/hooks.json`,
   so Codex never kills the hook mid-run; steps left over after the deadline are reported as skipped, not failed.
-- Failures - errors and any warning beyond the baseline - make the hook return
-  `{"decision":"block","reason":...}`, so Codex hands the failing commands and diagnostics back to the agent
-  instead of ending the turn. It hands a turn back at most twice, then only warns. Each excerpt is capped at 2400
-  characters and the whole hand-back prompt at 6000, so a wall of diagnostics cannot flood the context.
-- Warnings that predated the hook are tolerated through a baseline at `~/.codex/cache/sl-stop-check/baseline.json`,
-  seeded on the hook's first run; delete that file to re-baseline after accepting new warnings. A run with skipped
-  steps is incomplete: it neither seeds the baseline nor caches a verdict, so a restored tool is always re-checked.
-  `SL_STOP_CHECK=off` skips one check, and re-running on an unchanged working tree reuses the cached verdict. The
-  fingerprint hashes git stdout only, so git advisory noise on stderr never destabilizes it; above 5000 tracked
-  files it hashes the changed paths and their contents rather than every file.
-- Project-local hooks only load for trusted projects, and Codex prompts once to trust `.codex/hooks.json`; commit
-  changes to that file or `scripts/stop-check.ts` and re-approve the hook.
+- Every diagnostic counts, errors and warnings alike, so `bun run lint` has to stay warning-free. The skill
+  scripts' `window.__slQueue`, `__slPump` and `__slPerformance` globals are allowlisted in `.oxlintrc.json` rather
+  than tolerated through a baseline file, and cargo advisories with no `-->` location concern the manifest instead
+  of code, so they never reach the agent. `SL_STOP_CHECK=off` skips one check.
+- Failures make the hook return `{"decision":"block","reason":...}`, so Codex hands the failing commands and
+  diagnostics back to the agent instead of ending the turn. It hands a turn back at most twice, then only warns.
+  Each excerpt is capped at 2400 characters and the whole hand-back prompt at 6000.
+- Nothing is cached: the suite costs ~0.8s on a warm tree and ~5s from a cold cargo target, cheaper than tracking
+  whether the working tree changed, so there is no fingerprint that could go stale and skip validation. The only
+  state is the hand-back counter at `~/.codex/cache/sl-stop-check/<sha256(sessionId + repo root)>.json`, keyed to
+  the current turn id.
+- Project-local hooks only load for trusted projects, and Codex prompts once to trust `.codex/hooks.json`. That
+  file's contents are hashed for the trust record, so editing it needs re-approval; editing `scripts/stop-check.ts`
+  alone does not.
 
 ## Gotchas
 

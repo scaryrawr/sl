@@ -6,9 +6,9 @@
  * hook response on stdout. `{"decision":"block","reason":"..."}` hands the failures back to the agent so the
  * turn continues; `{}` lets the turn finish.
  *
- * Warnings that already existed when this hook was installed are stored as a tolerated baseline, so only new
- * warnings count as failures. Delete `~/.codex/cache/sl-stop-check/baseline.json` to re-baseline after
- * accepting new warnings. Set `SL_STOP_CHECK=off` to skip the check for one turn.
+ * Every diagnostic counts as a failure, errors and warnings alike, except cargo advisories that carry no source
+ * location. The checks run every time the hook fires: the repo's suite costs under a second on a warm tree, so
+ * nothing is cached and there is no working-tree state to go stale. Set `SL_STOP_CHECK=off` to skip one check.
  *
  * Manual run:
  *   printf '%s' '{"hook_event_name":"Stop","session_id":"dev","turn_id":"dev","cwd":"'$PWD'","stop_hook_active":false}' |
@@ -19,7 +19,6 @@
 
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readdirSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -56,7 +55,7 @@ interface RunResult {
   code: number;
   /** stdout and stderr concatenated, because diagnostics may arrive on either stream. */
   output: string;
-  /** stdout alone, used where output is hashed or resolved rather than read as diagnostics. */
+  /** stdout alone, used where output is resolved rather than read as diagnostics. */
   stdout: string;
   /** Non-empty when the step could not be evaluated, such as a missing tool or a timeout. */
   problem: string;
@@ -69,41 +68,21 @@ interface Failure {
   excerpt: string;
 }
 
-/** Verdict for one working-tree state. */
+/** Verdict for one run of the checks. */
 interface Outcome {
   failures: Failure[];
-  warnings: string[];
   notes: string[];
-  /** True when a step could not run, so the verdict and warning list are partial. */
-  incomplete: boolean;
 }
 
-/** Cached verdict and hand-back count for the current turn. */
+/** Hand-back counter for the current turn. */
 interface TurnStateWire {
   turn_id?: string;
-  fingerprint?: string;
-  failures?: FailureWire[];
   blocks?: number;
-  incomplete?: boolean;
-}
-
-interface FailureWire {
-  label?: string;
-  command?: string;
-  excerpt?: string;
 }
 
 interface TurnState {
   turnId: string;
-  fingerprint: string;
-  failures: Failure[];
   blocks: number;
-  incomplete: boolean;
-}
-
-/** Warnings tolerated because they predated this hook. */
-interface Baseline {
-  warnings: string[];
 }
 
 /** Times one turn may be handed back to fix failures. */
@@ -120,12 +99,6 @@ const SNIPPET_LIMIT = 2400;
 
 /** Upper bound for the whole continuation prompt, so many failures cannot flood the hand-back. */
 const PROMPT_LIMIT = 6000;
-
-/** Above this tracked-file count the fingerprint hashes changed paths only, instead of every file. */
-const LARGE_TREE_FILE_LIMIT = 5000;
-
-/** Cap for tolerated pre-existing warnings. */
-const BASELINE_LIMIT = 400;
 
 /** Validation steps, slowest first. */
 const CHECKS: CheckStep[] = [
@@ -193,7 +166,7 @@ const parseEvent = (payload: string): StopEvent => {
   };
 };
 
-/** Directory holding the warning baseline and per-session turn guards. */
+/** Directory holding the per-session hand-back counters. */
 const stateRoot = () => {
   const codexHome = process.env.CODEX_HOME ?? path.join(os.homedir(), '.codex');
 
@@ -249,7 +222,7 @@ const runStep = (step: CheckStep, cwd: string): RunResult => {
 
 const commandText = (step: CheckStep) => [step.command, ...step.args].join(' ');
 
-/** Final stdout line of a probe whose answer is one path or hash, ignoring any advisory output. */
+/** Final stdout line of a probe whose answer is one path, ignoring any advisory output. */
 const lastStdoutLine = (result: RunResult) => {
   const lines = result.stdout.split('\n').filter((line) => line.trim());
 
@@ -271,91 +244,6 @@ const repoRoot = (eventCwd: string) => {
   return fallbackRoot;
 };
 
-const nulSplit = (text: string) => text.split('\0').filter(Boolean);
-
-const hashFile = (hasher: ReturnType<typeof createHash>, directory: string, relative: string) => {
-  hasher.update(relative);
-
-  try {
-    hasher.update(readFileSync(path.join(directory, relative)));
-  } catch {
-    hasher.update('unreadable');
-  }
-};
-
-/** Path carried by a `git status --porcelain` line, following a rename to its destination. */
-const statusPath = (line: string) => {
-  const raw = line.slice(3).trim();
-  const target = raw.includes(' -> ') ? raw.split(' -> ')[1] : raw;
-
-  return target.replace(/^"|"$/g, '');
-};
-
-/** Content hash of the working tree plus the generated wasm bindings the demo site imports. */
-const workingTreeFingerprint = (root: string) => {
-  const hasher = createHash('sha256');
-  const head = runStep({ label: 'git head', command: 'git', args: ['rev-parse', 'HEAD'], timeoutMs: 5000 }, root);
-  const tracked = runStep({ label: 'git tracked', command: 'git', args: ['ls-files', '-z'], timeoutMs: 10000 }, root);
-
-  const others = runStep(
-    {
-      label: 'git untracked',
-      command: 'git',
-      args: ['ls-files', '--others', '--exclude-standard', '-z'],
-      timeoutMs: 10000
-    },
-    root
-  );
-
-  hasher.update(lastStdoutLine(head));
-  const files = [...new Set([...nulSplit(tracked.stdout), ...nulSplit(others.stdout)])].toSorted();
-
-  if (files.length > LARGE_TREE_FILE_LIMIT) {
-    const status = runStep(
-      { label: 'git status', command: 'git', args: ['status', '--porcelain'], timeoutMs: 10000 },
-      root
-    );
-
-    status.stdout
-      .split('\n')
-      .filter((line) => line.trim())
-      .forEach((line) => {
-        hasher.update(line);
-        // Porcelain lines carry paths but no content, so the changed files are hashed too: otherwise a content
-        // edit in a repository this large would reuse a stale verdict.
-        hashFile(hasher, root, statusPath(line));
-      });
-  } else {
-    files.forEach((relative) => {
-      hashFile(hasher, root, relative);
-    });
-  }
-
-  hasher.update(hashGeneratedBindings(root));
-
-  return hasher.digest('hex');
-};
-
-const hashGeneratedBindings = (root: string) => {
-  const hasher = createHash('sha256');
-  const pkgDir = path.join(root, 'libraries/websl/pkg');
-
-  try {
-    const names = readdirSync(pkgDir, { withFileTypes: true })
-      .filter((entry) => entry.isFile() && /\.(?:js|d\.ts|wasm)$/.test(entry.name))
-      .map((entry) => entry.name)
-      .toSorted();
-
-    names.forEach((name) => {
-      hashFile(hasher, pkgDir, name);
-    });
-  } catch {
-    hasher.update('pkg:absent');
-  }
-
-  return hasher.digest('hex');
-};
-
 const readJson = async <T>(file: string): Promise<T | null> => {
   try {
     const value: T = JSON.parse(await readFile(file, 'utf8'));
@@ -370,12 +258,12 @@ const readJson = async <T>(file: string): Promise<T | null> => {
   }
 };
 
-const writeJson = async (file: string, value: TurnStateWire | Baseline) => {
+const writeJson = async (file: string, value: TurnStateWire) => {
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(file, JSON.stringify(value), 'utf8');
 };
 
-/** One diagnostic line from a validation step, keyed for baseline comparison. */
+/** One diagnostic line from a validation step, keyed by source location. */
 interface DiagnosticEntry {
   /** `file:line: message`, or empty for cargo advisories that carry no source location. */
   key: string;
@@ -420,7 +308,7 @@ const diagnosticEntries = (output: string): DiagnosticEntry[] => {
     const position = /-->\s*(.+?):(\d+):\d+/.exec(location);
 
     if (!position) {
-      // Cargo manifest and resolver advisories carry no location, so they never key into the baseline.
+      // Cargo manifest and resolver advisories carry no source location, so they never reach the agent.
       entries.push({ key: '', line, location: '', warning: line.startsWith('warning') });
 
       return;
@@ -437,22 +325,16 @@ const diagnosticEntries = (output: string): DiagnosticEntry[] => {
   return entries;
 };
 
-/** Warning keys to compare against the baseline; location-less advisories are excluded. */
-const warningKeys = (output: string) =>
+/** Warning lines a step owes the agent; location-less cargo advisories are excluded. */
+const warningLines = (output: string) =>
   diagnosticEntries(output)
     .filter((entry) => entry.warning && entry.key)
-    .map((entry) => entry.key);
-
-/** Warning output lines the agent must fix, because they are outside the tolerated baseline. */
-const freshWarningLines = (output: string, tolerated: string[]) =>
-  diagnosticEntries(output)
-    .filter((entry) => entry.warning && entry.key && !tolerated.includes(entry.key))
     .map((entry) => entry.line);
 
-/** Trim step output to actionable diagnostics: every error, plus warnings beyond the tolerated baseline. */
-const summarize = (output: string, tolerated: string[]) => {
+/** Trim step output to actionable diagnostics: every error, plus every warning with a source location. */
+const summarize = (output: string) => {
   const kept = diagnosticEntries(output)
-    .filter((entry) => !entry.warning || (entry.key !== '' && !tolerated.includes(entry.key)))
+    .filter((entry) => !entry.warning || entry.key !== '')
     .flatMap((entry) => (entry.location ? [entry.line.trim(), entry.location] : [entry.line.trim()]));
 
   return truncate(kept.join('\n'), SNIPPET_LIMIT);
@@ -470,21 +352,18 @@ const rawTail = (output: string) => {
 /**
  * Run every validation step and report which ones failed.
  *
- * On the bootstrap run (`seedBaseline`) warnings are recorded instead of reported, so installing this hook never
- * forces the agent to clean up warnings that already existed.
+ * Errors and warnings both count as failures; cargo advisories without a source location concern the manifest
+ * rather than code, so they stay out of the report.
  */
-const evaluate = (root: string, tolerated: string[], seedBaseline: boolean): Outcome => {
+const evaluate = (root: string): Outcome => {
   const failures: Failure[] = [];
-  const warnings: string[] = [];
   const notes: string[] = [];
-  let incomplete = false;
 
   CHECKS.forEach((step) => {
     const result = runStep(step, root);
 
     if (result.problem) {
       notes.push(`${commandText(step)} → ${result.problem} (step skipped)`);
-      incomplete = true;
 
       return;
     }
@@ -495,28 +374,25 @@ const evaluate = (root: string, tolerated: string[], seedBaseline: boolean): Out
       failuresForStep.push({
         label: step.label,
         command: commandText(step),
-        excerpt: summarize(result.output, tolerated) || rawTail(result.output)
+        excerpt: summarize(result.output) || rawTail(result.output)
       });
     }
 
-    const fresh = seedBaseline ? [] : freshWarningLines(result.output, tolerated);
+    const warnings = warningLines(result.output);
 
-    // Warnings from failing steps are recorded too, so a bootstrap run never leaves pre-existing warnings
-    // untolerated just because some other step happened to fail at the same time.
-    warnings.push(...warningKeys(result.output));
-
-    if (result.code === 0 && fresh.length) {
+    // oxlint exits zero on warnings, so a step that passed can still owe the agent fixes.
+    if (result.code === 0 && warnings.length) {
       failuresForStep.push({
         label: `${step.label} warnings`,
         command: commandText(step),
-        excerpt: truncate(fresh.join('\n'), SNIPPET_LIMIT)
+        excerpt: truncate(warnings.join('\n'), SNIPPET_LIMIT)
       });
     }
 
     failures.push(...failuresForStep);
   });
 
-  return { failures, warnings, notes, incomplete };
+  return { failures, notes };
 };
 
 const continuationPrompt = (failures: Failure[], notes: string[]) => {
@@ -537,21 +413,11 @@ const continuationPrompt = (failures: Failure[], notes: string[]) => {
 };
 
 const decodeTurnState = (wire: TurnStateWire | null): TurnState | null => {
-  if (!wire || !wire.turn_id || !wire.fingerprint || !Array.isArray(wire.failures)) {
+  if (!wire || !wire.turn_id) {
     return null;
   }
 
-  const failures = wire.failures
-    .filter((failure) => failure.label && failure.command && failure.excerpt)
-    .map((failure) => ({ label: failure.label ?? '', command: failure.command ?? '', excerpt: failure.excerpt ?? '' }));
-
-  return {
-    turnId: wire.turn_id,
-    fingerprint: wire.fingerprint,
-    failures,
-    blocks: wire.blocks ?? 0,
-    incomplete: wire.incomplete === true
-  };
+  return { turnId: wire.turn_id, blocks: wire.blocks ?? 0 };
 };
 
 const handleEvent = async (event: StopEvent) => {
@@ -560,40 +426,12 @@ const handleEvent = async (event: StopEvent) => {
   }
 
   const root = repoRoot(path.resolve(event.cwd));
-  const dir = stateRoot();
-  const baselineFile = path.join(dir, 'baseline.json');
-  const turnFile = path.join(dir, `${digest(`${event.sessionId}\0${root}`)}.json`);
-  const baseline = await readJson<Baseline>(baselineFile);
-  const tolerated = baseline?.warnings ?? [];
-  const turn = await readJson<TurnStateWire>(turnFile);
-  const state = decodeTurnState(turn);
-  const fingerprint = workingTreeFingerprint(root);
-
-  // A missing baseline forces a fresh evaluation: reusing a cached verdict would seed the baseline from that
-  // verdict's empty warning list and make every tolerated warning look new. An incomplete verdict (missing tool
-  // or exhausted deadline) is never reused either: a restored tool would stay unchecked, and seeding from a
-  // partial warning list would make untouched warnings look new.
-  const repeat =
-    baseline !== null && !state?.incomplete && state?.turnId === event.turnId && state.fingerprint === fingerprint;
-
-  const outcome = repeat
-    ? { failures: state.failures, warnings: [], notes: [], incomplete: false }
-    : evaluate(root, tolerated, baseline === null);
+  const turnFile = path.join(stateRoot(), `${digest(`${event.sessionId}\0${root}`)}.json`);
+  const state = decodeTurnState(await readJson<TurnStateWire>(turnFile));
 
   // Hand-backs only accumulate inside one turn, so a new turn always starts with a fresh budget.
   const blocks = state !== null && state.turnId === event.turnId ? state.blocks : 0;
-
-  await writeJson(turnFile, {
-    turn_id: event.turnId,
-    fingerprint,
-    failures: outcome.failures,
-    blocks,
-    incomplete: outcome.incomplete
-  });
-
-  if (baseline === null && !outcome.incomplete) {
-    await writeJson(baselineFile, { warnings: [...new Set(outcome.warnings)].toSorted().slice(0, BASELINE_LIMIT) });
-  }
+  const outcome = evaluate(root);
 
   if (!outcome.failures.length) {
     if (outcome.notes.length) {
@@ -616,13 +454,7 @@ const handleEvent = async (event: StopEvent) => {
     };
   }
 
-  await writeJson(turnFile, {
-    turn_id: event.turnId,
-    fingerprint,
-    failures: outcome.failures,
-    blocks: blocks + 1,
-    incomplete: outcome.incomplete
-  });
+  await writeJson(turnFile, { turn_id: event.turnId, blocks: blocks + 1 });
 
   return { decision: 'block', reason: truncate(continuationPrompt(outcome.failures, outcome.notes), PROMPT_LIMIT) };
 };
