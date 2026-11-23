@@ -1,0 +1,17 @@
+{
+  "description": "Stop hook: hand the turn back to the agent until clippy, oxlint, and typecheck pass warning-free.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "runtime=\"$(command -v bun || command -v node)\"; root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; \"$runtime\" \"$root/scripts/stop-check.ts\"",
+            "timeout": 900,
+            "statusMessage": "Checking sl clippy, lint, and types"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -18,7 +18,10 @@
     "no-debugger": "error",
     "no-empty": "error",
     "no-array-delete": "error",
-    "no-underscore-dangle": ["warn", { "allow": ["__dirname", "__filename"] }],
+    "no-underscore-dangle": [
+      "warn",
+      { "allow": ["__dirname", "__filename", "__slPerformance", "__slQueue", "__slPump"] }
+    ],
     "oxc/no-accumulating-spread": "error",
     "anti-slop/no-array-filter-map": "error",
     "anti-slop/no-reduce-accumulator-copy": "error",
