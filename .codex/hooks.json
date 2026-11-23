@@ -7,7 +7,7 @@
           {
             "type": "command",
             "command": "runtime=\"$(command -v bun || command -v node)\"; root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; \"$runtime\" \"$root/scripts/stop-check.ts\"",
-            "timeout": 600,
+            "timeout": 900,
             "statusMessage": "Checking sl clippy, lint, and types"
           }
         ]

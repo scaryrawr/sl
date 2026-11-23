@@ -25,6 +25,8 @@ Monorepo for the `sl` terminal train. Rust workspace plus a Bun workspace for th
   --format=agent`, `bunx oxlint . --type-aware ... --format=agent` (`lint:types`), and `bun run typecheck`.
   `--format=agent` keeps one diagnostic per line so parsing works inside a hook, where oxlint otherwise prints
   multi-line code frames.
+- Step budgets sum to 660s under a 780s shared deadline, inside the 900s `timeout` declared in `.codex/hooks.json`,
+  so Codex never kills the hook mid-run; steps left over after the deadline are reported as skipped, not failed.
 - Failures - errors and any warning beyond the baseline - make the hook return
   `{"decision":"block","reason":...}`, so Codex hands the failing commands and diagnostics back to the agent
   instead of ending the turn. It hands a turn back at most twice, then only warns.

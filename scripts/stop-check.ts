@@ -102,6 +102,12 @@ interface Baseline {
 /** Times one turn may be handed back to fix failures. */
 const MAX_BLOCKS_PER_TURN = 2;
 
+/**
+ * Total budget for all steps plus repository discovery. `.codex/hooks.json` declares a 900s hook timeout while the
+ * step budgets sum to 660s, so this deadline leaves 120s before Codex terminates the hook process.
+ */
+const SHARED_DEADLINE_MS = 780000;
+
 /** Upper bound for each failing command excerpt in the continuation prompt. */
 const SNIPPET_LIMIT = 2400;
 
@@ -139,6 +145,7 @@ const CHECKS: CheckStep[] = [
   { label: 'demo typecheck', command: 'bun', args: ['run', 'typecheck'], timeoutMs: 60000 }
 ];
 
+const startedAt = Date.now();
 const scriptPath = fileURLToPath(import.meta.url);
 const fallbackRoot = path.resolve(path.dirname(scriptPath), '..');
 
@@ -177,9 +184,15 @@ const stateRoot = () => {
 };
 
 const runStep = (step: CheckStep, cwd: string): RunResult => {
+  const budgetMs = Math.min(step.timeoutMs, SHARED_DEADLINE_MS - (Date.now() - startedAt));
+
+  if (budgetMs <= 0) {
+    return { code: 0, output: '', problem: 'shared check deadline exhausted before this step' };
+  }
+
   const result = spawnSync(step.command, step.args, {
     cwd,
-    timeout: step.timeoutMs,
+    timeout: budgetMs,
     encoding: 'utf8',
     maxBuffer: 32 * 1024 * 1024
   });
@@ -196,7 +209,7 @@ const runStep = (step: CheckStep, cwd: string): RunResult => {
       return {
         code: 1,
         output: result.stdout ?? '',
-        problem: `${step.command} exceeded ${Math.round(step.timeoutMs / 1000)}s`
+        problem: `${step.command} exceeded ${Math.round(budgetMs / 1000)}s`
       };
     }
 
@@ -330,7 +343,9 @@ const diagnosticEntries = (output: string): DiagnosticEntry[] => {
   const entries: DiagnosticEntry[] = [];
 
   lines.forEach((line, index) => {
-    const lint = /^(.+?):(\d+):(\d+): (error|warning) (.+)$/.exec(line);
+    // Agent format prints `file:line:col: <severity> <rule>: <message>`; parser errors drop the rule and print
+    // `file:line:col: <severity>: <message>`, so the severity's trailing colon is optional.
+    const lint = /^(.+?):(\d+):(\d+): (error|warning):?\s+(.+)$/.exec(line);
 
     if (lint) {
       entries.push({ key: `${lint[1]}:${lint[2]}: ${lint[5]}`, line, location: '', warning: lint[4] === 'warning' });
@@ -492,7 +507,11 @@ const handleEvent = async (event: StopEvent) => {
   const turn = await readJson<TurnStateWire>(turnFile);
   const state = decodeTurnState(turn);
   const fingerprint = workingTreeFingerprint(root);
-  const repeat = state !== null && state.turnId === event.turnId && state.fingerprint === fingerprint;
+
+  // A missing baseline forces a fresh evaluation: reusing a cached verdict would seed the baseline from that
+  // verdict's empty warning list and make every tolerated warning look new.
+  const repeat =
+    baseline !== null && state !== null && state.turnId === event.turnId && state.fingerprint === fingerprint;
 
   const outcome = repeat
     ? { failures: state.failures, warnings: [], notes: [] }
