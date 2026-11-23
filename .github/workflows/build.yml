@@ -15,6 +15,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  lint:
+    uses: ./.github/workflows/lint.yml
+
   build-fedora:
     uses: ./.github/workflows/fedora-build.yml
   build-posix:
