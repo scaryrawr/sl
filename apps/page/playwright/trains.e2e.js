@@ -6,7 +6,7 @@ const TERMINAL_ROLE = { name: 'Animated ASCII art train moving across terminal s
 const TRAIN_DEMOS = [
   { name: 'D51', trainType: 'd51', sprite: '(_)---' },
   { name: 'C51', trainType: 'c51', sprite: 'oOo' },
-  { name: 'Logo', trainType: 'logo', sprite: '++' }
+  { name: 'Logo', trainType: 'logo', sprite: '|+-+ |' }
 ];
 
 test('shows a live demo for every supported train', async ({ page }) => {
@@ -28,5 +28,18 @@ test('shows a live demo for every supported train', async ({ page }) => {
     await expect(terminal).toBeVisible();
     await expect(terminal).not.toContainText('Failed to load animation');
     await expect.poll(() => terminal.textContent(), { timeout: 30_000 }).toContain(demo.sprite);
+  }
+});
+
+test('renders each static train and its status on a narrow screen', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/sl/');
+
+  for (const demo of TRAIN_DEMOS) {
+    const terminal = page.getByRole('region', { name: demo.name }).getByRole('img', TERMINAL_ROLE);
+
+    await expect(terminal).toContainText(demo.sprite);
+    await expect(terminal).toContainText('Static view - Animation disabled');
   }
 });

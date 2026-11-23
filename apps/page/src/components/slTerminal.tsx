@@ -192,28 +192,22 @@ const useSlAnimation = (props: {
         // Center the train vertically (accounting for message row)
         const startRow = Math.max(0, Math.floor((terminal.children.length - staticTrain.length - MESSAGE_ROWS) / 2));
 
-        // Render static train centered both vertically and horizontally
-        staticTrain.forEach((line, idx) => {
-          // SAFETY: Terminal renders every child of the grid as a row <div> element.
-          const row = terminal.children[startRow + idx] as HTMLElement | undefined;
+        const renderStaticRow = (row: Element | undefined, text: string) => {
+          if (!row) return;
 
-          if (row) {
-            const cols = row.textContent?.length ?? 0;
-            const padding = Math.max(0, Math.floor((cols - line.length) / 2));
-            row.textContent = '\xa0'.repeat(padding) + line + '\xa0'.repeat(cols - padding - line.length);
-          }
-        });
+          const cols = cellCount(row);
+          const visibleText = text.slice(0, cols);
+          const remaining = cols - visibleText.length;
+          const padding = Math.floor(remaining / 2);
 
-        // Add accessibility message explaining why animation is disabled
-        // SAFETY: Terminal renders every child of the grid as a row <div> element.
-        const msgRow = terminal.children[startRow + staticTrain.length] as HTMLElement | undefined;
+          row.textContent = '\xa0'.repeat(padding) + visibleText + '\xa0'.repeat(remaining - padding);
+        };
 
-        if (msgRow) {
-          const msg = 'Static view - Animation disabled due to reduced motion preference';
-          const cols = msgRow.textContent?.length ?? 0;
-          const padding = Math.max(0, Math.floor((cols - msg.length) / 2));
-          msgRow.textContent = '\xa0'.repeat(padding) + msg + '\xa0'.repeat(cols - padding - msg.length);
-        }
+        staticTrain.forEach((line, idx) => renderStaticRow(terminal.children[startRow + idx], line));
+        renderStaticRow(
+          terminal.children[startRow + staticTrain.length],
+          'Static view - Animation disabled due to reduced motion preference'
+        );
       }
 
       return () => {
