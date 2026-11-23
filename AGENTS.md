@@ -21,8 +21,10 @@ Monorepo for the `sl` terminal train. Rust workspace plus a Bun workspace for th
 ## Stop hook
 
 - `.codex/hooks.json` declares a Codex Stop hook that runs `scripts/stop-check.ts` before a turn may finish:
-  `cargo clippy --workspace --all-targets -- -D warnings` (build errors + clippy warnings), `bunx oxlint .`,
-  `bunx oxlint . --type-aware ...` (`lint:types`), and `bun run typecheck`.
+  `cargo clippy --workspace --all-targets -- -D warnings` (build errors + clippy warnings), `bunx oxlint .
+  --format=agent`, `bunx oxlint . --type-aware ... --format=agent` (`lint:types`), and `bun run typecheck`.
+  `--format=agent` keeps one diagnostic per line so parsing works inside a hook, where oxlint otherwise prints
+  multi-line code frames.
 - Failures - errors and any warning beyond the baseline - make the hook return
   `{"decision":"block","reason":...}`, so Codex hands the failing commands and diagnostics back to the agent
   instead of ending the turn. It hands a turn back at most twice, then only warns.

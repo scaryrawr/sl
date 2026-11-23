@@ -116,7 +116,9 @@ const CHECKS: CheckStep[] = [
     args: ['clippy', '--workspace', '--all-targets', '--', '-D', 'warnings'],
     timeoutMs: 300000
   },
-  { label: 'oxlint', command: 'bunx', args: ['oxlint', '.'], timeoutMs: 120000 },
+  // `--format=agent` pins one diagnostic line per finding; oxlint's default format switches between compact
+  // lines and multi-line code frames depending on its environment, which would break parsing inside a hook.
+  { label: 'oxlint', command: 'bunx', args: ['oxlint', '.', '--format=agent'], timeoutMs: 120000 },
   {
     label: 'oxlint type-aware',
     command: 'bunx',
@@ -129,7 +131,8 @@ const CHECKS: CheckStep[] = [
       '-W',
       'typescript/no-floating-promises',
       '-D',
-      'typescript/await-thenable'
+      'typescript/await-thenable',
+      '--format=agent'
     ],
     timeoutMs: 180000
   },
@@ -331,6 +334,14 @@ const diagnosticEntries = (output: string): DiagnosticEntry[] => {
 
     if (lint) {
       entries.push({ key: `${lint[1]}:${lint[2]}: ${lint[5]}`, line, location: '', warning: lint[4] === 'warning' });
+
+      return;
+    }
+
+    const tsc = /^(.+?)\((\d+),(\d+)\): (error|warning) (.+)$/.exec(line);
+
+    if (tsc) {
+      entries.push({ key: `${tsc[1]}:${tsc[2]}: ${tsc[5]}`, line, location: '', warning: tsc[4] === 'warning' });
 
       return;
     }
