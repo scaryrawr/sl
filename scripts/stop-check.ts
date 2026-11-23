@@ -414,9 +414,10 @@ const evaluate = (root: string, tolerated: string[], seedBaseline: boolean): Out
     }
 
     const fresh = seedBaseline ? [] : freshWarningLines(result.output, tolerated);
-    const passedWarnings = result.code === 0 ? warningKeys(result.output) : [];
 
-    warnings.push(...passedWarnings);
+    // Warnings from failing steps are recorded too, so a bootstrap run never leaves pre-existing warnings
+    // untolerated just because some other step happened to fail at the same time.
+    warnings.push(...warningKeys(result.output));
 
     if (result.code === 0 && fresh.length) {
       failuresForStep.push({ label: `${step.label} warnings`, command: commandText(step), excerpt: fresh.join('\n') });
