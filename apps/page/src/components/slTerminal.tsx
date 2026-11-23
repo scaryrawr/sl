@@ -257,11 +257,16 @@ const useSlAnimation = (props: {
             return existing;
           }
 
+          // SAFETY: terminal's children are row <div> elements (the same
+          // invariant used everywhere else in this file); textContent on each
+          // row is all the grid is built from.
           const rows = Array.from(terminal.children).map((row) =>
             Array.from((row as HTMLElement).textContent ?? '')
           );
+
           const fresh = { firstRow, rows };
           gridRef.current = fresh;
+
           return fresh;
         };
 
@@ -316,7 +321,7 @@ const useSlAnimation = (props: {
           const grid = getGrid();
           const rows = grid.rows.length;
           const cols = grid.rows[0]?.length ?? 0;
-          const display = ensureDisplay(cols, rows);
+          const displayInstance = ensureDisplay(cols, rows);
           dirtyRowsRef.current.clear();
 
           if ((xRef.current ?? 0) > cols) {
@@ -329,7 +334,7 @@ const useSlAnimation = (props: {
 
           xRef.current = nextX;
 
-          if (!trains[trainType](nextX, messages, display, options, trainSmoke)) {
+          if (!trains[trainType](nextX, messages, displayInstance, options, trainSmoke)) {
             clear();
             xRef.current = cols;
             resetSmoke();

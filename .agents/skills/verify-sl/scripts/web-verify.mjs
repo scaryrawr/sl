@@ -59,6 +59,7 @@ const SCENARIOS = {
 };
 
 const config = SCENARIOS[scenario];
+
 if (!config) {
   console.error(`unknown scenario: ${scenario} (choose: ${Object.keys(SCENARIOS).join(", ")})`);
   process.exit(2);
@@ -66,13 +67,16 @@ if (!config) {
 
 const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
 const evidenceDir = join(skillDir, "evidence", `${stamp}-web-${scenario}`);
+
 mkdirSync(evidenceDir, { recursive: true });
 
 const portOpen = () =>
   fetch(`${base}/sl/`)
     .then((response) => response.ok)
     .catch(() => false);
+
 let server = null;
+
 if (!(await portOpen())) {
   server = Bun.spawn([process.execPath, "playwright-server.mjs"], {
     cwd: join(repoRoot, "apps/page"),
@@ -80,9 +84,11 @@ if (!(await portOpen())) {
     stdout: "ignore",
     stderr: "inherit",
   });
+
   for (let attempt = 0; attempt < 60 && !(await portOpen()); attempt += 1) {
     await Bun.sleep(500);
   }
+
   if (!(await portOpen())) {
     server.kill();
     throw new Error(`verification server did not answer on ${base} within 30s`);
@@ -93,14 +99,16 @@ let browser = null;
 let context = null;
 const results = [];
 const check = (name, ok) => results.push([name, ok]);
+
 try {
   // Launch inside the cleanup scope: a missing/incomplete browser must still
   // kill the verification server this run started.
   browser = await chromium.launch({ headless: true });
-  context = await browser.newContext({
-    viewport: { width: 1280, height: 900 },
-    ...(scenario === "reduced-motion" ? { reducedMotion: "reduce" } : {}),
-  });
+  const contextOptions = { viewport: { width: 1280, height: 900 } };
+
+  if (scenario === "reduced-motion") contextOptions.reducedMotion = "reduce";
+
+  context = await browser.newContext(contextOptions);
   const page = await context.newPage();
 
   const pump = async () => {
@@ -138,16 +146,20 @@ try {
     );
     const frames = [];
     let shot = false;
+
     for (let step = 0; step < config.steps; step += 1) {
       await page.waitForTimeout(70);
       const text = await readGrid(page);
       frames.push(text);
+
       if (step === 80 && !shot) {
         await grid.screenshot({ path: join(evidenceDir, "terminal-step080.png") });
         shot = true;
       }
+
       if (text.includes("VERIFCAR-A") && text.includes("_D _|")) break;
     }
+
     writeFileSync(join(evidenceDir, "frames.json"), JSON.stringify({ frames }, null, 1));
     const blob = frames.join("\n");
     check("home: locomotive art animates", blob.includes("_D _|"));
@@ -190,6 +202,7 @@ try {
 
     const readTrain = (id) => page.locator(`#${id} [role="img"]`).evaluate((grid) =>
       Array.from(grid.children).map((row) => row.textContent ?? "").join("\n").replace(/\u00a0/g, " "));
+
     const soloA = [];
     const jointA = [];
     const jointB = [];
@@ -250,7 +263,7 @@ try {
       frames.slice(0, 24).every((frame, index) => frame === frames[restart + index]));
   } else if (scenario === "reduced-motion") {
     await page.goto(`${base}/sl/embed.html${config.query}`, { waitUntil: "networkidle" });
-    const grid = page.locator('[role="img"][aria-label*="Animated ASCII art"]');
+
     try {
       await expectText(page, "Static view - Animation disabled", 10000);
     } catch (error) {
@@ -265,8 +278,10 @@ try {
             .slice(0, 2),
         }))));
       }
+
       throw error;
     }
+
     const text = await readGrid(page);
     writeFileSync(join(evidenceDir, "frame-static.txt"), text);
     check("reduced-motion: static locomotive shown", text.includes("_D _|") || text.includes("+------"));
@@ -283,63 +298,86 @@ try {
         firstLabel: document.querySelector('[role="img"]')?.getAttribute("aria-label") ?? null,
       }))));
     }
+
     const frames = [];
     let shot = false;
+
     for (let step = 0; step < config.steps; step += 1) {
       await pump();
       const text = await readGrid(page);
       frames.push(text);
+
       if (step === 100 && !shot) {
         await grid.screenshot({ path: join(evidenceDir, "terminal-step100.png") });
         shot = true;
       }
     }
+
     writeFileSync(join(evidenceDir, "frames.json"), JSON.stringify({ frames }, null, 1));
     const blob = frames.join("\n");
     check("no WASM load failure", !blob.includes("Failed to load animation"));
     check(`locomotive art rendered (${config.art})`, blob.includes(config.art));
+
     for (const car of config.cars ?? []) {
       check(`car label visible (${car})`, blob.includes(car));
     }
+
     check("animation advanced (distinct frames)", new Set(frames).size > 20);
+
     if (config.accident) {
       check("accident: people cry for help", blob.includes("Help!"));
     }
+
     if (config.fly) {
       // Track the locomotive head row across the run: a flying train RISES,
       // so the head must climb at least 10 rows. A centered stationary-height
       // D51 (which also has empty top rows and content near the bottom) cannot
       // pass this.
-      const headRow = (frame) => {
-        const rows = frame.split("\n");
-        for (let i = 0; i < rows.length; i += 1) if (rows[i].includes("_D _|")) return i;
-        return null;
-      };
-      const seen = frames.map(headRow).filter((row) => row !== null);
+      const seen = frames.flatMap((frame) => {
+        const row = headRow(frame);
+
+        return row === null ? [] : [row];
+      });
+
       // The embed loops: one run ends where the head row jumps back down.
       // Measure the climb of the first unbroken run.
       const run = [];
+
       for (const row of seen) {
         if (run.length && row > run[run.length - 1]) break;
         run.push(row);
       }
+
       check("fly: train rises across the run", run.length > 50 && run[0] - run[run.length - 1] >= 10);
     }
+
     if (!config.accident) {
       check("no accident figures without accident mode", !blob.includes("Help!"));
     }
   }
 } finally {
   if (context) await context.close();
+
   if (browser) await browser.close();
+
   if (server) server.kill();
+}
+
+function headRow(frame) {
+  const rows = frame.split("\n");
+
+  for (let i = 0; i < rows.length; i += 1) if (rows[i].includes("_D _|")) return i;
+
+  return null;
 }
 
 /** Read the animation grid as newline-joined rows (each row is a child <div>). */
 async function readGrid(page) {
   return page.evaluate(() => {
     const grid = document.querySelector('[role="img"][aria-label*="Animated ASCII art"]');
+
     if (!grid) return "";
+
     return Array.from(grid.children)
       .map((row) => row.textContent ?? "")
       .join("\n")
@@ -349,11 +387,14 @@ async function readGrid(page) {
 
 async function expectText(page, text, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
+
   while (Date.now() < deadline) {
     const value = await readGrid(page);
+
     if (value.includes(text)) return;
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
+
   throw new Error(`timed out waiting for ${JSON.stringify(text)} in grid`);
 }
 
@@ -365,33 +406,46 @@ function stepPatch() {
   window.__slQueue = [];
   window.__slPump = (count) => {
     let pumped = 0;
+
     for (let n = 0; n < count; n += 1) {
       const pending = window.__slQueue.splice(0, window.__slQueue.length);
+
       if (pending.length === 0) break;
+
       for (const animate of pending) animate(0);
       pumped += 1;
     }
+
     return pumped;
   };
+
   window.requestAnimationFrame = (callback) => {
     window.__slQueue.push(callback);
+
     return 0;
   };
+
   const realSetTimeout = window.setTimeout.bind(window);
   window.setTimeout = (callback, delay, ...rest) => {
     if (delay === 60) {
       callback();
+
       return 0;
     }
+
     return realSetTimeout(callback, delay, ...rest);
   };
 }
 
 let failed = 0;
 const width = Math.max(...results.map(([name]) => name.length));
+
 for (const [name, ok] of results) {
   console.log(`${ok ? "PASS" : "FAIL"} ${name.padEnd(width)}`);
+
   if (!ok) failed += 1;
 }
+
 console.log(`evidence: ${evidenceDir}`);
+
 process.exit(failed === 0 ? 0 : 1);
