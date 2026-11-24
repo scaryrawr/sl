@@ -1,17 +1,44 @@
 import type { JSX, RefObject } from 'preact';
 import { useLayoutEffect, useMemo, useRef } from 'preact/hooks';
 
-/** Approximate character width in pixels for a 16px monospace font (fallback before measurement). */
-const CHAR_WIDTH_ESTIMATE = 9.6;
+/** Default terminal text color: the phosphor green of the vintage terminals `sl` ran on. */
+const DEFAULT_FONT_COLOR = '#0f0';
 
-/** Approximate character height in pixels for a 16px monospace font (fallback before measurement). */
-const CHAR_HEIGHT_ESTIMATE = 19;
+/** Default terminal background color, chosen so the green glyphs read as a CRT screen. */
+const DEFAULT_BACKGROUND_COLOR = '#000';
+
+/** Font size assumed when `getComputedStyle` hands back a size that is not a plain pixel number. */
+const FALLBACK_FONT_SIZE_PX = 16;
+
+/** Advance width of a monospace cell as a share of the font size: the classic 0.6em. */
+const MONOSPACE_ADVANCE_RATIO = 0.6;
 
 /** Multiplier applied to font size to compute line height when TextMetrics bounding box is unavailable. */
 const LINE_HEIGHT_MULTIPLIER = 1.2;
 
+/** Approximate cell width for a {@link FALLBACK_FONT_SIZE_PX} monospace, before measurement. */
+const CHAR_WIDTH_ESTIMATE = FALLBACK_FONT_SIZE_PX * MONOSPACE_ADVANCE_RATIO;
+
+/** Approximate cell height for a {@link FALLBACK_FONT_SIZE_PX} monospace, at the same {@link LINE_HEIGHT_MULTIPLIER}. */
+const CHAR_HEIGHT_ESTIMATE = Math.floor(FALLBACK_FONT_SIZE_PX * LINE_HEIGHT_MULTIPLIER);
+
+/** Glyph used to measure a monospace cell: `M` is the widest letter in most fixed-width faces. */
+const MEASURE_GLYPH = 'M';
+
 /** Version tag for the localStorage font-metrics cache key; bump to invalidate stale measurements. */
 const CACHE_VERSION = 'v1';
+
+/** localStorage key prefix for cached font metrics; also the prefix used to sweep old entries. */
+const FONT_METRICS_CACHE_PREFIX = 'sl-font-metrics-';
+
+/** Hard ceiling on grid rows, so a very tall viewport cannot build thousands of row elements. */
+const MAX_TERMINAL_ROWS = 80;
+
+/** Height of the demo terminal window as a share of the viewport. */
+const WINDOW_HEIGHT = '80vh';
+
+/** Outer margin above and below the window (`margin: ${WINDOW_MARGIN_PX}px auto`). */
+const WINDOW_MARGIN_PX = 20;
 
 /** Character cell measurements cached in localStorage. */
 type FontMetrics = { width: number; height: number };
@@ -33,10 +60,10 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     position: 'relative',
-    margin: '20px auto',
+    margin: `${WINDOW_MARGIN_PX}px auto`,
     backgroundColor: '#fff',
-    // Fixed height to prevent layout shift
-    height: 'calc(80vh - 40px)'
+    // Fixed height to prevent layout shift: the window box minus its own vertical margins.
+    height: `calc(${WINDOW_HEIGHT} - ${WINDOW_MARGIN_PX * 2}px)`
   },
   titleBar: {
     backgroundColor: '#333',
@@ -71,7 +98,7 @@ const styles = {
     padding: '10px',
     overflow: 'hidden',
     minHeight: 0, // Allow flex child to shrink
-    lineHeight: '1.2' // Match LINE_HEIGHT_MULTIPLIER for consistent measurements
+    lineHeight: String(LINE_HEIGHT_MULTIPLIER) // Keep the painted rhythm equal to the measured one
   }
 } satisfies Record<'window' | 'titleBar' | 'title' | 'buttons' | 'button' | 'terminal', JSX.CSSProperties>;
 
@@ -107,8 +134,8 @@ type TerminalProps = {
 const Terminal = ({
   title,
   terminalRef: externalRef,
-  fontColor = '#0f0',
-  backgroundColor = '#000',
+  fontColor = DEFAULT_FONT_COLOR,
+  backgroundColor = DEFAULT_BACKGROUND_COLOR,
   fill = false
 }: TerminalProps) => {
   const internalRef = useRef<HTMLDivElement | null>(null);
@@ -136,7 +163,7 @@ const Terminal = ({
         const fontStyle = computedStyle.fontStyle;
 
         // Try to load from localStorage cache first
-        const cacheKey = `sl-font-metrics-${CACHE_VERSION}-${fontFamily}-${fontSize}-${fontWeight}-${fontStyle}`;
+        const cacheKey = `${FONT_METRICS_CACHE_PREFIX}${CACHE_VERSION}-${fontFamily}-${fontSize}-${fontWeight}-${fontStyle}`;
 
         try {
           const cached = localStorage.getItem(cacheKey);
@@ -166,8 +193,8 @@ const Terminal = ({
 
             if (ctx) {
               ctx.font = `${fontSize} ${fontFamily}`;
-              const metrics = ctx.measureText('M'); // Use 'M' as it's typically widest in monospace
-              const fontSizeNum = parseFloat(fontSize) || 16;
+              const metrics = ctx.measureText(MEASURE_GLYPH);
+              const fontSizeNum = parseFloat(fontSize) || FALLBACK_FONT_SIZE_PX;
 
               // Use TextMetrics bounding box for more accurate line height
               const lineHeight =
@@ -190,7 +217,7 @@ const Terminal = ({
                     for (let i = localStorage.length - 1; i >= 0; i--) {
                       const key = localStorage.key(i);
 
-                      if (key?.startsWith('sl-font-metrics-')) {
+                      if (key?.startsWith(FONT_METRICS_CACHE_PREFIX)) {
                         localStorage.removeItem(key);
                       }
                     }
@@ -217,7 +244,7 @@ const Terminal = ({
       // Batch all DOM reads
       const { clientWidth, clientHeight } = terminal;
       const cols = Math.floor(clientWidth / charWidth);
-      const rows = Math.min(80, Math.floor(clientHeight / lineHeight));
+      const rows = Math.min(MAX_TERMINAL_ROWS, Math.floor(clientHeight / lineHeight));
 
       const prev = dimensionsRef.current;
 
@@ -301,5 +328,7 @@ const Terminal = ({
     </div>
   );
 };
+
+export { DEFAULT_BACKGROUND_COLOR, DEFAULT_FONT_COLOR };
 
 export default Terminal;

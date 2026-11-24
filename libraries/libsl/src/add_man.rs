@@ -7,6 +7,22 @@ use crate::{RenderTarget, ScreenSize};
 
 use super::mvaddstr::mvaddstr;
 
+/// Vertical rows a passenger occupies: a head row above a body row.
+const ROWS: usize = 2;
+
+/// Frames that each passenger row alternates between.
+const FRAMES: usize = 2;
+
+/// Columns the train travels before a passenger switches frame.
+///
+/// Inherited from the original curses `sl`, whose `add_man` picked the frame with
+/// `(abs(x) / 12) % 2`. 12 is roughly the width of one carriage window, so a passenger
+/// waves once as each window scrolls past.
+const FRAME_TOGGLE_INTERVAL: i32 = 12;
+
+/// Frames per row: the top row hides or shouts, the bottom row stands or waves.
+const MAN_FRAMES: [[&str; FRAMES]; ROWS] = [["", "Help!"], ["(O)", "\\O/"]];
+
 /// Draw a person (passenger) at position `(y, x)` for the accident animation.
 ///
 /// Two frames alternate based on the x position: a standing figure and a "Help!" message.
@@ -27,10 +43,9 @@ pub fn add_man<T: RenderTarget>(
     screen: ScreenSize,
     target: &mut T,
 ) -> Result<(), T::Error> {
-    const MAN: [[&str; 2]; 2] = [["", "Help!"], ["(O)", "\\O/"]];
-    for (i, row) in MAN.iter().enumerate() {
-        let man = row[(x.abs() / 12 % 2) as usize];
-        mvaddstr(y + i as i32, x, man, screen, target)?;
+    for (i, row) in MAN_FRAMES.iter().enumerate() {
+        let frame = (x.abs() / FRAME_TOGGLE_INTERVAL % FRAMES as i32) as usize;
+        mvaddstr(y + i as i32, x, row[frame], screen, target)?;
     }
 
     Ok(())

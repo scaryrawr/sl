@@ -1,7 +1,43 @@
 use crate::{
-    add_train::{add_train, RenderContext, TrainFrames, TrainOffsets, WindowOffsets},
+    add_train::{
+        add_train, car_label_width, RenderContext, TrainFrames, TrainOffsets, WindowOffsets,
+    },
     RenderError, RenderTarget, ScreenSize, Smoke, TrainOptions,
 };
+
+/// Rows in every sprite of this train: engine frames, coal car, and carriage all stand this
+/// tall, and it is the `HEIGHT` the shared renderer is instantiated with.
+const HEIGHT: usize = 11;
+
+/// Wheel-animation frames the engine cycles through as it travels.
+const ANIMATIONS: usize = 6;
+
+/// Windows on the engine cab, and windows on each carriage.
+const ENGINE_WINDOWS: usize = 2;
+const CAR_WINDOWS: usize = 4;
+
+/// Column of the funnel that smoke rises from, inside the engine's stack.
+///
+/// The D51 stack is the `====` that spans columns 6..9 of the engine's top row, so smoke
+/// starts one column in from its left edge and reads as coming out of the chimney.
+const FUNNEL: i32 = 7;
+
+/// Engine sprite row holding the cab windows (`___ ___` in row 2); accident passengers are
+/// drawn from this row down so their heads appear in the cab.
+const ENGINE_WINDOW_ROW: i32 = 2;
+
+/// Cab-window columns of the engine sprite, one per window, spaced 4 columns apart.
+const ENGINE_WINDOW_COLUMNS: [i32; ENGINE_WINDOWS] = [43, 47];
+
+/// Carriage sprite row holding the window bays (`___` in row 1); passengers are drawn from
+/// this row down.
+const CAR_WINDOW_ROW: i32 = 1;
+
+/// Carriage window columns, one per bay, spaced 5 columns apart to match the sprite.
+///
+/// Each column sits two cells left of its `___` bay so the 3-cell `(O)` head and the 5-cell
+/// `Help!` line both land on the bay instead of beside it.
+const CAR_WINDOW_COLUMNS: [i32; CAR_WINDOWS] = [4, 9, 14, 19];
 
 /// Adds a D51 train to the display.
 ///
@@ -25,7 +61,7 @@ pub fn add_d51<T: AsRef<str>, U: RenderTarget>(
     options: &TrainOptions,
     smoke: &mut Smoke,
 ) -> Result<(), RenderError<U::Error>> {
-    const ENGINE: [[&str; 11]; 6] = [
+    const ENGINE: [[&str; HEIGHT]; ANIMATIONS] = [
         [
             "      ====        ________                ___________ ",
             "  _D _|  |_______/        \\__I_I_____===__|_________| ",
@@ -106,7 +142,7 @@ pub fn add_d51<T: AsRef<str>, U: RenderTarget>(
         ],
     ];
 
-    const COAL: [&str; 11] = [
+    const COAL: [&str; HEIGHT] = [
         "                              ",
         "                              ",
         "    _________________         ",
@@ -120,7 +156,7 @@ pub fn add_d51<T: AsRef<str>, U: RenderTarget>(
         "                              ",
     ];
 
-    const CAR: [&str; 11] = [
+    const CAR: [&str; HEIGHT] = [
         "  __________________________  ",
         "  |   ___  ___  ___  ___   |   ",
         "  |   | |  | |  | |  | |   |  ",
@@ -134,23 +170,23 @@ pub fn add_d51<T: AsRef<str>, U: RenderTarget>(
         "                              ",
     ];
 
-    const FRAMES: TrainFrames<11, 6> = TrainFrames {
+    const FRAMES: TrainFrames<HEIGHT, ANIMATIONS> = TrainFrames {
         engine: ENGINE,
         coal: COAL,
         car: CAR,
     };
 
-    const OFFSETS: TrainOffsets<2, 4> = TrainOffsets {
-        funnel: 7,
+    const OFFSETS: TrainOffsets<ENGINE_WINDOWS, CAR_WINDOWS> = TrainOffsets {
+        funnel: FUNNEL,
         engine_windows: WindowOffsets {
-            height: 2,
-            window_positions: [43, 47],
+            height: ENGINE_WINDOW_ROW,
+            window_positions: ENGINE_WINDOW_COLUMNS,
         },
         car_windows: WindowOffsets {
-            height: 1,
-            window_positions: [4, 9, 14, 19],
+            height: CAR_WINDOW_ROW,
+            window_positions: CAR_WINDOW_COLUMNS,
         },
-        car_text_width: 22,
+        car_text_width: car_label_width(&CAR),
     };
 
     add_train(
@@ -186,9 +222,6 @@ mod tests {
     }
 
     const SCREEN: ScreenSize = ScreenSize::new(200, 24);
-
-    /// D51 funnel offset, from `TrainOffsets::funnel`.
-    const D51_FUNNEL: i32 = 7;
 
     struct RecordingTarget {
         draws: Vec<(i32, i32, String)>,
@@ -307,7 +340,7 @@ mod tests {
             smoke_draws(&control),
             "expired puff still draws or erases"
         );
-        let funnel_column = 181 - 17 * 4 + D51_FUNNEL;
+        let funnel_column = 181 - 17 * 4 + FUNNEL;
         assert!(
             late.iter()
                 .any(|draw| is_puff(&draw.2) && draw.1 == funnel_column),

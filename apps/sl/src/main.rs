@@ -22,6 +22,16 @@ use std::sync::mpsc::Receiver;
 
 mod cli;
 
+/// Delay between animation steps, one column of travel per step.
+///
+/// 40 ms is the sleep inherited from the original curses `sl`, which paused after each column
+/// the train advanced: about 25 columns a second, fast enough to read as motion and slow enough
+/// that a terminal can redraw every frame without flicker.
+const FRAME_DELAY: time::Duration = time::Duration::from_micros(40_000);
+
+/// The train starts one column past the right edge, fully off screen, and walks left from there.
+const START_OFFSCREEN_BY: i32 = 1;
+
 /// Bridges the real terminal (`stdout`) to the [`RenderTarget`] trait so the train
 /// can be drawn using crossterm cursor positioning and byte writes.
 struct TerminalRenderer<'a> {
@@ -65,7 +75,7 @@ fn main() -> Result<(), Error> {
     let mut render_error = None;
 
     let mut smoke = Smoke::new();
-    let mut x = screen.columns - 1;
+    let mut x = screen.columns - START_OFFSCREEN_BY;
 
     loop {
         if let Ok(name) = names_receiver.try_recv() {
@@ -97,7 +107,7 @@ fn main() -> Result<(), Error> {
         stdout.flush()?;
         x -= 1;
 
-        if crossterm::event::poll(time::Duration::from_micros(40_000))? {
+        if crossterm::event::poll(FRAME_DELAY)? {
             match read()? {
                 Event::Key(KeyEvent {
                     code: KeyCode::Char('c'),
