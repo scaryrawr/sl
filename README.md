@@ -123,5 +123,5 @@ GitHub Actions uses five build jobs. One Ubuntu runner builds both amd64 and arm
 Linux debug and release smoke checks. One Windows runner builds both x64 and ARM64 MSVC binaries and NSIS installers.
 The ARM64 binaries are cross-compiled, not executed. A separate Ubuntu job cross-compiles debug and release macOS
 binaries for Intel and Apple Silicon without runtime checks. Other jobs handle Fedora RPM validation and the website
-build. Pages deployment and tagged releases use additional jobs when their conditions match. Tagged releases require
-the Fedora, Ubuntu, and Windows builds, but do not wait for the macOS cross-build.
+build. Pages deployment and tagged releases use additional jobs when their conditions match. Tagged releases require the
+Fedora, Ubuntu, and Windows builds, but do not wait for the macOS cross-build.

@@ -49,6 +49,7 @@ bun run test:websl:rust          # WASM browser tests
 bun run lint                     # Lint JS/TS
 bun run lint:fix                 # Auto-fix linting issues
 bun run format                   # Format with bun fmt
+bun run format:check               # Fail when any file needs formatting
 bun run typecheck                # TypeScript type checking
 ```
 

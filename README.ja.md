@@ -24,5 +24,6 @@ bun run setup
 ### CI ビルド
 
 GitHub
-Actions では 5 つのビルドジョブを実行します。1 台の Ubuntu ランナーで amd64 と arm64 の Debian パッケージを作成し、Linux ネイティブのデバッグ版とリリース版の動作を確認します。1 台の Windows ランナーで x64 と ARM64 の MSVC バイナリと NSIS インストーラーを作成します。ARM64 バイナリはクロスコンパイルのみで、実行はしません。別の Ubuntu ジョブで Intel と Apple Silicon 向けの macOS バイナリをデバッグ版とリリース版の両方でクロスコンパイルしますが、実行による動作確認は行いません。Fedora
+Actions では 5 つのビルドジョブを実行します。1 台の Ubuntu ランナーで amd64 と arm64 の Debian パッケージを作成し、Linux ネイティブのデバッグ版とリリース版の動作を確認します。1 台の Windows ランナーで x64 と ARM64 の MSVC バイナリと NSIS インストーラーを作成します。ARM64 バイナリはクロスコンパイルのみで、実行はしません。別の Ubuntu ジョブで Intel と Apple
+Silicon 向けの macOS バイナリをデバッグ版とリリース版の両方でクロスコンパイルしますが、実行による動作確認は行いません。Fedora
 RPM の検証と Web サイトのビルドは、それぞれ別のジョブで実行します。Pages のデプロイとタグ付きリリースは、条件を満たす場合に追加のジョブで実行します。タグ付きリリースには Fedora、Ubuntu、Windows のビルド成功が必要ですが、macOS のクロスビルドは待ちません。

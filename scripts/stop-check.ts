@@ -2,8 +2,8 @@
 /**
  * Stop hook that keeps the agent working until the sl repo is free of build, lint, and clippy problems.
  *
- * Reads a Codex `Stop` hook event on stdin, runs the repo's clippy, lint, and type checks, then prints a Codex
- * hook response on stdout. `{"decision":"block","reason":"..."}` hands the failures back to the agent so the
+ * Reads a Codex `Stop` hook event on stdin, runs the repo's clippy, lint, type, and format checks, then prints a
+ * Codex hook response on stdout. `{"decision":"block","reason":"..."}` hands the failures back to the agent so the
  * turn continues; `{}` lets the turn finish.
  *
  * Every diagnostic counts as a failure, errors and warnings alike, except cargo advisories that carry no source
@@ -48,6 +48,8 @@ interface CheckStep {
   command: string;
   args: string[];
   timeoutMs: number;
+  /** Command that rewrites the offending files, used when the failing step is a formatter in check mode. */
+  fix?: string;
 }
 
 /** Result of one validation step. */
@@ -66,6 +68,8 @@ interface Failure {
   label: string;
   command: string;
   excerpt: string;
+  /** Command that rewrites the offending files, when the fix is a formatter rather than a manual edit. */
+  fix?: string;
 }
 
 /** Verdict for one run of the checks. */
@@ -128,7 +132,21 @@ const CHECKS: CheckStep[] = [
     ],
     timeoutMs: 180000
   },
-  { label: 'demo typecheck', command: 'bun', args: ['run', 'typecheck'], timeoutMs: 60000 }
+  { label: 'demo typecheck', command: 'bun', args: ['run', 'typecheck'], timeoutMs: 60000 },
+  {
+    label: 'site formatting',
+    command: 'bun',
+    args: ['fmt', '--check'],
+    timeoutMs: 30000,
+    fix: 'bun fmt'
+  },
+  {
+    label: 'rust formatting',
+    command: 'cargo',
+    args: ['fmt', '--all', '--check'],
+    timeoutMs: 30000,
+    fix: 'cargo fmt --all'
+  }
 ];
 
 const startedAt = Date.now();
@@ -136,6 +154,15 @@ const scriptPath = fileURLToPath(import.meta.url);
 const fallbackRoot = path.resolve(path.dirname(scriptPath), '..');
 
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
+
+/** The ESC byte that introduces an ANSI escape sequence. */
+const escape = String.fromCharCode(27);
+
+/** cargo fmt colors its diff with ANSI codes even when this hook captures its output through a pipe. */
+const ansiEscape = new RegExp(`${escape}\\[[0-9;]*[A-Za-z]|${escape}\\([A-Za-z]`, 'g');
+
+/** Drop those color codes so a cargo fmt diff stays readable inside a hand-back prompt. */
+const stripAnsi = (text: string) => text.replace(ansiEscape, '');
 
 /** Keep text inside a limit so one long excerpt cannot dominate the hand-back. */
 const truncate = (text: string, limit: number) =>
@@ -214,7 +241,7 @@ const runStep = (step: CheckStep, cwd: string): RunResult => {
 
   return {
     code: result.status ?? 1,
-    output: `${result.stdout ?? ''}${result.stderr ?? ''}`,
+    output: stripAnsi(`${result.stdout ?? ''}${result.stderr ?? ''}`),
     stdout: result.stdout ?? '',
     problem: ''
   };
@@ -374,7 +401,8 @@ const evaluate = (root: string): Outcome => {
       failuresForStep.push({
         label: step.label,
         command: commandText(step),
-        excerpt: summarize(result.output) || rawTail(result.output)
+        excerpt: summarize(result.output) || rawTail(result.output),
+        fix: step.fix
       });
     }
 
@@ -397,18 +425,22 @@ const evaluate = (root: string): Outcome => {
 
 const continuationPrompt = (failures: Failure[], notes: string[]) => {
   const numbered = failures.map((failure, index) => {
-    return `${index + 1}. ${failure.label}\n   command: ${failure.command}\n${failure.excerpt}`;
+    const fix = failure.fix ? `\n   fix: ${failure.fix}` : '';
+
+    return `${index + 1}. ${failure.label}\n   command: ${failure.command}${fix}\n${failure.excerpt}`;
   });
 
   const notesText = notes.length ? `\nNotes:\n${notes.map((note) => `   ${note}`).join('\n')}` : '';
 
   return [
-    'The sl stop check found build, lint, or clippy problems. Fix every one of them before ending this turn:',
+    'The sl stop check found build, lint, clippy, or formatting problems. Fix every one of them before ending this turn:',
     '',
     numbered.join('\n\n'),
     notesText,
     '',
-    'Edit the offending files, then re-run the commands above until each one passes. Do not silence a check by disabling a rule, adding an ignore comment, or deleting failing code unless the user asked for that.'
+    'Edit the offending files, or run the fix command where one is given, then re-run the commands above until each ' +
+      'one passes. Do not silence a check by disabling a rule, adding an ignore comment, or deleting failing code unless ' +
+      'the user asked for that.'
   ].join('\n');
 };
 

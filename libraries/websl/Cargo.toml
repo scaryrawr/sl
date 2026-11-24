@@ -8,8 +8,8 @@ wasm-opt = false
 
 [profile.release]
 # Tell `rustc` to optimize for small code size.
-opt-level = "z"   # Aggressive size optimization (was "s")
-lto = true        # Link-time optimization for smaller binaries
+opt-level = "z" # Aggressive size optimization (was "s")
+lto = true # Link-time optimization for smaller binaries
 codegen-units = 1 # Better optimization at cost of compile time
 
 [features]

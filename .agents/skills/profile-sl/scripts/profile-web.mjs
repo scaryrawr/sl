@@ -3,42 +3,42 @@
  * Measure the shipped web embed with the real animation clock.
  * This is a performance probe, not the deterministic frame-verification clock.
  */
-import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { chromium } from "playwright";
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { chromium } from 'playwright';
 
 const skillDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const repoRoot = dirname(dirname(dirname(skillDir)));
-const scenario = process.argv[2] ?? "embed";
+const scenario = process.argv[2] ?? 'embed';
 let runs = 7;
 let sampleMs = 5000;
 
 for (let index = 3; index < process.argv.length; index += 1) {
   const argument = process.argv[index];
 
-  if (argument === "--runs") runs = Number.parseInt(process.argv[++index] ?? "", 10);
-  else if (argument === "--sample-ms") sampleMs = Number.parseInt(process.argv[++index] ?? "", 10);
+  if (argument === '--runs') runs = Number.parseInt(process.argv[++index] ?? '', 10);
+  else if (argument === '--sample-ms') sampleMs = Number.parseInt(process.argv[++index] ?? '', 10);
   else throw new Error(`unknown argument: ${argument}`);
 }
 
-if (!Number.isInteger(runs) || runs < 5) throw new Error("--runs must be an integer >= 5");
+if (!Number.isInteger(runs) || runs < 5) throw new Error('--runs must be an integer >= 5');
 
 if (!Number.isInteger(sampleMs) || sampleMs < 2000) {
-
-  throw new Error("--sample-ms must be an integer >= 2000");
+  throw new Error('--sample-ms must be an integer >= 2000');
 }
 
 const scenarios = {
-  embed: "?trainType=d51&messages=%5B%22PERFCAR-A%22%2C%22PERFCAR-B%22%5D&accident=false",
-  "embed-logo": "?trainType=logo&messages=%5B%5D",
-  "embed-accident": "?trainType=d51&messages=%5B%22PERFCAR-A%22%5D&accident=true",
-  "embed-fly": "?trainType=d51&messages=%5B%22PERFCAR-A%22%5D&fly=true",
+  embed: '?trainType=d51&messages=%5B%22PERFCAR-A%22%2C%22PERFCAR-B%22%5D&accident=false',
+  'embed-logo': '?trainType=logo&messages=%5B%5D',
+  'embed-accident': '?trainType=d51&messages=%5B%22PERFCAR-A%22%5D&accident=true',
+  'embed-fly': '?trainType=d51&messages=%5B%22PERFCAR-A%22%5D&fly=true'
 };
 
 const query = scenarios[scenario];
 
-if (!query) throw new Error(`unknown scenario: ${scenario} (choose ${Object.keys(scenarios).join(", ")})`);
+if (!query) throw new Error(`unknown scenario: ${scenario} (choose ${Object.keys(scenarios).join(', ')})`);
 
 const port = Number(process.env.PLAYWRIGHT_PORT ?? 4173);
 const base = `http://127.0.0.1:${port}`;
@@ -52,11 +52,11 @@ if (await isServerReady()) {
   throw new Error(`refusing to profile an existing server on ${base}`);
 }
 
-const server = Bun.spawn([process.execPath, "playwright-server.mjs"], {
-  cwd: join(repoRoot, "apps/page"),
+const server = Bun.spawn([process.execPath, 'playwright-server.mjs'], {
+  cwd: join(repoRoot, 'apps/page'),
   env: { ...process.env, PLAYWRIGHT_PORT: String(port) },
-  stdout: "ignore",
-  stderr: "inherit",
+  stdout: 'ignore',
+  stderr: 'inherit'
 });
 
 for (let attempt = 0; attempt < 60 && !(await isServerReady()); attempt += 1) {
@@ -72,8 +72,8 @@ if (!(await isServerReady())) {
   throw new Error(`performance server did not answer on ${base} within 30s`);
 }
 
-const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-const evidenceDir = join(skillDir, "evidence", `${stamp}-web-${scenario}`);
+const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+const evidenceDir = join(skillDir, 'evidence', `${stamp}-web-${scenario}`);
 
 mkdirSync(evidenceDir, { recursive: true });
 
@@ -88,9 +88,9 @@ try {
   for (let run = 0; run < runs; run += 1) {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
-    page.on("pageerror", (error) => pageErrors.push({ run, message: error.message }));
+    page.on('pageerror', (error) => pageErrors.push({ run, message: error.message }));
     await page.addInitScript(measureAnimationCallbacks);
-    await page.goto(`${base}/sl/embed.html${query}`, { waitUntil: "networkidle" });
+    await page.goto(`${base}/sl/embed.html${query}`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(1000);
     await page.evaluate(() => window.__slPerformance.reset());
     await page.waitForTimeout(sampleMs);
@@ -100,7 +100,7 @@ try {
 
       return {
         ...window.__slPerformance.snapshot(),
-        gridText: grid?.textContent ?? "",
+        gridText: grid?.textContent ?? ''
       };
     });
 
@@ -109,8 +109,8 @@ try {
       raw: {
         callbackDurationsMs: sample.callbackDurationsMs,
         frameIntervalsMs: sample.frameIntervalsMs,
-        longTasksMs: sample.longTasksMs,
-      },
+        longTasksMs: sample.longTasksMs
+      }
     });
     await context.close();
   }
@@ -130,10 +130,10 @@ const report = {
   sampleMs,
   viewport: { width: 1280, height: 900 },
   summary: summarizeRuns(samples),
-  samples,
+  samples
 };
 
-writeFileSync(join(evidenceDir, "results.json"), JSON.stringify(report, null, 2));
+writeFileSync(join(evidenceDir, 'results.json'), JSON.stringify(report, null, 2));
 
 console.log(evidenceDir);
 
@@ -145,7 +145,7 @@ function measureAnimationCallbacks() {
     frameIntervalsMs: [],
     longTasksMs: [],
     lastTimestamp: null,
-    locomotiveArtSeen: false,
+    locomotiveArtSeen: false
   };
 
   const nativeRequestAnimationFrame = window.requestAnimationFrame.bind(window);
@@ -163,7 +163,7 @@ function measureAnimationCallbacks() {
       } finally {
         state.callbackDurationsMs.push(performance.now() - started);
         const grid = document.querySelector('[role="img"][aria-label*="Animated ASCII art"]');
-        const gridText = grid?.textContent ?? "";
+        const gridText = grid?.textContent ?? '';
         state.locomotiveArtSeen ||= /_D _\||\+------/.test(gridText);
       }
     });
@@ -172,7 +172,7 @@ function measureAnimationCallbacks() {
     for (const entry of list.getEntries()) state.longTasksMs.push(entry.duration);
   });
 
-  observer.observe({ entryTypes: ["longtask"] });
+  observer.observe({ entryTypes: ['longtask'] });
   window.__slPerformance = {
     reset() {
       state.callbackDurationsMs.length = 0;
@@ -186,9 +186,9 @@ function measureAnimationCallbacks() {
         callbackDurationsMs: [...state.callbackDurationsMs],
         frameIntervalsMs: [...state.frameIntervalsMs],
         longTasksMs: [...state.longTasksMs],
-        locomotiveArtSeen: state.locomotiveArtSeen,
+        locomotiveArtSeen: state.locomotiveArtSeen
       };
-    },
+    }
   };
 }
 
@@ -196,9 +196,9 @@ function summarizeRun(sample) {
   const rendered =
     sample.callbackDurationsMs.length >= 20 &&
     sample.locomotiveArtSeen &&
-    !sample.gridText.includes("Failed to load animation");
+    !sample.gridText.includes('Failed to load animation');
 
-  if (!rendered) throw new Error("work/output check failed: animation did not render enough frames");
+  if (!rendered) throw new Error('work/output check failed: animation did not render enough frames');
 
   return {
     frames: sample.callbackDurationsMs.length,
@@ -207,7 +207,7 @@ function summarizeRun(sample) {
     intervalP50Ms: percentile(sample.frameIntervalsMs, 0.5),
     intervalP95Ms: percentile(sample.frameIntervalsMs, 0.95),
     longTaskCount: sample.longTasksMs.length,
-    longTaskP95Ms: percentile(sample.longTasksMs, 0.95),
+    longTaskP95Ms: percentile(sample.longTasksMs, 0.95)
   };
 }
 
@@ -219,7 +219,7 @@ function summarizeRuns(runSamples) {
     intervalP50Ms: range(runSamples.map((sample) => sample.intervalP50Ms)),
     intervalP95Ms: range(runSamples.map((sample) => sample.intervalP95Ms)),
     longTaskCount: range(runSamples.map((sample) => sample.longTaskCount)),
-    longTaskP95Ms: range(runSamples.map((sample) => sample.longTaskP95Ms)),
+    longTaskP95Ms: range(runSamples.map((sample) => sample.longTaskP95Ms))
   };
 }
 
@@ -240,6 +240,6 @@ function range(values) {
   return {
     median: percentile(sorted, 0.5),
     min: sorted[0],
-    max: sorted.at(-1),
+    max: sorted.at(-1)
   };
 }
