@@ -51,10 +51,10 @@ impl Smoke {
 ///
 /// Every 4 frames (`x % 4 == 0`) each live particle advances one step upward
 /// and to the side, cycling through 16 frames from a large puff down to a
-/// single character before disappearing. New puffs spawn only while the funnel
-/// column `x` is between zero and the screen width (inclusive). Once it passes
-/// the left edge, existing particles keep aging so the trail finishes its
-/// lifecycle instead of freezing mid-puff.
+/// single character before disappearing. New puffs spawn before the funnel
+/// passes the right edge of the screen. Puffs emitted beyond the left edge are
+/// initially clipped, but can drift back into view as the smoke trail follows
+/// the train. All particles expire after 16 steps.
 ///
 /// # Arguments
 ///
@@ -120,8 +120,8 @@ pub fn add_smoke<T: RenderTarget>(
             }
         }
 
-        if x >= 0 && x <= screen.columns {
-            let kind = (((screen.columns - x.min(screen.columns)) / 4) % 2) as usize;
+        if x >= -(PATTERN_LEN as i32) && x <= screen.columns {
+            let kind = ((screen.columns - x) / 4).rem_euclid(2) as usize;
             survivors.push(SmokeParticle {
                 y,
                 x,
@@ -241,7 +241,7 @@ mod tests {
         let mut puffs_per_emission = Vec::new();
         let mut offscreen_draws: Vec<(i32, i32, String)> = Vec::new();
         let mut x = 16;
-        while x >= -64 {
+        while x >= -96 {
             target.draws.clear();
             add_smoke(10, x, screen, &mut target, &mut smoke).expect("draw");
             puffs_per_emission.push(target.draws.iter().filter(|d| is_puff(&d.2)).count());
@@ -267,10 +267,35 @@ mod tests {
             "every puff should expire after the funnel exits: {puffs_per_emission:?}"
         );
 
-        // Only new puffs appear on the funnel row; older puffs have risen.
         assert!(
-            !offscreen_draws.iter().any(|d| d.0 == 10 && is_puff(&d.2)),
-            "no puff should spawn once the funnel is off screen: {offscreen_draws:?}"
+            offscreen_draws.iter().any(|d| d.0 < 10 && is_puff(&d.2)),
+            "offscreen emissions should drift back into view: {offscreen_draws:?}"
+        );
+    }
+
+    #[test]
+    fn offscreen_emission_drifts_into_view_from_empty_state() {
+        let screen = ScreenSize::new(80, 24);
+        let mut smoke = Smoke::new();
+        let mut target = RecordingTarget { draws: Vec::new() };
+        let mut visible_puffs = Vec::new();
+
+        for emission in 0..=16 {
+            let x = -4 - emission * 4;
+            target.draws.clear();
+            add_smoke(10, x, screen, &mut target, &mut smoke).expect("draw");
+            visible_puffs.extend(
+                target
+                    .draws
+                    .iter()
+                    .filter(|draw| draw.1 >= 0 && draw.0 < 10 && is_puff(&draw.2))
+                    .cloned(),
+            );
+        }
+
+        assert!(
+            !visible_puffs.is_empty(),
+            "an empty smoke state must emit offscreen puffs that drift into view"
         );
     }
 

@@ -35,14 +35,13 @@ WHEEL_ANIMATION = {
 WHEEL_ANIMATION["d51-accident"] = WHEEL_ANIMATION["d51"]
 WHEEL_ANIMATION["fly"] = WHEEL_ANIMATION["d51"]
 
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("cast")
     parser.add_argument("--scenario", required=True, choices=sorted(ART))
     args = parser.parse_args()
 
-    _header, frames, final_frame = completed_frames(args.cast)
+    header, frames, final_frame = completed_frames(args.cast)
     if len(frames) < 2:
         print("FAIL cast produced no frames (empty capture)")
         sys.exit(1)
@@ -111,21 +110,51 @@ def main():
 
     # Smoke lifecycle: once the engine has left the screen, its trail must
     # finish aging out instead of freezing mid-puff in the top rows.
-    def engine_present(frame):
-        blob = "\n".join(frame)
-        return "H\\\\" in blob or "(_)" in blob or "|+-+ |" in blob
+    engine_geometry = {
+        "d51": ("(_)", 2, 11),
+        "d51-accident": ("(_)", 2, 11),
+        "c51": ("(_)", 2, 12),
+        "logo": ("|+-+ |", 1, 7),
+        "fly": ("(_)", 2, 11),
+    }
 
-    engine_seen = [engine_present(frame) for frame in frames]
+    anchor, anchor_offset, engine_rows = engine_geometry[args.scenario]
+
+    def engine_y(frame):
+        for row_index, row in enumerate(frame):
+            if anchor in row:
+                return row_index - anchor_offset
+        return None
+
+    rows = header["term"]["rows"]
+    fallback_y = rows // 2 - engine_rows // 2
+    smoke_visible = []
+    last_engine_y = fallback_y
+    for frame in frames:
+        frame_engine_y = engine_y(frame)
+        if frame_engine_y is not None:
+            last_engine_y = frame_engine_y
+        smoke_visible.append(any(
+            ch in "(@)"
+            for row in frame[
+                max(0, last_engine_y - 7):max(0, last_engine_y + 1)
+            ]
+            for ch in row
+        ))
+
+    engine_seen = [engine_y(frame) is not None for frame in frames]
     if not any(engine_seen):
         raise ValueError("capture has no identifiable engine for smoke lifecycle verification")
     last_engine = max(i for i, seen in enumerate(engine_seen) if seen)
-    # A puff lives 16 emissions, one every four train columns.
-    settle = 16 * 4
+    # A puff lives 16 emissions, one every four train columns. The funnel can
+    # emit for four more column groups after crossing the left edge, because
+    # those puffs can still drift back into view.
+    settle = 20 * 4
     if last_engine + settle >= len(frames):
         raise ValueError("capture has no post-engine frames to verify smoke clearing")
     tail_rows_clear = all(
-        not any(ch in "(@)" for row in frame[:8] for ch in row)
-        for frame in frames[last_engine + settle:]
+        not visible
+        for visible in smoke_visible[last_engine + settle:]
     )
     results.append(("smoke trail clears after the engine exits", tail_rows_clear))
 
