@@ -35,6 +35,55 @@ WHEEL_ANIMATION = {
 WHEEL_ANIMATION["d51-accident"] = WHEEL_ANIMATION["d51"]
 WHEEL_ANIMATION["fly"] = WHEEL_ANIMATION["d51"]
 
+SMOKE = [
+    ["(   )", "(    )", "(    )", "(   )", "(  )", "(  )", "( )", "( )", "()", "()",
+     "O", "O", "O", "O", "O", " "],
+    ["(@@@)", "(@@@@)", "(@@@@)", "(@@@)", "(@@)", "(@@)", "(@)", "(@)", "@@", "@@",
+     "@", "@", "@", "@", "@", " "],
+]
+DY = [2, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+DX = [-2, -1, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3]
+
+
+def expected_last_smoke_frame(cols, rows, frame_count, engine_height, funnel, fly, spawn_min):
+    particles = []
+    last_visible = None
+
+    for frame in range(frame_count):
+        train_x = cols - 1 - frame
+        funnel_x = train_x + funnel
+        if funnel_x % 4 == 0:
+            aged = []
+            for y, x, pattern, kind in particles:
+                pattern += 1
+                if pattern < 16:
+                    aged.append((y - DY[pattern - 1], x + DX[pattern - 1], pattern, kind))
+            particles = aged
+
+            if spawn_min <= funnel_x <= cols:
+                if fly:
+                    quotient = abs(train_x) // 7
+                    if train_x < 0:
+                        quotient = -quotient
+                    y = quotient + rows - cols // 7 - engine_height - 1
+                else:
+                    y = rows // 2 - engine_height // 2 - 1
+                kind = ((cols - funnel_x) // 4) % 2
+                particles.append((y, funnel_x, 0, kind))
+
+        for y, x, pattern, kind in particles:
+            if not 0 <= y < rows:
+                continue
+            visible = [
+                char
+                for index, char in enumerate(SMOKE[kind][pattern])
+                if 0 <= x + index < cols
+            ]
+            if any(char in "(@)" for char in visible):
+                last_visible = frame
+
+    return last_visible
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -112,14 +161,14 @@ def main():
     # Smoke lifecycle: once the engine has left the screen, its trail must
     # finish aging out instead of freezing mid-puff in the top rows.
     engine_geometry = {
-        "d51": ("(_)", 2),
-        "d51-accident": ("(_)", 2),
-        "c51": ("(_)", 2),
-        "logo": ("|+-+ |", 1),
-        "fly": ("(_)", 2),
+        "d51": ("(_)", 2, 11, 7),
+        "d51-accident": ("(_)", 2, 11, 7),
+        "c51": ("(_)", 2, 12, 7),
+        "logo": ("|+-+ |", 1, 7, 4),
+        "fly": ("(_)", 2, 11, 7),
     }
 
-    anchor, anchor_offset = engine_geometry[args.scenario]
+    anchor, anchor_offset, engine_rows, funnel = engine_geometry[args.scenario]
 
     def engine_y(frame):
         for row_index, row in enumerate(frame):
@@ -128,14 +177,8 @@ def main():
         return None
 
     rows = header["term"]["rows"]
-    engine_rows = {
-        "d51": 11,
-        "d51-accident": 11,
-        "c51": 12,
-        "logo": 7,
-        "fly": 11,
-    }
-    fallback_y = rows // 2 - engine_rows[args.scenario] // 2
+    cols = header["term"]["cols"]
+    fallback_y = rows // 2 - engine_rows // 2
     smoke_visible = []
     last_engine_y = fallback_y
     for frame in frames:
@@ -164,10 +207,17 @@ def main():
         (i for i, visible in enumerate(smoke_visible) if visible),
         default=None,
     )
-    results.append((
-        "smoke follows engine off screen",
-        last_puff is not None and last_puff - last_engine >= 15 * 4,
-    ))
+    expected_last_puff = expected_last_smoke_frame(
+        cols, rows, len(frames), engine_rows, funnel, args.scenario == "fly", -16
+    )
+    old_last_puff = expected_last_smoke_frame(
+        cols, rows, len(frames), engine_rows, funnel, args.scenario == "fly", 0
+    )
+    if expected_last_puff != old_last_puff:
+        results.append((
+            "smoke follows engine off screen",
+            last_puff == expected_last_puff,
+        ))
     tail_rows_clear = all(
         not visible
         for visible in smoke_visible[last_engine + settle:]
