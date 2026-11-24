@@ -243,10 +243,7 @@ const useSlAnimation = (props: {
         };
 
         staticTrain.forEach((line, idx) => renderStaticRow(terminal.children[startRow + idx], line));
-        renderStaticRow(
-          terminal.children[startRow + staticTrain.length],
-          REDUCED_MOTION_MESSAGE
-        );
+        renderStaticRow(terminal.children[startRow + staticTrain.length], REDUCED_MOTION_MESSAGE);
       }
 
       return () => {
