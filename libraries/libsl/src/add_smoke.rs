@@ -274,6 +274,32 @@ mod tests {
     }
 
     #[test]
+    fn offscreen_emission_drifts_into_view_from_empty_state() {
+        let screen = ScreenSize::new(80, 24);
+        let mut smoke = Smoke::new();
+        let mut target = RecordingTarget { draws: Vec::new() };
+        let mut visible_puffs = Vec::new();
+
+        for emission in 0..=16 {
+            let x = -4 - emission * 4;
+            target.draws.clear();
+            add_smoke(10, x, screen, &mut target, &mut smoke).expect("draw");
+            visible_puffs.extend(
+                target
+                    .draws
+                    .iter()
+                    .filter(|draw| draw.1 >= 0 && draw.0 < 10 && is_puff(&draw.2))
+                    .cloned(),
+            );
+        }
+
+        assert!(
+            !visible_puffs.is_empty(),
+            "an empty smoke state must emit offscreen puffs that drift into view"
+        );
+    }
+
+    #[test]
     fn no_panic_when_funnel_column_goes_negative() {
         let screen = ScreenSize::new(80, 24);
         let mut smoke = Smoke::new();

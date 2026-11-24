@@ -42,7 +42,7 @@ def main():
     parser.add_argument("--scenario", required=True, choices=sorted(ART))
     args = parser.parse_args()
 
-    _header, frames, final_frame = completed_frames(args.cast)
+    header, frames, final_frame = completed_frames(args.cast)
     if len(frames) < 2:
         print("FAIL cast produced no frames (empty capture)")
         sys.exit(1)
@@ -111,11 +111,46 @@ def main():
 
     # Smoke lifecycle: once the engine has left the screen, its trail must
     # finish aging out instead of freezing mid-puff in the top rows.
-    def engine_present(frame):
-        blob = "\n".join(frame)
-        return "H\\\\" in blob or "(_)" in blob or "|+-+ |" in blob
+    engine_geometry = {
+        "d51": ("(_)", 2),
+        "d51-accident": ("(_)", 2),
+        "c51": ("(_)", 2),
+        "logo": ("|+-+ |", 1),
+        "fly": ("(_)", 2),
+    }
 
-    engine_seen = [engine_present(frame) for frame in frames]
+    anchor, anchor_offset = engine_geometry[args.scenario]
+
+    def engine_y(frame):
+        for row_index, row in enumerate(frame):
+            if anchor in row:
+                return row_index - anchor_offset
+        return None
+
+    rows = header["term"]["rows"]
+    engine_rows = {
+        "d51": 11,
+        "d51-accident": 11,
+        "c51": 12,
+        "logo": 7,
+        "fly": 11,
+    }
+    fallback_y = rows // 2 - engine_rows[args.scenario] // 2
+    smoke_visible = []
+    last_engine_y = fallback_y
+    for frame in frames:
+        frame_engine_y = engine_y(frame)
+        if frame_engine_y is not None:
+            last_engine_y = frame_engine_y
+        smoke_visible.append(any(
+            ch in "(@)"
+            for row in frame[
+                max(0, last_engine_y - 7):max(0, last_engine_y + 1)
+            ]
+            for ch in row
+        ))
+
+    engine_seen = [engine_y(frame) is not None for frame in frames]
     if not any(engine_seen):
         raise ValueError("capture has no identifiable engine for smoke lifecycle verification")
     last_engine = max(i for i, seen in enumerate(engine_seen) if seen)
@@ -125,12 +160,14 @@ def main():
     settle = 20 * 4
     if last_engine + settle >= len(frames):
         raise ValueError("capture has no post-engine frames to verify smoke clearing")
-    smoke_visible = [
-        any(ch in "(@)" for row in frame[:8] for ch in row)
-        for frame in frames
-    ]
-    last_puff = max(i for i, visible in enumerate(smoke_visible) if visible)
-    results.append(("smoke follows engine off screen", last_puff - last_engine >= 15 * 4))
+    last_puff = max(
+        (i for i, visible in enumerate(smoke_visible) if visible),
+        default=None,
+    )
+    results.append((
+        "smoke follows engine off screen",
+        last_puff is not None and last_puff - last_engine >= 15 * 4,
+    ))
     tail_rows_clear = all(
         not visible
         for visible in smoke_visible[last_engine + settle:]
