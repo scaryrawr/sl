@@ -120,6 +120,12 @@ type TerminalProps = {
    * the terminal exactly fills an `<iframe>` without white letterboxing or scrollbars.
    */
   fill?: boolean;
+  /**
+   * CSS height for the terminal window (default: `calc(80vh - 40px)`). Used by the
+   * per-train showcases so several terminals stack down the page without each one
+   * claiming most of the viewport.
+   */
+  height?: string;
 };
 
 /**
@@ -136,7 +142,8 @@ const Terminal = ({
   terminalRef: externalRef,
   fontColor = DEFAULT_FONT_COLOR,
   backgroundColor = DEFAULT_BACKGROUND_COLOR,
-  fill = false
+  fill = false,
+  height
 }: TerminalProps) => {
   const internalRef = useRef<HTMLDivElement | null>(null);
   const terminalRef = externalRef ?? internalRef;
@@ -285,20 +292,22 @@ const Terminal = ({
     };
   }, [terminalRef]);
 
-  const windowStyle = useMemo(
-    () =>
-      fill
-        ? {
-            ...styles.window,
-            margin: 0,
-            height: '100vh',
-            border: 'none',
-            borderRadius: 0,
-            backgroundColor
-          }
-        : styles.window,
-    [fill, backgroundColor]
-  );
+  const windowStyle = useMemo(() => {
+    if (fill) {
+      return {
+        ...styles.window,
+        margin: 0,
+        height: '100vh',
+        border: 'none',
+        borderRadius: 0,
+        backgroundColor
+      };
+    }
+
+    if (!height) return styles.window;
+
+    return { ...styles.window, height };
+  }, [fill, backgroundColor, height]);
 
   const terminalStyle = useMemo(
     () => ({

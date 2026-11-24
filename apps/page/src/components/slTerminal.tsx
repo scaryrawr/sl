@@ -105,6 +105,8 @@ type SlProps = {
   backgroundColor?: string;
   /** Stretch the terminal window to fill the viewport (used by embeds; passed through to {@link Terminal}). */
   fill?: boolean;
+  /** CSS height for the terminal window (passed through to {@link Terminal}). */
+  height?: string;
 };
 
 /** Lazy-loaded WASM module promise; initializes the panic hook before resolving. */
@@ -176,7 +178,7 @@ const useSlAnimation = (props: {
       const terminal = terminalRef.current;
 
       if (terminal && terminal.children.length > 0) {
-        // Standard steam locomotive ASCII art (used for both D51 and C51)
+        // D51 steam locomotive ASCII art
         const standardTrain = [
           '      ====        ________                ___________ ',
           '  _D _|  |_______/        \\__I_I_____===__|_________| ',
@@ -190,9 +192,24 @@ const useSlAnimation = (props: {
           '  \\_/      \\O=====O=====O=====O_/      \\_/             '
         ];
 
+        // First animation frame of libsl's C51 engine, without its trailing blank row.
+        const c51Train = [
+          '        ___                                            ',
+          '       _|_|_  _     __       __             ___________',
+          '    D__/   \\_(_)___|  |__H__|  |_____I_Ii_()|_________|',
+          "     | `---'   |:: `--'  H  `--'         |  |___ ___|  ",
+          '    +|~~~~~~~~++::~~~~~~~H~~+=====+~~~~~~|~~||_| |_||  ',
+          '    ||        | ::       H  +=====+      |  |::  ...|  ',
+          '|    | _______|_::-----------------[][]-----|       |  ',
+          '| /~~ ||   |-----/~~~~\\  /[I_____I][][] --|||_______|__',
+          "------'|oOo|=[]=-      ||      ||      |  ||=======_|__",
+          '/~\\____|___|/~\\_|  O=======O=======O   |__|+-/~\\_|     ',
+          '\\_/         \\_/  \\____/  \\____/  \\____/      \\_/       '
+        ];
+
         const staticTrains: Record<TrainTypeValue, string[]> = {
           [TrainType.D51]: standardTrain,
-          [TrainType.C51]: standardTrain,
+          [TrainType.C51]: c51Train,
           [TrainType.LOGO]: [
             '     ++      +------ ',
             '     ||      |+-+ |  ',
@@ -218,23 +235,18 @@ const useSlAnimation = (props: {
           Math.floor((terminal.children.length - staticTrain.length - REDUCED_MOTION_MESSAGE_ROWS) / 2)
         );
 
-        // Render static train centered both vertically and horizontally
-        staticTrain.forEach((line, idx) => {
-          // SAFETY: Terminal renders every child of the grid as a row <div> element.
-          const row = terminal.children[startRow + idx] as HTMLElement | undefined;
+        const renderStaticRow = (row: Element | undefined, text: string) => {
+          if (!row) return;
 
-          if (row) {
-            row.textContent = centeredRow(row.textContent?.length ?? 0, line);
-          }
-        });
+          const cols = cellCount(row);
+          row.textContent = centeredRow(cols, text.slice(0, cols));
+        };
 
-        // Add accessibility message explaining why animation is disabled
-        // SAFETY: Terminal renders every child of the grid as a row <div> element.
-        const msgRow = terminal.children[startRow + staticTrain.length] as HTMLElement | undefined;
-
-        if (msgRow) {
-          msgRow.textContent = centeredRow(msgRow.textContent?.length ?? 0, REDUCED_MOTION_MESSAGE);
-        }
+        staticTrain.forEach((line, idx) => renderStaticRow(terminal.children[startRow + idx], line));
+        renderStaticRow(
+          terminal.children[startRow + staticTrain.length],
+          REDUCED_MOTION_MESSAGE
+        );
       }
 
       return () => {
@@ -444,7 +456,8 @@ const SlTerminal = ({
   smoke,
   fontColor,
   backgroundColor,
-  fill
+  fill,
+  height
 }: SlProps) => {
   const terminalRef = useSlAnimation({ accident, fly, trainType, messages, smoke });
 
@@ -455,6 +468,7 @@ const SlTerminal = ({
       fontColor={fontColor}
       backgroundColor={backgroundColor}
       fill={fill}
+      height={height}
     />
   );
 };
