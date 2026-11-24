@@ -9,13 +9,55 @@ use crate::{RenderError, RenderTarget, ScreenSize, Smoke, TrainOptions};
 use super::add_man::add_man;
 use super::add_smoke::add_smoke;
 use super::mvaddstr::mvaddstr;
-use super::print_car::print_car;
+use super::print_car::{print_car, LABEL_MARKER};
 use core::str;
+
+/// Columns that two adjacent sprites share.
+///
+/// Inherited from the original curses `sl`: every sprite is authored one column wider than
+/// the space it occupies so its coupling lands on the last column of the sprite in front of
+/// it. The engine therefore ends one column before the coal car starts, and each car's
+/// length is its sprite width minus this overlap.
+const SPRITE_OVERLAP: usize = 1;
+
+/// Bytes reserved for one rendered passenger-car row.
+///
+/// Inherited from the original curses `sl`, which rendered every car row into a fixed
+/// `char car_name[256]`. The row only ever holds one sprite line plus a label, so the size
+/// is a generous constant rather than a computed maximum; [`print_car`] truncates the label
+/// to whatever is left after the sprite's `{}` placeholder.
+const CAR_ROW_BUFFER_BYTES: usize = 256;
+
+/// Character cells a carriage label may fill, derived from the carriage sprite.
+///
+/// Exactly one row of `car` carries [`LABEL_MARKER`], and that row's art is
+/// `prefix + "{}" + suffix`: everything except the marker is fixed carriage metal. Because
+/// the finished row has to read as wide as the carriage itself (`car[0]`), the label may fill
+/// precisely the columns the marker row leaves over. Deriving the width here, instead of
+/// hand-writing it per train, keeps it true whenever a sprite is redrawn.
+pub const fn car_label_width<const HEIGHT: usize>(car: &[&str; HEIGHT]) -> usize {
+    let body_width = car[0].len();
+    let marker = LABEL_MARKER.as_bytes();
+    let mut row = 0;
+    while row < HEIGHT {
+        let line = car[row].as_bytes();
+        let mut column = 0;
+        while column + marker.len() <= line.len() {
+            if line[column] == marker[0] && line[column + 1] == marker[1] {
+                return body_width - (line.len() - marker.len());
+            }
+            column += 1;
+        }
+        row += 1;
+    }
+    panic!("a carriage sprite must keep a row holding the label placeholder");
+}
 
 /// Positions and height of window elements on a train car (engine or passenger).
 #[derive(Debug)]
 pub struct WindowOffsets<const COUNT: usize> {
-    /// Number of vertical rows the windows occupy.
+    /// Sprite row, counted from the top of the car, where its windows start. Accident
+    /// passengers are drawn from this row down, so their heads appear in the windows.
     pub height: i32,
     /// Column offsets for each window within the car sprite.
     pub window_positions: [i32; COUNT],
@@ -103,12 +145,17 @@ pub fn add_train<
         return Err(RenderError::Offscreen);
     }
 
-    let car_length: i32 = (frames.car[0].len() - 1).try_into().unwrap();
-    let num_frames: i32 = (ANIMATIONS + 1).try_into().unwrap();
+    // The car's last column is shared with the sprite in front of it, so it does not add width.
+    let car_length: i32 = (frames.car[0].len() - SPRITE_OVERLAP).try_into().unwrap();
+    // One wheel-animation step per column, over `ANIMATIONS + 1` columns: the flying train
+    // climbs one row per engine cycle so its wheels keep turning in step with the ascent.
+    let climb_columns: i32 = (ANIMATIONS + 1).try_into().unwrap();
     let count: i32 = names.len().try_into().unwrap();
     let engine_length: i32 = frames.engine[0][0].len().try_into().unwrap();
     let front_length: i32 = engine_length + frames.coal[0].len() as i32;
-    let fly_factor = if options.fly { 1 } else { 0 };
+    // Rows each successive car drops below the one in front: flying tilts the train into a
+    // diagonal, while a grounded train keeps every car on the engine's row.
+    let fly_row_drop = if options.fly { 1 } else { 0 };
     if x < -(front_length + (if count > 0 { count * car_length } else { 0 })) {
         return Err(RenderError::Offscreen);
     }
@@ -117,7 +164,7 @@ pub fn add_train<
     let mut y = screen.lines / 2 - engine_height / 2;
     let mut dy = 0;
     if options.fly {
-        y = (((x / num_frames) + screen.lines) - screen.columns / num_frames) - engine_height;
+        y = (((x / climb_columns) + screen.lines) - screen.columns / climb_columns) - engine_height;
         // Try to estimate when the train is off screen enough.
         if y < -(engine_height * screen.columns / screen.lines) {
             return Err(RenderError::Offscreen);
@@ -139,7 +186,7 @@ pub fn add_train<
             .map_err(RenderError::Target)?;
             mvaddstr(
                 (y + i) + dy,
-                x + engine_length - 1,
+                x + engine_length - SPRITE_OVERLAP as i32,
                 frames.coal[ui],
                 screen,
                 target,
@@ -156,7 +203,7 @@ pub fn add_train<
                 break;
             }
 
-            let mut car_name: [u8; 256] = [0; 256];
+            let mut car_name: [u8; CAR_ROW_BUFFER_BYTES] = [0; CAR_ROW_BUFFER_BYTES];
             print_car(
                 car_name.as_mut(),
                 frames.car[ui],
@@ -164,8 +211,8 @@ pub fn add_train<
                 offsets.car_text_width,
             );
             mvaddstr(
-                ((y + i) + (fly_factor * (j + 1))) + dy,
-                (x + engine_length - 1) + (car_length * (j + 1)),
+                ((y + i) + (fly_row_drop * (j + 1))) + dy,
+                (x + engine_length - SPRITE_OVERLAP as i32) + (car_length * (j + 1)),
                 str::from_utf8(&car_name).unwrap(),
                 screen,
                 target,
@@ -204,7 +251,9 @@ pub fn add_train<
                 .iter()
                 .try_for_each(|offset| {
                     add_man(
-                        (y + offsets.car_windows.height) + (fly_factor * (j + 2)),
+                        // One row further down than the car itself: the passenger dangles out
+                        // of the window, below the car's own diagonal offset.
+                        (y + offsets.car_windows.height) + (fly_row_drop * (j + 2)),
                         ((x + front_length) + offset) + (car_length * j),
                         screen,
                         target,
@@ -219,4 +268,31 @@ pub fn add_train<
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use core::str;
+
+    use super::{car_label_width, CAR_ROW_BUFFER_BYTES};
+    use crate::print_car::print_car;
+
+    /// A carriage small enough to check by hand: the body rows are 8 columns wide and the
+    /// marker row leaves `| ` plus ` |` (4 columns) of fixed art, so its label gets 4 cells.
+    const SPRITE: [&str; 3] = ["+------+", "| {} |", "+------+"];
+
+    #[test]
+    fn label_width_is_what_the_marker_row_leaves_over() {
+        assert_eq!(car_label_width(&SPRITE), 4);
+    }
+
+    #[test]
+    fn a_padded_label_makes_its_row_as_wide_as_the_carriage() {
+        let mut buffer = [0; CAR_ROW_BUFFER_BYTES];
+        print_car(&mut buffer, SPRITE[1], "abcd", car_label_width(&SPRITE));
+
+        let end = buffer.iter().position(|byte| *byte == 0).unwrap();
+        assert_eq!(str::from_utf8(&buffer[..end]).unwrap(), "| abcd |");
+        assert_eq!(end, SPRITE[0].len());
+    }
 }

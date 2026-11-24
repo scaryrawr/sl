@@ -1,6 +1,42 @@
 use crate::{RenderError, RenderTarget, ScreenSize, Smoke, TrainOptions};
 
-use super::add_train::{add_train, RenderContext, TrainFrames, TrainOffsets, WindowOffsets};
+use super::add_train::{
+    add_train, car_label_width, RenderContext, TrainFrames, TrainOffsets, WindowOffsets,
+};
+
+/// Rows in every sprite of this train: engine frames, coal car, and carriage all stand this
+/// tall, and it is the `HEIGHT` the shared renderer is instantiated with.
+const HEIGHT: usize = 12;
+
+/// Wheel-animation frames the engine cycles through as it travels.
+const ANIMATIONS: usize = 6;
+
+/// Windows on the engine cab, and windows on each carriage.
+const ENGINE_WINDOWS: usize = 2;
+const CAR_WINDOWS: usize = 4;
+
+/// Column of the funnel that smoke rises from, at the base of the engine's stack.
+///
+/// The C51 stack crown is the `___` spanning columns 8..10 of the engine's top row, so smoke
+/// starts one column to its left, where the stack meets the boiler.
+const FUNNEL: i32 = 7;
+
+/// Engine sprite row holding the cab windows (`___ ___` in row 3); accident passengers are
+/// drawn from this row down so their heads appear in the cab.
+const ENGINE_WINDOW_ROW: i32 = 3;
+
+/// Cab-window columns of the engine sprite, one per window, spaced 4 columns apart.
+const ENGINE_WINDOW_COLUMNS: [i32; ENGINE_WINDOWS] = [45, 49];
+
+/// Carriage sprite row holding the window bays (`___` in row 2); passengers are drawn from
+/// this row down. The C51 carriage art sits one row lower than the D51's.
+const CAR_WINDOW_ROW: i32 = 2;
+
+/// Carriage window columns, one per bay, spaced 5 columns apart to match the sprite.
+///
+/// Each column sits two cells left of its `___` bay so the 3-cell `(O)` head and the 5-cell
+/// `Help!` line both land on the bay instead of beside it.
+const CAR_WINDOW_COLUMNS: [i32; CAR_WINDOWS] = [4, 9, 14, 19];
 
 /// Adds a C51 train to the display.
 ///
@@ -24,7 +60,7 @@ pub fn add_c51<T: AsRef<str>, U: RenderTarget>(
     options: &TrainOptions,
     smoke: &mut Smoke,
 ) -> Result<(), RenderError<U::Error>> {
-    const ENGINE: [[&str; 12]; 6] = [
+    const ENGINE: [[&str; HEIGHT]; ANIMATIONS] = [
         [
             "        ___                                            ",
             "       _|_|_  _     __       __             ___________",
@@ -111,7 +147,7 @@ pub fn add_c51<T: AsRef<str>, U: RenderTarget>(
         ],
     ];
 
-    const COAL: [&str; 12] = [
+    const COAL: [&str; HEIGHT] = [
         "                              ",
         "                              ",
         "                              ",
@@ -126,7 +162,7 @@ pub fn add_c51<T: AsRef<str>, U: RenderTarget>(
         "                              ",
     ];
 
-    const CAR: [&str; 12] = [
+    const CAR: [&str; HEIGHT] = [
         "                              ",
         "  __________________________  ",
         "  |   ___  ___  ___  ___   |   ",
@@ -141,23 +177,23 @@ pub fn add_c51<T: AsRef<str>, U: RenderTarget>(
         "                              ",
     ];
 
-    const FRAMES: TrainFrames<12, 6> = TrainFrames {
+    const FRAMES: TrainFrames<HEIGHT, ANIMATIONS> = TrainFrames {
         engine: ENGINE,
         coal: COAL,
         car: CAR,
     };
 
-    const OFFSETS: TrainOffsets<2, 4> = TrainOffsets {
-        funnel: 7,
+    const OFFSETS: TrainOffsets<ENGINE_WINDOWS, CAR_WINDOWS> = TrainOffsets {
+        funnel: FUNNEL,
         engine_windows: WindowOffsets {
-            height: 3,
-            window_positions: [45, 49],
+            height: ENGINE_WINDOW_ROW,
+            window_positions: ENGINE_WINDOW_COLUMNS,
         },
         car_windows: WindowOffsets {
-            height: 2,
-            window_positions: [4, 9, 14, 19],
+            height: CAR_WINDOW_ROW,
+            window_positions: CAR_WINDOW_COLUMNS,
         },
-        car_text_width: 22,
+        car_text_width: car_label_width(&CAR),
     };
 
     add_train(

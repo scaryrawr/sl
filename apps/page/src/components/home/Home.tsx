@@ -1,5 +1,6 @@
 import { useReducer } from 'preact/hooks';
 
+import { DEFAULT_BACKGROUND_COLOR, DEFAULT_FONT_COLOR } from '../terminal';
 import SlTerminal, { TrainType, type TrainTypeValue } from '../slTerminal';
 import Embed from './Embed';
 import Form from './Form';
@@ -40,8 +41,8 @@ const initialState: State = {
   smoke: true,
   trainType: TrainType.D51,
   messages: ['hello', 'world'],
-  fontColor: '#0f0',
-  backgroundColor: '#000'
+  fontColor: DEFAULT_FONT_COLOR,
+  backgroundColor: DEFAULT_BACKGROUND_COLOR
 };
 
 /**

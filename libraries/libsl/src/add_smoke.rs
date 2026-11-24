@@ -14,7 +14,47 @@ use crate::{RenderTarget, ScreenSize};
 use super::mvaddstr::mvaddstr;
 
 /// Number of animation frames a puff lives before it disappears.
+///
+/// Also the length of every per-frame pattern table below ([`SMOKE`], [`ERASER`], [`DY`],
+/// [`DX`]), so a puff's art, its eraser, and its drift all step forward once per frame.
 const PATTERN_LEN: usize = 16;
+
+/// Puff shapes, one table per style, indexed by the puff's age in frames.
+const SMOKE: [[&str; PATTERN_LEN]; STYLES] = [
+    [
+        "(   )", "(    )", "(    )", "(   )", "(  )", "(  )", "( )", "( )", "()", "()", "O", "O",
+        "O", "O", "O", " ",
+    ],
+    [
+        "(@@@)", "(@@@@)", "(@@@@)", "(@@@)", "(@@)", "(@@)", "(@)", "(@)", "@@", "@@", "@", "@",
+        "@", "@", "@", " ",
+    ],
+];
+
+/// Blank overwrites as wide as the puff frame at the same age, so each age step erases
+/// exactly the art it drew last time. Both styles share these widths, which the test below
+/// pins back to [`SMOKE`].
+const ERASER: [&str; PATTERN_LEN] = [
+    "     ", "      ", "      ", "     ", "    ", "    ", "   ", "   ", "  ", "  ", " ", " ", " ",
+    " ", " ", " ",
+];
+
+/// Rows a puff rises per frame: the first step lifts two rows, the next three lift one,
+/// after which the puff only spreads sideways.
+const DY: [i32; PATTERN_LEN] = [2, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+/// Columns a puff shifts per frame, in screen coordinates: it lurches left while forming,
+/// then drifts right as it dissipates behind the train.
+const DX: [i32; PATTERN_LEN] = [-2, -1, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3];
+
+/// Train columns (one per animation frame) between smoke puffs.
+///
+/// Inherited from the original curses `sl`, which emitted a puff on every fourth column
+/// (`x % 4 == 0`) so the trail is sparse enough to read as puffs rather than a solid plume.
+const EMISSION_INTERVAL: i32 = 4;
+
+/// Puff styles that alternate along the trail: `()` puffs and `@`-filled puffs.
+const STYLES: usize = 2;
 
 /// Internal state tracked for each smoke particle.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -74,25 +114,7 @@ pub fn add_smoke<T: RenderTarget>(
     target: &mut T,
     smoke: &mut Smoke,
 ) -> Result<(), T::Error> {
-    const SMOKE: [[&str; 16]; 2] = [
-        [
-            "(   )", "(    )", "(    )", "(   )", "(  )", "(  )", "( )", "( )", "()", "()", "O",
-            "O", "O", "O", "O", " ",
-        ],
-        [
-            "(@@@)", "(@@@@)", "(@@@@)", "(@@@)", "(@@)", "(@@)", "(@)", "(@)", "@@", "@@", "@",
-            "@", "@", "@", "@", " ",
-        ],
-    ];
-    const ERASER: [&str; 16] = [
-        "     ", "      ", "      ", "     ", "    ", "    ", "   ", "   ", "  ", "  ", " ", " ",
-        " ", " ", " ", " ",
-    ];
-
-    const DY: [i32; 16] = [2, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    const DX: [i32; 16] = [-2, -1, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3];
-
-    if x % 4 == 0 {
+    if x % EMISSION_INTERVAL == 0 {
         let mut survivors = Vec::with_capacity(smoke.particles.len() + 1);
         for &particle in &smoke.particles {
             mvaddstr(
@@ -120,8 +142,15 @@ pub fn add_smoke<T: RenderTarget>(
             }
         }
 
+        // A funnel that has just passed the left edge keeps emitting for one puff lifetime:
+        // a puff drifts 21 columns rightward across its PATTERN_LEN frames, so a window that
+        // wide always brings the trail back on screen.
         if x >= -(PATTERN_LEN as i32) && x <= screen.columns {
-            let kind = ((screen.columns - x) / 4).rem_euclid(2) as usize;
+            // Screen-relative phase: one puff is emitted per EMISSION_INTERVAL columns, so
+            // dividing the distance the funnel has travelled by that interval counts puffs.
+            // Taking it modulo STYLES flips the shape every other puff (every 8 columns).
+            let puff_index = (screen.columns - x) / EMISSION_INTERVAL;
+            let kind = puff_index.rem_euclid(STYLES as i32) as usize;
             survivors.push(SmokeParticle {
                 y,
                 x,
@@ -143,6 +172,19 @@ mod tests {
     use super::*;
     use crate::std::string::String;
     use crate::std::vec::Vec;
+
+    #[test]
+    fn every_eraser_is_as_wide_as_the_puff_it_clears() {
+        for (style, frames) in SMOKE.iter().enumerate() {
+            for (age, puff) in frames.iter().enumerate() {
+                assert_eq!(
+                    ERASER[age].len(),
+                    puff.len(),
+                    "eraser does not cover style {style} at age {age}"
+                );
+            }
+        }
+    }
 
     struct RecordingTarget {
         draws: Vec<(i32, i32, String)>,
