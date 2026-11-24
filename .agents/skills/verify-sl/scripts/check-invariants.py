@@ -119,13 +119,21 @@ def main():
     if not any(engine_seen):
         raise ValueError("capture has no identifiable engine for smoke lifecycle verification")
     last_engine = max(i for i, seen in enumerate(engine_seen) if seen)
-    # A puff lives 16 emissions, one every four train columns.
-    settle = 16 * 4
+    # A puff lives 16 emissions, one every four train columns. The funnel can
+    # emit for four more column groups after crossing the left edge, because
+    # those puffs can still drift back into view.
+    settle = 20 * 4
     if last_engine + settle >= len(frames):
         raise ValueError("capture has no post-engine frames to verify smoke clearing")
+    smoke_visible = [
+        any(ch in "(@)" for row in frame[:8] for ch in row)
+        for frame in frames
+    ]
+    last_puff = max(i for i, visible in enumerate(smoke_visible) if visible)
+    results.append(("smoke follows engine off screen", last_puff - last_engine >= 15 * 4))
     tail_rows_clear = all(
-        not any(ch in "(@)" for row in frame[:8] for ch in row)
-        for frame in frames[last_engine + settle:]
+        not visible
+        for visible in smoke_visible[last_engine + settle:]
     )
     results.append(("smoke trail clears after the engine exits", tail_rows_clear))
 
