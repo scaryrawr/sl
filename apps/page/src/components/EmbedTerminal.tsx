@@ -1,6 +1,7 @@
 import { useEffect } from 'preact/hooks';
 
 import SlTerminal, { parseTrainType } from './slTerminal';
+import { DEFAULT_BACKGROUND_COLOR, DEFAULT_FONT_COLOR } from './terminal';
 
 /** Validate a single decoded message entry as a display string. */
 const isMessageLine = (value: unknown): value is string => typeof value === 'string';
@@ -57,8 +58,8 @@ const EmbedTerminal = () => {
   const trainType = parseTrainType(searchParams.get('trainType'));
   const messages = parseMessages(searchParams.get('messages'));
   // `||` so empty query params (e.g. `backgroundColor=`) fall back to the defaults
-  const fontColor = searchParams.get('fontColor') || '#0f0';
-  const backgroundColor = searchParams.get('backgroundColor') || '#000';
+  const fontColor = searchParams.get('fontColor') || DEFAULT_FONT_COLOR;
+  const backgroundColor = searchParams.get('backgroundColor') || DEFAULT_BACKGROUND_COLOR;
 
   // Keep the page background in sync with the terminal so the embed
   // never shows a mismatched (white) frame around the terminal window.

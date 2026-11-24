@@ -43,6 +43,47 @@ const parseTrainType = (raw: string | null): TrainTypeValue =>
 const cellCount = (row: Element | undefined): number => Array.from(row?.textContent ?? '').length;
 
 /**
+ * Cell written for empty grid positions.
+ *
+ * A no-break space (U+00A0) rather than a plain space: runs of ordinary spaces can be
+ * collapsed or trimmed whenever the grid is not laid out with `white-space: pre`, which would
+ * silently shrink a row and desynchronise it from the animation grid.
+ */
+const BLANK_CELL = '\xa0';
+
+/**
+ * Milliseconds between animation steps.
+ *
+ * Each step advances the train one column, so this is the web counterpart of the CLI's
+ * per-column sleep. 60 ms (~16 steps/second) stays below the requestAnimationFrame cadence
+ * because every step repaints the rows it touched as a whole `textContent` write.
+ */
+const FRAME_INTERVAL_MS = 60;
+
+/** Rows reserved below the static train for the reduced-motion notice. */
+const REDUCED_MOTION_MESSAGE_ROWS = 1;
+
+/** Notice drawn in place of the animation when the visitor prefers reduced motion. */
+const REDUCED_MOTION_MESSAGE = 'Static view - Animation disabled due to reduced motion preference';
+
+/** Notice drawn when the WASM module cannot be loaded or instantiated. */
+const LOAD_FAILURE_MESSAGE = 'Failed to load animation. Please refresh the page to try again.';
+
+/**
+ * Write `text` centred inside a `cols`-cell row, padding both sides with {@link BLANK_CELL}.
+ *
+ * @param cols - Cells available in the row.
+ * @param text - Text to centre (its own cell count is used, matching how rows are measured).
+ * @returns The row contents, clamped so a text longer than the row cannot overflow the padding.
+ */
+const centeredRow = (cols: number, text: string): string => {
+  const padding = Math.max(0, Math.floor((cols - text.length) / 2));
+  const trailing = Math.max(0, cols - padding - text.length);
+
+  return BLANK_CELL.repeat(padding) + text + BLANK_CELL.repeat(trailing);
+};
+
+/**
  * Props for the {@link SlTerminal} component.
  */
 type SlProps = {
@@ -112,13 +153,13 @@ const useSlAnimation = (props: {
     for (const row of Array.from(terminal.children)) {
       // SAFETY: Terminal renders every child of the grid as a row <div> element.
       const el = row as HTMLElement;
-      el.textContent = '\xa0'.repeat(cols);
+      el.textContent = BLANK_CELL.repeat(cols);
     }
 
     // Keep the persistent grid consistent with the cleared DOM.
     gridRef.current = {
       firstRow: terminal.children[0],
-      rows: Array.from(terminal.children).map(() => Array(cols).fill('\xa0'))
+      rows: Array.from(terminal.children).map(() => Array(cols).fill(BLANK_CELL))
     };
   }, []);
 
@@ -181,32 +222,30 @@ const useSlAnimation = (props: {
         };
 
         const staticTrain = staticTrains[trainType] || standardTrain;
-        const MESSAGE_ROWS = 1; // Reserve rows for accessibility message
-        const minRequiredRows = staticTrain.length + MESSAGE_ROWS;
+        const minRequiredRows = staticTrain.length + REDUCED_MOTION_MESSAGE_ROWS;
 
         // Check if terminal is large enough to display static content
         if (terminal.children.length < minRequiredRows) {
           return;
         }
 
-        // Center the train vertically (accounting for message row)
-        const startRow = Math.max(0, Math.floor((terminal.children.length - staticTrain.length - MESSAGE_ROWS) / 2));
+        // Center the train vertically, leaving the notice row underneath it.
+        const startRow = Math.max(
+          0,
+          Math.floor((terminal.children.length - staticTrain.length - REDUCED_MOTION_MESSAGE_ROWS) / 2)
+        );
 
         const renderStaticRow = (row: Element | undefined, text: string) => {
           if (!row) return;
 
           const cols = cellCount(row);
-          const visibleText = text.slice(0, cols);
-          const remaining = cols - visibleText.length;
-          const padding = Math.floor(remaining / 2);
-
-          row.textContent = '\xa0'.repeat(padding) + visibleText + '\xa0'.repeat(remaining - padding);
+          row.textContent = centeredRow(cols, text.slice(0, cols));
         };
 
         staticTrain.forEach((line, idx) => renderStaticRow(terminal.children[startRow + idx], line));
         renderStaticRow(
           terminal.children[startRow + staticTrain.length],
-          'Static view - Animation disabled due to reduced motion preference'
+          REDUCED_MOTION_MESSAGE
         );
       }
 
@@ -221,8 +260,6 @@ const useSlAnimation = (props: {
     // cached grid, and flushing a stale grid would erase cells outside the
     // current draw range.
     gridRef.current = null;
-
-    const frameInterval = 60; // 60ms = ~16.67 FPS (reduced from 60 FPS for performance)
 
     const runWasm = async () => {
       try {
@@ -366,7 +403,7 @@ const useSlAnimation = (props: {
           // Use setTimeout + RAF pattern to reduce callback overhead
           timeoutId = window.setTimeout(() => {
             animationFrameId = requestAnimationFrame(animate);
-          }, frameInterval);
+          }, FRAME_INTERVAL_MS);
         };
 
         animationFrameId = requestAnimationFrame(animate);
@@ -374,7 +411,6 @@ const useSlAnimation = (props: {
         console.error('Failed to load WASM module', error);
 
         if (disposed) return;
-        const message = 'Failed to load animation. Please refresh the page to try again.';
         const terminal = terminalRef.current;
 
         if (!terminal || terminal.children.length === 0) return;
@@ -382,10 +418,7 @@ const useSlAnimation = (props: {
         const row = terminal.children[0] as HTMLElement | undefined;
 
         if (!row) return;
-        const cols = row.textContent?.length ?? 0;
-        const padding = Math.max(0, Math.floor((cols - message.length) / 2));
-        row.textContent =
-          '\xa0'.repeat(padding) + message + '\xa0'.repeat(Math.max(0, cols - padding - message.length));
+        row.textContent = centeredRow(row.textContent?.length ?? 0, LOAD_FAILURE_MESSAGE);
       }
     };
 

@@ -8,6 +8,12 @@ use core::{cmp::min, str};
 use super::unicode_width::UnicodeWidthStr;
 use unicode_segmentation::UnicodeSegmentation;
 
+/// Marker a carriage sprite row uses to reserve the space its label will fill.
+pub const LABEL_MARKER: &str = "{}";
+
+/// Bytes left free at the end of the buffer for the null terminator `print_car` writes.
+const NUL_TERMINATOR_BYTES: usize = 1;
+
 /// Render a passenger car row with `text` substituted into the `{}` placeholder of `format`.
 ///
 /// The resulting null-terminated string is written into `buffer`. If `text` is wider
@@ -23,21 +29,24 @@ use unicode_segmentation::UnicodeSegmentation;
 /// * `text_display_width` – Maximum display width (in character cells) for the text.
 pub fn print_car(buffer: &mut [u8], format: &str, text: &str, text_display_width: usize) {
     // No format string, just copy text
-    if !format.contains("{}") {
-        let copy_len = min(format.len(), buffer.len() - 1);
+    if !format.contains(LABEL_MARKER) {
+        let copy_len = min(format.len(), buffer.len() - NUL_TERMINATOR_BYTES);
         buffer[0..copy_len].copy_from_slice(format.as_bytes());
         buffer[copy_len] = 0;
         return;
     }
 
     // Copy the format string up to the first {}
-    let mut format_iter = format.split("{}");
+    let mut format_iter = format.split(LABEL_MARKER);
     let first = format_iter.next().unwrap();
-    let mut end_pos = min(first.len(), buffer.len() - 1);
+    let mut end_pos = min(first.len(), buffer.len() - NUL_TERMINATOR_BYTES);
     buffer[0..end_pos].copy_from_slice(first.as_bytes());
 
     // Copy the car text
-    let car_text = car_text(buffer.len() - (format.len() - 2), text_display_width, text);
+    // The marker is the only part of the sprite row the label replaces, so the rest of the
+    // row is what is left of the buffer for the label.
+    let room = buffer.len() - (format.len() - LABEL_MARKER.len());
+    let car_text = car_text(room, text_display_width, text);
     let start_pos = end_pos;
     end_pos = start_pos + car_text.len();
     buffer[start_pos..end_pos].copy_from_slice(car_text.as_bytes());

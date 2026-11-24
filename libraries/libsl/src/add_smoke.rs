@@ -14,7 +14,47 @@ use crate::{RenderTarget, ScreenSize};
 use super::mvaddstr::mvaddstr;
 
 /// Number of animation frames a puff lives before it disappears.
+///
+/// Also the length of every per-frame pattern table below ([`SMOKE`], [`ERASER`], [`DY`],
+/// [`DX`]), so a puff's art, its eraser, and its drift all step forward once per frame.
 const PATTERN_LEN: usize = 16;
+
+/// Puff shapes, one table per style, indexed by the puff's age in frames.
+const SMOKE: [[&str; PATTERN_LEN]; STYLES] = [
+    [
+        "(   )", "(    )", "(    )", "(   )", "(  )", "(  )", "( )", "( )", "()", "()", "O", "O",
+        "O", "O", "O", " ",
+    ],
+    [
+        "(@@@)", "(@@@@)", "(@@@@)", "(@@@)", "(@@)", "(@@)", "(@)", "(@)", "@@", "@@", "@", "@",
+        "@", "@", "@", " ",
+    ],
+];
+
+/// Blank overwrites as wide as the puff frame at the same age, so each age step erases
+/// exactly the art it drew last time. Both styles share these widths, which the test below
+/// pins back to [`SMOKE`].
+const ERASER: [&str; PATTERN_LEN] = [
+    "     ", "      ", "      ", "     ", "    ", "    ", "   ", "   ", "  ", "  ", " ", " ", " ",
+    " ", " ", " ",
+];
+
+/// Rows a puff rises per frame: the first step lifts two rows, the next three lift one,
+/// after which the puff only spreads sideways.
+const DY: [i32; PATTERN_LEN] = [2, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+/// Columns a puff shifts per frame, in screen coordinates: it lurches left while forming,
+/// then drifts right as it dissipates behind the train.
+const DX: [i32; PATTERN_LEN] = [-2, -1, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3];
+
+/// Train columns (one per animation frame) between smoke puffs.
+///
+/// Inherited from the original curses `sl`, which emitted a puff on every fourth column
+/// (`x % 4 == 0`) so the trail is sparse enough to read as puffs rather than a solid plume.
+const EMISSION_INTERVAL: i32 = 4;
+
+/// Puff styles that alternate along the trail: `()` puffs and `@`-filled puffs.
+const STYLES: usize = 2;
 
 /// Internal state tracked for each smoke particle.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -51,10 +91,10 @@ impl Smoke {
 ///
 /// Every 4 frames (`x % 4 == 0`) each live particle advances one step upward
 /// and to the side, cycling through 16 frames from a large puff down to a
-/// single character before disappearing. New puffs spawn only while the funnel
-/// column `x` is between zero and the screen width (inclusive). Once it passes
-/// the left edge, existing particles keep aging so the trail finishes its
-/// lifecycle instead of freezing mid-puff.
+/// single character before disappearing. New puffs spawn before the funnel
+/// passes the right edge of the screen. Puffs emitted beyond the left edge are
+/// initially clipped, but can drift back into view as the smoke trail follows
+/// the train. All particles expire after 16 steps.
 ///
 /// # Arguments
 ///
@@ -74,25 +114,7 @@ pub fn add_smoke<T: RenderTarget>(
     target: &mut T,
     smoke: &mut Smoke,
 ) -> Result<(), T::Error> {
-    const SMOKE: [[&str; 16]; 2] = [
-        [
-            "(   )", "(    )", "(    )", "(   )", "(  )", "(  )", "( )", "( )", "()", "()", "O",
-            "O", "O", "O", "O", " ",
-        ],
-        [
-            "(@@@)", "(@@@@)", "(@@@@)", "(@@@)", "(@@)", "(@@)", "(@)", "(@)", "@@", "@@", "@",
-            "@", "@", "@", "@", " ",
-        ],
-    ];
-    const ERASER: [&str; 16] = [
-        "     ", "      ", "      ", "     ", "    ", "    ", "   ", "   ", "  ", "  ", " ", " ",
-        " ", " ", " ", " ",
-    ];
-
-    const DY: [i32; 16] = [2, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    const DX: [i32; 16] = [-2, -1, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3];
-
-    if x % 4 == 0 {
+    if x % EMISSION_INTERVAL == 0 {
         let mut survivors = Vec::with_capacity(smoke.particles.len() + 1);
         for &particle in &smoke.particles {
             mvaddstr(
@@ -120,8 +142,15 @@ pub fn add_smoke<T: RenderTarget>(
             }
         }
 
-        if x >= 0 && x <= screen.columns {
-            let kind = (((screen.columns - x.min(screen.columns)) / 4) % 2) as usize;
+        // A funnel that has just passed the left edge keeps emitting for one puff lifetime:
+        // a puff drifts 21 columns rightward across its PATTERN_LEN frames, so a window that
+        // wide always brings the trail back on screen.
+        if x >= -(PATTERN_LEN as i32) && x <= screen.columns {
+            // Screen-relative phase: one puff is emitted per EMISSION_INTERVAL columns, so
+            // dividing the distance the funnel has travelled by that interval counts puffs.
+            // Taking it modulo STYLES flips the shape every other puff (every 8 columns).
+            let puff_index = (screen.columns - x) / EMISSION_INTERVAL;
+            let kind = puff_index.rem_euclid(STYLES as i32) as usize;
             survivors.push(SmokeParticle {
                 y,
                 x,
@@ -143,6 +172,19 @@ mod tests {
     use super::*;
     use crate::std::string::String;
     use crate::std::vec::Vec;
+
+    #[test]
+    fn every_eraser_is_as_wide_as_the_puff_it_clears() {
+        for (style, frames) in SMOKE.iter().enumerate() {
+            for (age, puff) in frames.iter().enumerate() {
+                assert_eq!(
+                    ERASER[age].len(),
+                    puff.len(),
+                    "eraser does not cover style {style} at age {age}"
+                );
+            }
+        }
+    }
 
     struct RecordingTarget {
         draws: Vec<(i32, i32, String)>,
@@ -241,7 +283,7 @@ mod tests {
         let mut puffs_per_emission = Vec::new();
         let mut offscreen_draws: Vec<(i32, i32, String)> = Vec::new();
         let mut x = 16;
-        while x >= -64 {
+        while x >= -96 {
             target.draws.clear();
             add_smoke(10, x, screen, &mut target, &mut smoke).expect("draw");
             puffs_per_emission.push(target.draws.iter().filter(|d| is_puff(&d.2)).count());
@@ -267,10 +309,35 @@ mod tests {
             "every puff should expire after the funnel exits: {puffs_per_emission:?}"
         );
 
-        // Only new puffs appear on the funnel row; older puffs have risen.
         assert!(
-            !offscreen_draws.iter().any(|d| d.0 == 10 && is_puff(&d.2)),
-            "no puff should spawn once the funnel is off screen: {offscreen_draws:?}"
+            offscreen_draws.iter().any(|d| d.0 < 10 && is_puff(&d.2)),
+            "offscreen emissions should drift back into view: {offscreen_draws:?}"
+        );
+    }
+
+    #[test]
+    fn offscreen_emission_drifts_into_view_from_empty_state() {
+        let screen = ScreenSize::new(80, 24);
+        let mut smoke = Smoke::new();
+        let mut target = RecordingTarget { draws: Vec::new() };
+        let mut visible_puffs = Vec::new();
+
+        for emission in 0..=16 {
+            let x = -4 - emission * 4;
+            target.draws.clear();
+            add_smoke(10, x, screen, &mut target, &mut smoke).expect("draw");
+            visible_puffs.extend(
+                target
+                    .draws
+                    .iter()
+                    .filter(|draw| draw.1 >= 0 && draw.0 < 10 && is_puff(&draw.2))
+                    .cloned(),
+            );
+        }
+
+        assert!(
+            !visible_puffs.is_empty(),
+            "an empty smoke state must emit offscreen puffs that drift into view"
         );
     }
 
