@@ -12,10 +12,28 @@ chunking. Incomplete captures and changed animation lengths fail explicitly.
 import argparse
 import json
 import os
+import shutil
+import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from castgrid import completed_frames  # noqa: E402
+
+
+def write_golden(path, payload):
+    """Write a golden, then hand it to the repo formatter.
+
+    Goldens are committed fixtures, and `bun run format:check` (CI, and the Codex stop hook) expects every
+    tracked file to match `bun fmt`, whose JSON style differs from json.dump's. Formatting here keeps a
+    re-recorded golden green without a separate manual step.
+    """
+    with open(path, "w") as handle:
+        json.dump(payload, handle, indent=1)
+    formatter = shutil.which("bun")
+    if formatter:
+        subprocess.run([formatter, "fmt", path], check=False)
+    else:
+        print("note: run `bun fmt %s` so the golden passes the repo format check" % path)
 
 
 def main():
@@ -65,12 +83,10 @@ def main():
         }
         if not os.path.exists(args.golden):
             os.makedirs(os.path.dirname(args.golden) or ".", exist_ok=True)
-            with open(args.golden, "w") as handle:
-                json.dump(payload, handle, indent=1)
+            write_golden(args.golden, payload)
             print("created golden %s (%d frames)" % (args.golden, len(frames)))
         elif args.update:
-            with open(args.golden, "w") as handle:
-                json.dump(payload, handle, indent=1)
+            write_golden(args.golden, payload)
             print("updated golden %s (%d frames)" % (args.golden, len(frames)))
         else:
             problems = []

@@ -243,10 +243,7 @@ const useSlAnimation = (props: {
         };
 
         staticTrain.forEach((line, idx) => renderStaticRow(terminal.children[startRow + idx], line));
-        renderStaticRow(
-          terminal.children[startRow + staticTrain.length],
-          REDUCED_MOTION_MESSAGE
-        );
+        renderStaticRow(terminal.children[startRow + staticTrain.length], REDUCED_MOTION_MESSAGE);
       }
 
       return () => {
@@ -297,20 +294,14 @@ const useSlAnimation = (props: {
           const firstRow = terminal.children[0];
           const existing = gridRef.current;
 
-          if (
-            existing &&
-            existing.firstRow === firstRow &&
-            existing.rows.length === terminal.children.length
-          ) {
+          if (existing && existing.firstRow === firstRow && existing.rows.length === terminal.children.length) {
             return existing;
           }
 
           // SAFETY: terminal's children are row <div> elements (the same
           // invariant used everywhere else in this file); textContent on each
           // row is all the grid is built from.
-          const rows = Array.from(terminal.children).map((row) =>
-            Array.from((row as HTMLElement).textContent ?? '')
-          );
+          const rows = Array.from(terminal.children).map((row) => Array.from((row as HTMLElement).textContent ?? ''));
 
           const fresh = { firstRow, rows };
           gridRef.current = fresh;

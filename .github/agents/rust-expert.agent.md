@@ -37,6 +37,7 @@ cargo test --manifest-path libraries/libsl/Cargo.toml
 
 # Linting and formatting
 cargo fmt
+cargo fmt --all --check      # What CI enforces
 cargo clippy
 
 # Running the CLI

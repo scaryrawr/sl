@@ -13,14 +13,7 @@ export function mount(withSecondTrain: boolean) {
   document.body.appendChild(first);
 
   render(
-    <SlTerminal
-      title="Train A"
-      trainType="d51"
-      accident={false}
-      fly={false}
-      smoke
-      messages={['TWIN-A']}
-    />,
+    <SlTerminal title="Train A" trainType="d51" accident={false} fly={false} smoke messages={['TWIN-A']} />,
     first
   );
 
@@ -31,14 +24,7 @@ export function mount(withSecondTrain: boolean) {
     document.body.appendChild(second);
 
     render(
-      <SlTerminal
-        title="Train B"
-        trainType="logo"
-        accident={false}
-        fly={false}
-        smoke
-        messages={['TWIN-B']}
-      />,
+      <SlTerminal title="Train B" trainType="logo" accident={false} fly={false} smoke messages={['TWIN-B']} />,
       second
     );
   }
