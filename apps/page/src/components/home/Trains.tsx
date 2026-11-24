@@ -35,7 +35,7 @@ const TRAIN_DEMOS: TrainDemoProps[] = [
     name: 'D51',
     command: 'sl',
     description:
-      'The D51 is the locomotive that runs when you type sl with no flags: a Decapod engine eleven rows tall, ' +
+      'The D51 is the locomotive that runs when you type sl with no flags: a 2-8-2 Mikado engine eleven rows tall, ' +
       'a coal car, and a line of passenger cars that carry whatever you pipe in.'
   },
   {
