@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "Stop": [
+      {
+        "type": "command",
+        "bash": "runtime=\"$(command -v bun || command -v node)\"; root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; \"$runtime\" \"$root/scripts/stop-check.ts\"",
+        "powershell": "$root = git rev-parse --show-toplevel 2>$null; if (-not $root) { $root = (Get-Location).Path }; $runtime = Get-Command bun -ErrorAction SilentlyContinue; if (-not $runtime) { $runtime = Get-Command node -ErrorAction Stop }; & $runtime.Source (Join-Path $root 'scripts/stop-check.ts')",
+        "timeoutSec": 900
+      }
+    ]
+  }
+}

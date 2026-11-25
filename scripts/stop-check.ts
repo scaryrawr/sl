@@ -1,9 +1,10 @@
 #!/usr/bin/env bun
 /**
- * Stop hook that keeps the agent working until the sl repo is free of build, lint, and clippy problems.
+ * Codex and Copilot Stop hook that keeps the agent working until the sl repo is free of build, lint, and clippy
+ * problems.
  *
- * Reads a Codex `Stop` hook event on stdin, runs the repo's clippy, lint, type, and format checks, then prints a
- * Codex hook response on stdout. `{"decision":"block","reason":"..."}` hands the failures back to the agent so the
+ * Reads an agent `Stop` hook event on stdin, runs the repo's clippy, lint, type, and format checks, then prints a
+ * hook response on stdout. `{"decision":"block","reason":"..."}` hands the failures back to the agent so the
  * turn continues; `{}` lets the turn finish.
  *
  * Every diagnostic counts as a failure, errors and warnings alike, except cargo advisories that carry no source
@@ -24,7 +25,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-/** Codex Stop hook payload, before validation. */
+/** Codex or Copilot Stop hook payload, before validation. */
 interface StopEventWire {
   hook_event_name?: string;
   session_id?: string;
@@ -93,8 +94,8 @@ interface TurnState {
 const MAX_BLOCKS_PER_TURN = 2;
 
 /**
- * Total budget for all steps plus repository discovery. `.codex/hooks.json` declares a 900s hook timeout while the
- * step budgets sum to 660s, so this deadline leaves 120s before Codex terminates the hook process.
+ * Total budget for all steps plus repository discovery. Both hook files declare a 900s timeout while the step
+ * budgets sum to 720s, so this deadline leaves 60s before the agent terminates the hook process.
  */
 const SHARED_DEADLINE_MS = 780000;
 
@@ -176,18 +177,18 @@ const getErrorMessage = (cause: unknown) => {
   return String(cause);
 };
 
-/** Decode the stdin payload, or throw when it is not a Stop event. */
+/** Decode a Codex or Copilot Stop payload. */
 const parseEvent = (payload: string): StopEvent => {
   const wire: StopEventWire = JSON.parse(payload);
 
   if (!wire.session_id || !wire.cwd) {
-    throw new Error('missing Codex session_id or cwd');
+    throw new Error('missing session_id or cwd');
   }
 
   return {
     hookEventName: wire.hook_event_name ?? '',
     sessionId: wire.session_id,
-    turnId: wire.turn_id ?? 'session',
+    turnId: wire.turn_id ?? 'copilot',
     cwd: wire.cwd,
     stopHookActive: wire.stop_hook_active === true
   };
@@ -458,8 +459,9 @@ const handleEvent = async (event: StopEvent) => {
   }
 
   const root = repoRoot(path.resolve(event.cwd));
-  const turnFile = path.join(stateRoot(), `${digest(`${event.sessionId}\0${root}`)}.json`);
-  const state = decodeTurnState(await readJson<TurnStateWire>(turnFile));
+  const isCopilot = event.turnId === 'copilot';
+  const turnFile = isCopilot ? null : path.join(stateRoot(), `${digest(`${event.sessionId}\0${root}`)}.json`);
+  const state = turnFile === null ? null : decodeTurnState(await readJson<TurnStateWire>(turnFile));
 
   // Hand-backs only accumulate inside one turn, so a new turn always starts with a fresh budget.
   const blocks = state !== null && state.turnId === event.turnId ? state.blocks : 0;
@@ -473,9 +475,13 @@ const handleEvent = async (event: StopEvent) => {
     return {};
   }
 
-  // Stop with a warning once the budget is spent, or when Codex already handed this turn back but no guard
-  // state survived; blocking again would risk an endless hand-back loop.
-  if (blocks >= MAX_BLOCKS_PER_TURN || (event.stopHookActive && blocks === 0)) {
+  // Codex can count two hand-backs per turn. Copilot marks forced continuations with `stop_hook_active`, which
+  // provides the equivalent guard without a Codex turn ID.
+  if ((isCopilot && event.stopHookActive) || blocks >= MAX_BLOCKS_PER_TURN || (event.stopHookActive && blocks === 0)) {
+    if (isCopilot) {
+      return {};
+    }
+
     const headline = outcome.failures.map((failure) => `${failure.command}: ${failure.excerpt.split('\n')[0]}`);
 
     return {
@@ -486,9 +492,27 @@ const handleEvent = async (event: StopEvent) => {
     };
   }
 
-  await writeJson(turnFile, { turn_id: event.turnId, blocks: blocks + 1 });
+  if (turnFile !== null) {
+    await writeJson(turnFile, { turn_id: event.turnId, blocks: blocks + 1 });
+  }
 
-  return { decision: 'block', reason: truncate(continuationPrompt(outcome.failures, outcome.notes), PROMPT_LIMIT) };
+  const reason = truncate(continuationPrompt(outcome.failures, outcome.notes), PROMPT_LIMIT);
+
+  if (isCopilot) {
+    return {
+      decision: 'block',
+      reason,
+      hookSpecificOutput: {
+        decision: 'block',
+        reason
+      }
+    };
+  }
+
+  return {
+    decision: 'block',
+    reason
+  };
 };
 
 if (pathToFileURL(process.argv[1] ?? '').href === import.meta.url) {
