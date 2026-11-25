@@ -125,6 +125,26 @@ Proof standards:
   is part of the logo sprite).
 - No mocks anywhere; wasm and sprites are the shipped ones.
 
+### Publish proof on the PR
+
+When presenting verification of user-visible behavior, embed a **playable video or animated GIF directly in the PR
+description** under Verification. Record the affected behavior from the verified revision. A checklist, log, still
+screenshot, local path, or comment-only attachment does not count as proof in the description.
+
+For UX/UI changes, calculation changes, or optimizations, show the affected surface's train entering from the right,
+moving across the terminal, and exiting on the left. Keep the relevant interaction and its visible result in the
+recording. Golden comparisons and performance measurements supplement the recording; they don't replace it.
+
+- CLI: render the verified `sl.cast` with `agg "$cast/sl.cast" "$cast/cli.gif"`.
+- Web: capture the affected user journey in the real, built site. For an embed, use
+  `bun .agents/skills/verify-sl/scripts/web-record.mjs "$out" accident` (also accepts `d51` or `fly`). Use an existing
+  directory under `evidence/` for `$out`. For a home-page change, record the home-page interaction directly instead of
+  substituting an embed recording.
+- Upload with GitHub CLI 2.99.0 or later: `gh pr edit "$pr" --attach "$recording"`. For MP4, keep the asset URL on its
+  own line so GitHub renders a player. Read the description back with `gh pr view "$pr" --json body --jq .body` and
+  verify every recording has a GitHub-hosted asset URL there. If capture or upload is blocked, report that proof is
+  missing instead of substituting a screenshot.
+
 Do not regenerate goldens to fix verification failures. After an explicitly intended visual change, review differences
 at the same frame indices before running `extract-frames.py ... --golden ... --update`; unchanged train/car art must
 remain identical. When migrating a legacy byte-offset golden, capture the trusted base with the same synchronized-output
