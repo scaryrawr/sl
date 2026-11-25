@@ -1,31 +1,7 @@
 import { useCallback, useEffect, useRef } from 'preact/hooks';
 
 import Terminal from './terminal';
-
-/** Allowed train type identifiers for the SL animation. */
-type TrainTypeValue = 'c51' | 'd51' | 'logo';
-
-/**
- * Constant map of train type names to their string values.
- * Use these values when configuring the train animation.
- */
-const TrainType = {
-  /** C51-class steam locomotive. */
-  C51: 'c51',
-  /** D51-class steam locomotive (default). */
-  D51: 'd51',
-  /** Small logo train. */
-  LOGO: 'logo'
-} as const satisfies Record<string, TrainTypeValue>;
-
-/**
- * Parse a raw string (query parameter, select value) into a train type.
- *
- * @param raw - Untrusted train type string, or `null` when absent.
- * @returns The matching train type, falling back to {@link TrainType.D51}.
- */
-const parseTrainType = (raw: string | null): TrainTypeValue =>
-  Object.values(TrainType).find((type) => type === raw) ?? TrainType.D51;
+import { TrainType, type TrainTypeValue } from './trainType';
 
 /**
  * Count the character cells of a terminal row.
@@ -463,9 +439,5 @@ const SlTerminal = ({
     />
   );
 };
-
-export { TrainType, parseTrainType };
-
-export type { TrainTypeValue };
 
 export default SlTerminal;

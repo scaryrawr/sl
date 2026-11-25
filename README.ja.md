@@ -21,6 +21,10 @@ bun run setup
 `bun run setup` は、Web サイトのビルドに必要な Rust の `wasm32-unknown-unknown` ターゲットと `wasm-pack`
 をインストールします。ビルドや開発用スクリプトは、これらが足りない場合にセットアップコマンドを表示します。
 
+`bun run build` は、ホームページの説明と各列車へのリンクを HTML として `apps/page/lib/`
+に生成します。ブラウザーで JavaScript が必要なのは、デモの操作とターミナルのアニメーションだけです。`bun run dev`
+はソースの変更に合わせて HTML を再生成します。
+
 ### CI ビルド
 
 GitHub

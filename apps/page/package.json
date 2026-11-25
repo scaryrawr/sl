@@ -4,7 +4,6 @@
   "description": "Demo page of sl",
   "license": "MIT",
   "type": "module",
-  "main": "index.js",
   "scripts": {
     "prebuild": "cd ../.. && bun run build:websl",
     "build": "bun build.ts",
@@ -19,11 +18,12 @@
     "typecheck": "bun check"
   },
   "dependencies": {
-    "preact": "^10.25.4"
+    "preact": "^11.2.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
-    "@types/bun": "1.3.3"
+    "@types/bun": "1.3.3",
+    "preact-render-to-string": "^6.8.3"
   },
   "packageManager": "bun@1.4.4"
 }

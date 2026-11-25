@@ -35,7 +35,7 @@ const serviceWorker = self as typeof self & {
 };
 
 /** Cache version bump forces all cached assets to be re-fetched on next activation. */
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 
 /** Name of the cache used for both assets and navigation responses. */
 const CACHE_NAME = `sl-page-${CACHE_VERSION}`;
@@ -68,7 +68,7 @@ const ASSETS_TO_CACHE = [
   `${BASE_PATH}/index.html`,
   `${BASE_PATH}/embed.html`,
   `${BASE_PATH}/favicon.svg`,
-  `${BASE_PATH}/index.js`,
+  `${BASE_PATH}/home.js`,
   `${BASE_PATH}/embed.js`,
   `${BASE_PATH}/manifest.json`,
   // WASM_PLACEHOLDER - will be replaced at build time

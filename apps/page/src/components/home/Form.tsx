@@ -1,8 +1,8 @@
-import type { JSX } from 'preact';
+import type { TargetedEvent } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
-import { parseTrainType, TrainType } from '../slTerminal';
-import type { Action, State } from './Home';
+import { parseTrainType, TrainType } from '../trainType';
+import type { Action, State } from './Demo';
 
 /**
  * Props for the demo control form.
@@ -31,8 +31,8 @@ const Form = ({ state, dispatch }: FormProps) => {
   // Debounced color announcements to avoid overwhelming screen readers
   const [announcedFontColor, setAnnouncedFontColor] = useState(state.fontColor);
   const [announcedBgColor, setAnnouncedBgColor] = useState(state.backgroundColor);
-  const fontColorTimerRef = useRef<number>();
-  const bgColorTimerRef = useRef<number>();
+  const fontColorTimerRef = useRef<number | undefined>(undefined);
+  const bgColorTimerRef = useRef<number | undefined>(undefined);
 
   // Sync announced colors with parent state changes (e.g., reset button)
   useEffect(() => {
@@ -52,42 +52,42 @@ const Form = ({ state, dispatch }: FormProps) => {
   }, []);
 
   const handleAccidentChange = useCallback(
-    (e: JSX.TargetedEvent<HTMLInputElement>) => {
+    (e: TargetedEvent<HTMLInputElement>) => {
       dispatch({ type: 'SET_ACCIDENT', payload: e.currentTarget.checked });
     },
     [dispatch]
   );
 
   const handleFlyChange = useCallback(
-    (e: JSX.TargetedEvent<HTMLInputElement>) => {
+    (e: TargetedEvent<HTMLInputElement>) => {
       dispatch({ type: 'SET_FLY', payload: e.currentTarget.checked });
     },
     [dispatch]
   );
 
   const handleSmokeChange = useCallback(
-    (e: JSX.TargetedEvent<HTMLInputElement>) => {
+    (e: TargetedEvent<HTMLInputElement>) => {
       dispatch({ type: 'SET_SMOKE', payload: e.currentTarget.checked });
     },
     [dispatch]
   );
 
   const handleTrainTypeChange = useCallback(
-    (e: JSX.TargetedEvent<HTMLSelectElement>) => {
+    (e: TargetedEvent<HTMLSelectElement>) => {
       dispatch({ type: 'SET_TRAIN_TYPE', payload: parseTrainType(e.currentTarget.value) });
     },
     [dispatch]
   );
 
   const handleMessagesChange = useCallback(
-    (e: JSX.TargetedEvent<HTMLTextAreaElement>) => {
+    (e: TargetedEvent<HTMLTextAreaElement>) => {
       dispatch({ type: 'SET_MESSAGES', payload: e.currentTarget.value.split('\n') });
     },
     [dispatch]
   );
 
   const handleFontColorChange = useCallback(
-    (e: JSX.TargetedEvent<HTMLInputElement>) => {
+    (e: TargetedEvent<HTMLInputElement>) => {
       const newColor = e.currentTarget.value;
       dispatch({ type: 'SET_FONT_COLOR', payload: newColor });
 
@@ -101,7 +101,7 @@ const Form = ({ state, dispatch }: FormProps) => {
   );
 
   const handleBackgroundColorChange = useCallback(
-    (e: JSX.TargetedEvent<HTMLInputElement>) => {
+    (e: TargetedEvent<HTMLInputElement>) => {
       const newColor = e.currentTarget.value;
       dispatch({ type: 'SET_BACKGROUND_COLOR', payload: newColor });
 

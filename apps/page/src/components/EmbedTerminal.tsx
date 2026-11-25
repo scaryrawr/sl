@@ -1,7 +1,8 @@
 import { useEffect } from 'preact/hooks';
 
-import SlTerminal, { parseTrainType } from './slTerminal';
+import SlTerminal from './slTerminal';
 import { DEFAULT_BACKGROUND_COLOR, DEFAULT_FONT_COLOR } from './terminal';
+import { parseTrainType } from './trainType';
 
 /** Validate a single decoded message entry as a display string. */
 const isMessageLine = (value: unknown): value is string => typeof value === 'string';

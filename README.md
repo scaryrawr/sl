@@ -117,6 +117,9 @@ bun run setup
 `bun run setup` installs the Rust `wasm32-unknown-unknown` target and `wasm-pack`, which are required by the website
 build. The build and dev scripts also check for these prerequisites and print the setup command if anything is missing.
 
+`bun run build` generates the home page's documentation and train links as HTML in `apps/page/lib/`. Only the demo
+controls and live terminals need browser JavaScript. `bun run dev` regenerates the HTML when its source changes.
+
 ### CI builds
 
 GitHub Actions uses five build jobs. One Ubuntu runner builds both amd64 and arm64 Debian packages and runs the native

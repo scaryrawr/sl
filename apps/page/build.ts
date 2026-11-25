@@ -3,12 +3,12 @@
  * Production build script for the SL web page.
  *
  * Steps:
- * 1. Build `index.tsx` and `embed.tsx` with Bun (generates hashed WASM file).
+ * 1. Build `home.tsx` and `embed.tsx` with Bun (generates hashed WASM file).
  * 2. Discover the generated WASM filename.
  * 3. Inject the WASM filename into `service-worker.ts` via a placeholder replacement.
  * 4. Build the patched service worker.
  * 5. Rename the temp service worker output to `service-worker.js`.
- * 6. Copy static assets (HTML, favicon, manifest) to the output directory.
+ * 6. Render the home HTML and copy the remaining static assets.
  *
  * Run with: `bun run build.ts`
  *
@@ -17,10 +17,12 @@
 import { copyFile, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { writeHomePage } from './prerender';
+
 const root = path.dirname(new URL(import.meta.url).pathname);
 const libDir = path.join(root, 'lib');
 
-// Step 1: Build the main entry points (index.tsx and embed.tsx)
+// Step 1: Build the main entry points (home.tsx and embed.tsx)
 // This generates the WASM file with a content hash
 console.log('Building main entry points...');
 
@@ -28,7 +30,7 @@ const mainBuild = Bun.spawn(
   [
     'bun',
     'build',
-    './src/index.tsx',
+    './src/home.tsx',
     './src/embed.tsx',
     '--outdir',
     './lib',
@@ -145,10 +147,10 @@ await unlink(swTempOutput);
 
 await unlink(swTempMap);
 
-// Step 6: Copy static files
-console.log('Copying static files...');
+// Step 6: Generate the home page and copy remaining static files
+console.log('Generating static pages...');
 
-await copyFile(path.join(root, 'index.html'), path.join(libDir, 'index.html'));
+await writeHomePage();
 
 await copyFile(path.join(root, 'embed.html'), path.join(libDir, 'embed.html'));
 

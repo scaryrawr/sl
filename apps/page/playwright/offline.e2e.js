@@ -64,7 +64,10 @@ test('loads the home page offline from the bare project path', async ({ context,
   }
 
   await expect(frame.getByRole('heading', { name: 'Welcome to the SL Project' })).toBeVisible();
-  expect(requestedOutsideProjectPath).not.toContain('/index.js');
+  await expect(frame.getByRole('combobox', { name: 'Train Type' })).toBeVisible();
+  const train = frame.getByRole('region', { name: 'D51' }).getByRole('img');
+  await expect.poll(() => train.textContent()).toContain('(_)---');
+  expect(requestedOutsideProjectPath).not.toContain('/home.js');
   expect(requestedOutsideProjectPath).not.toContain('/manifest.json');
 });
 

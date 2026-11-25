@@ -1,4 +1,4 @@
-import type { JSX, RefObject } from 'preact';
+import type { CSSProperties, RefObject } from 'preact';
 import { useLayoutEffect, useMemo, useRef } from 'preact/hooks';
 
 /** Default terminal text color: the phosphor green of the vintage terminals `sl` ran on. */
@@ -100,7 +100,7 @@ const styles = {
     minHeight: 0, // Allow flex child to shrink
     lineHeight: String(LINE_HEIGHT_MULTIPLIER) // Keep the painted rhythm equal to the measured one
   }
-} satisfies Record<'window' | 'titleBar' | 'title' | 'buttons' | 'button' | 'terminal', JSX.CSSProperties>;
+} satisfies Record<'window' | 'titleBar' | 'title' | 'buttons' | 'button' | 'terminal', CSSProperties>;
 
 /**
  * Props for the {@link Terminal} component.
