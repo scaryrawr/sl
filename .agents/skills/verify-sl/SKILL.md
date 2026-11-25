@@ -127,19 +127,22 @@ Proof standards:
 
 ### Publish proof on the PR
 
-When presenting verification of user-visible behavior, embed a **playable video or animated GIF directly in the PR
-description** under Verification. Record the affected behavior from the verified revision. A checklist, log, still
-screenshot, local path, or comment-only attachment does not count as proof in the description.
+For UI/UX changes, calculation changes, and optimizations that touch a user-facing train path, record **one complete
+animation on each affected surface** from the verified revision: the real CLI/TUI terminal, the actual web page or
+embed, or both if both are affected. Include the train's entrance from the right, its full crossing, its exit on the
+left, and the cleared terminal or loop reset. Show the relevant interaction and its visible result when applicable.
 
-For UX/UI changes, calculation changes, or optimizations, show the affected surface's train entering from the right,
-moving across the terminal, and exiting on the left. Keep the relevant interaction and its visible result in the
-recording. Golden comparisons and performance measurements supplement the recording; they don't replace it.
+Play each recording back to confirm it shows the full pass, then embed it as a **playable video or animated GIF directly
+in the PR description** under Verification. Label each recording by surface and scenario. A checklist, log, still
+screenshot, local path, or comment-only attachment does not count. Golden comparisons and performance measurements
+supplement the recording; they don't replace it.
 
 - CLI: render the verified `sl.cast` with `agg "$cast/sl.cast" "$cast/cli.gif"`.
 - Web: capture the affected user journey in the real, built site. For an embed, use
   `bun .agents/skills/verify-sl/scripts/web-record.mjs "$out" accident` (also accepts `d51` or `fly`). Use an existing
-  directory under `evidence/` for `$out`. For a home-page change, record the home-page interaction directly instead of
-  substituting an embed recording.
+  directory under `evidence/` for `$out`. The embed helper samples a fixed window; if it clips the entrance or exit,
+  take a longer capture starting before the animation begins. For a home-page change, record the home-page interaction
+  directly instead of substituting an embed recording.
 - Upload with GitHub CLI 2.99.0 or later: `gh pr edit "$pr" --attach "$recording"`. For MP4, keep the asset URL on its
   own line so GitHub renders a player. Read the description back with `gh pr view "$pr" --json body --jq .body` and
   verify every recording has a GitHub-hosted asset URL there. If capture or upload is blocked, report that proof is

@@ -43,6 +43,10 @@ Start from the diff: list the changed paths, then work through each section that
 
 ## Cross-cutting
 
+- Animation proof: for UI/UX changes, calculations, or optimizations touching a user-facing train path, play the
+  recording in the PR description for each affected surface (CLI/TUI, actual web page or embed, or both). Check that it
+  shows entry, full crossing, exit, and clear or loop reset. Ask for missing or incomplete recordings; screenshots, test
+  results, and benchmarks do not substitute for them. See `verify-sl` for capture and upload.
 - Docs: user-visible behavior changes need `README.md` and `README.ja.md` updates.
 - Version: `apps/sl/Cargo.toml` is the source of the CLI release version; do not duplicate that release version in other
   manifests. `libsl` and `websl` have independent package versions, so intentional library version bumps and matching

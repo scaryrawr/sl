@@ -189,7 +189,9 @@ evidence before proposing a JS/WASM boundary rewrite.
    ```
 
    Replace `d51` with the matching CLI scenario and golden when the candidate affects C51, logo, accident, fly, or
-   another protected rendering path.
+   another protected rendering path. For an optimization PR touching a user-facing train path, follow `verify-sl`'s
+   "Publish proof on the PR" workflow for every affected surface; benchmark and frame-comparison results don't replace a
+   playable recording of the full animation in the PR description.
 
 7. Check the end-to-end share. A helper that costs 5% of one complete frame cannot yield a 30% end-to-end improvement.
 
