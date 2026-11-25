@@ -498,13 +498,18 @@ const handleEvent = async (event: StopEvent) => {
 
   const reason = truncate(continuationPrompt(outcome.failures, outcome.notes), PROMPT_LIMIT);
 
+  if (isCopilot) {
+    return {
+      hookSpecificOutput: {
+        decision: 'block',
+        reason
+      }
+    };
+  }
+
   return {
     decision: 'block',
-    reason,
-    hookSpecificOutput: {
-      decision: 'block',
-      reason
-    }
+    reason
   };
 };
 
