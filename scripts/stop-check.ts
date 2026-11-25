@@ -496,7 +496,16 @@ const handleEvent = async (event: StopEvent) => {
     await writeJson(turnFile, { turn_id: event.turnId, blocks: blocks + 1 });
   }
 
-  return { decision: 'block', reason: truncate(continuationPrompt(outcome.failures, outcome.notes), PROMPT_LIMIT) };
+  const reason = truncate(continuationPrompt(outcome.failures, outcome.notes), PROMPT_LIMIT);
+
+  return {
+    decision: 'block',
+    reason,
+    hookSpecificOutput: {
+      decision: 'block',
+      reason
+    }
+  };
 };
 
 if (pathToFileURL(process.argv[1] ?? '').href === import.meta.url) {
