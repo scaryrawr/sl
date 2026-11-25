@@ -9,6 +9,28 @@ const TRAIN_DEMOS = [
   { name: 'Logo', trainType: 'logo', sprite: '|+-+ |' }
 ];
 
+test.describe('static home page', () => {
+  test.use({ javaScriptEnabled: false });
+
+  test('shows documentation and full-screen demo links without JavaScript', async ({ page }) => {
+    await page.goto('/sl/');
+
+    const main = page.getByRole('main');
+    await expect(main.getByRole('heading', { name: 'Welcome to the SL Project' })).toBeVisible();
+
+    for (const name of ['Usage', 'Piping', 'Embed', 'Installation']) {
+      await expect(main.getByRole('heading', { name, exact: true })).toBeVisible();
+    }
+
+    for (const { name, trainType } of TRAIN_DEMOS) {
+      const region = main.getByRole('region', { name });
+      const link = region.getByRole('link', { name: `${name} full-screen demo (opens in new tab)` });
+      await expect(link).toBeVisible();
+      await expect(link).toHaveAttribute('href', new RegExp(`^\\./embed\\.html\\?trainType=${trainType}&`));
+    }
+  });
+});
+
 test('shows a live demo for every supported train', async ({ page }) => {
   await page.goto('/sl/', { waitUntil: 'networkidle' });
 

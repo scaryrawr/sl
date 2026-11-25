@@ -125,6 +125,29 @@ Proof standards:
   is part of the logo sprite).
 - No mocks anywhere; wasm and sprites are the shipped ones.
 
+### Publish proof on the PR
+
+For UI/UX changes, calculation changes, and optimizations that touch a user-facing train path, record **one complete
+animation on each affected surface** from the verified revision: the real CLI/TUI terminal, the actual web page or
+embed, or both if both are affected. Include the train's entrance from the right, its full crossing, its exit on the
+left, and the cleared terminal or loop reset. Show the relevant interaction and its visible result when applicable.
+
+Play each recording back to confirm it shows the full pass, then embed it as a **playable video or animated GIF directly
+in the PR description** under Verification. Label each recording by surface and scenario. A checklist, log, still
+screenshot, local path, or comment-only attachment does not count. Golden comparisons and performance measurements
+supplement the recording; they don't replace it.
+
+- CLI: render the verified `sl.cast` with `agg "$cast/sl.cast" "$cast/cli.gif"`.
+- Web: capture the affected user journey in the real, built site. For an embed, use
+  `bun .agents/skills/verify-sl/scripts/web-record.mjs "$out" accident` (also accepts `d51` or `fly`). Use an existing
+  directory under `evidence/` for `$out`. The embed helper samples a fixed window; if it clips the entrance or exit,
+  take a longer capture starting before the animation begins. For a home-page change, record the home-page interaction
+  directly instead of substituting an embed recording.
+- Upload with GitHub CLI 2.99.0 or later: `gh pr edit "$pr" --attach "$recording"`. For MP4, keep the asset URL on its
+  own line so GitHub renders a player. Read the description back with `gh pr view "$pr" --json body --jq .body` and
+  verify every recording has a GitHub-hosted asset URL there. If capture or upload is blocked, report that proof is
+  missing instead of substituting a screenshot.
+
 Do not regenerate goldens to fix verification failures. After an explicitly intended visual change, review differences
 at the same frame indices before running `extract-frames.py ... --golden ... --update`; unchanged train/car art must
 remain identical. When migrating a legacy byte-offset golden, capture the trusted base with the same synchronized-output
