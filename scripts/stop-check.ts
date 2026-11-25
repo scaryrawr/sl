@@ -500,6 +500,8 @@ const handleEvent = async (event: StopEvent) => {
 
   if (isCopilot) {
     return {
+      decision: 'block',
+      reason,
       hookSpecificOutput: {
         decision: 'block',
         reason
