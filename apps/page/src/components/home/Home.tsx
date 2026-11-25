@@ -1,7 +1,7 @@
 import { useReducer } from 'preact/hooks';
 
-import { DEFAULT_BACKGROUND_COLOR, DEFAULT_FONT_COLOR } from '../terminal';
 import SlTerminal, { TrainType, type TrainTypeValue } from '../slTerminal';
+import { DEFAULT_BACKGROUND_COLOR, DEFAULT_FONT_COLOR } from '../terminal';
 import Embed from './Embed';
 import Form from './Form';
 import Installation from './Installation';
