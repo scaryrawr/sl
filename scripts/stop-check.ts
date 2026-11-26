@@ -1,11 +1,16 @@
 #!/usr/bin/env bun
 /**
- * Codex and Copilot Stop hook that keeps the agent working until the sl repo is free of build, lint, and clippy
- * problems.
+ * Stop hook shared by the Codex, Copilot, and OpenCode setups of this repo, keeping the agent working until the tree is
+ * free of build, lint, and clippy problems.
  *
  * Reads an agent `Stop` hook event on stdin, runs the repo's clippy, lint, type, and format checks, then prints a
  * hook response on stdout. `{"decision":"block","reason":"..."}` hands the failures back to the agent so the
  * turn continues; `{}` lets the turn finish.
+ *
+ * Codex and Copilot run this file directly from their hook files. OpenCode has no `Stop` hook, so
+ * `.opencode/plugins/sl-stop-check.ts` watches finished executions and calls this same script with a payload of its own:
+ * its session id, and the id of the user message that started the turn as the turn id, so the per-turn budget below
+ * counts hand-backs for one OpenCode turn the way it counts them for a Codex one.
  *
  * Every diagnostic counts as a failure, errors and warnings alike, except cargo advisories that carry no source
  * location. The checks run every time the hook fires: the repo's suite costs under a second on a warm tree, so

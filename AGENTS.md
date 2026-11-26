@@ -29,26 +29,42 @@ Monorepo for the `sl` terminal train. Rust workspace plus a Bun workspace for th
 
 ## Stop hook
 
-- `.codex/hooks.json` declares a Codex Stop hook that runs `scripts/stop-check.ts` before a turn may finish:
-  `cargo clippy --workspace --all-targets -- -D warnings` (build errors + clippy warnings),
-  `bunx oxlint . --format=agent`, `bunx oxlint . --type-aware ... --format=agent` (`lint:types`), `bun run typecheck`,
-  `bun fmt --check`, and `cargo fmt --all --check`. `--format=agent` keeps one diagnostic per line so parsing works
-  inside a hook, where oxlint otherwise prints multi-line code frames.
+- `scripts/stop-check.ts` holds the checks for every agent: `cargo clippy --workspace --all-targets -- -D warnings`
+  (build errors + clippy warnings), `bunx oxlint . --format=agent`, `bunx oxlint . --type-aware ... --format=agent`
+  (`lint:types`), `bun run typecheck`, `bun fmt --check`, and `cargo fmt --all --check`. `--format=agent` keeps one
+  diagnostic per line so parsing works inside a hook, where oxlint otherwise prints multi-line code frames.
+- `.codex/hooks.json` declares the Codex Stop hook, and `.github/hooks/stop-check.json` the Copilot one; both run that
+  script before a turn may finish.
+- OpenCode has no Stop hook, so `.opencode/plugins/sl-stop-check.ts` watches successful executions with a completed
+  model step, excluding control-only runs, and runs that script with the same stdin payload. A `block` verdict becomes a
+  queued prompt for the same session; a `systemMessage` becomes a non-resuming synthetic message.
+- OpenCode turns carry no id, so the plugin reports the id of the user message that started the turn, and marks its own
+  queued prompts in message metadata (which the model never sees) so a hand-back keeps reporting that turn id and a real
+  prompt opens a fresh budget. Sequence-bounded prompt delivery records preserve the turn id across compaction, and
+  unknown deliveries are skipped rather than attributed to the wrong turn. Atomic per-event claims prevent duplicate
+  charges, and per-session repository locks serialize checks across instances.
+- Editing the plugin does not take effect on its own: local plugin files are watched, but the running instance reloads
+  only when its location reloads, so use `/reload` or `opencode api post /api/location/reload` after a change.
+  `.opencode/plugins/**/*.ts` is in `tsconfig.json` and typed by the pinned `@opencode/plugin` devDependency, so
+  oxlint's type-aware pass and the editor check it like the files under `scripts/`.
 - A failing formatter step names the repair command (`bun fmt` or `cargo fmt --all`) in the hand-back, so the agent
   rewrites the files instead of hand-editing them.
-- Step budgets sum to 720s under a 780s shared deadline, inside the 900s `timeout` declared in `.codex/hooks.json`, so
-  Codex never kills the hook mid-run; steps left over after the deadline are reported as skipped, not failed.
+- Step budgets sum to 720s under a 780s shared deadline, inside the 900s `timeout` declared in `.codex/hooks.json` and
+  the 900s the plugin gives its child process, so no agent kills the hook mid-run; steps left over after the deadline
+  are reported as skipped, not failed.
 - Every diagnostic counts, errors and warnings alike, so `bun run lint` has to stay warning-free. The skill scripts'
   `window.__slQueue`, `__slPump` and `__slPerformance` globals are allowlisted in `.oxlintrc.json` rather than tolerated
   through a baseline file, and cargo advisories with no `-->` location concern the manifest instead of code, so they
   never reach the agent. `SL_STOP_CHECK=off` skips one check.
-- Failures make the hook return `{"decision":"block","reason":...}`, so Codex hands the failing commands and diagnostics
-  back to the agent instead of ending the turn. It hands a turn back at most twice, then only warns. Each excerpt is
-  capped at 2400 characters and the whole hand-back prompt at 6000.
-- Nothing is cached: the suite costs ~0.8s on a warm tree and ~5s from a cold cargo target, cheaper than tracking
-  whether the working tree changed, so there is no fingerprint that could go stale and skip validation. The only state
-  is the hand-back counter at `~/.codex/cache/sl-stop-check/<sha256(sessionId + repo root)>.json`, keyed to the current
-  turn id.
+- Failures make the script return `{"decision":"block","reason":...}`, so each agent hands the failing commands and
+  diagnostics back to itself instead of ending the turn: Codex and Copilot keep the turn running, and the OpenCode
+  plugin queues the reason as a prompt. A turn is handed back at most twice, then only warned. Each excerpt is capped at
+  2400 characters and the whole hand-back prompt at 6000.
+- Check results are not cached: the suite costs ~0.8s on a warm tree and ~5s from a cold cargo target, cheaper than
+  tracking whether the working tree changed. Hand-back counters live at
+  `~/.codex/cache/sl-stop-check/<sha256(sessionId + repo root)>.json`, keyed to the current turn id. OpenCode also keeps
+  per-event claims under `~/.codex/cache/sl-stop-check/opencode-events/`, locks under `opencode-locks/`, and turn ids in
+  plugin storage. A lock left behind by a crashed process must be removed after confirming its owner has stopped.
 - Project-local hooks only load for trusted projects, and Codex prompts once to trust `.codex/hooks.json`. That file's
   contents are hashed for the trust record, so editing it needs re-approval; editing `scripts/stop-check.ts` alone does
   not.
