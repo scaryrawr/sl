@@ -35,15 +35,14 @@ Monorepo for the `sl` terminal train. Rust workspace plus a Bun workspace for th
   diagnostic per line so parsing works inside a hook, where oxlint otherwise prints multi-line code frames.
 - `.codex/hooks.json` declares the Codex Stop hook, and `.github/hooks/stop-check.json` the Copilot one; both run that
   script before a turn may finish.
-- OpenCode has no Stop hook, so `.opencode/plugins/sl-stop-check.ts` plays the same part: it watches
-  `session.execution.succeeded`, which the server streams when a session finishes a prompt (`session.idle` exists in the
-  API schema but never reaches a plugin), runs that script in a child process with the same stdin payload, and turns a
-  `block` verdict into a queued prompt for the same session. A `systemMessage` becomes a non-resuming synthetic message.
+- OpenCode has no Stop hook, so `.opencode/plugins/sl-stop-check.ts` watches successful executions with a completed
+  model step, excluding control-only runs, and runs that script with the same stdin payload. A `block` verdict becomes a
+  queued prompt for the same session; a `systemMessage` becomes a non-resuming synthetic message.
 - OpenCode turns carry no id, so the plugin reports the id of the user message that started the turn, and marks its own
   queued prompts in message metadata (which the model never sees) so a hand-back keeps reporting that turn id and a real
-  prompt opens a fresh budget. Prompt delivery, context, and compaction preserve the turn id in plugin storage before
-  compaction removes the user message. Atomic per-event claims prevent redelivered events or multiple plugin instances
-  from charging the budget twice; the claims survive errors and restarts.
+  prompt opens a fresh budget. Sequence-bounded prompt delivery records preserve the turn id across compaction, and
+  unknown deliveries are skipped rather than attributed to the wrong turn. Atomic per-event claims prevent duplicate
+  charges, and per-session repository locks serialize checks across instances.
 - Editing the plugin does not take effect on its own: local plugin files are watched, but the running instance reloads
   only when its location reloads, so use `/reload` or `opencode api post /api/location/reload` after a change.
   `.opencode/plugins/**/*.ts` is in `tsconfig.json` and typed by the pinned `@opencode/plugin` devDependency, so
@@ -64,7 +63,8 @@ Monorepo for the `sl` terminal train. Rust workspace plus a Bun workspace for th
 - Check results are not cached: the suite costs ~0.8s on a warm tree and ~5s from a cold cargo target, cheaper than
   tracking whether the working tree changed. Hand-back counters live at
   `~/.codex/cache/sl-stop-check/<sha256(sessionId + repo root)>.json`, keyed to the current turn id. OpenCode also keeps
-  per-event claims under `~/.codex/cache/sl-stop-check/opencode-events/` and turn ids in plugin storage.
+  per-event claims under `~/.codex/cache/sl-stop-check/opencode-events/`, locks under `opencode-locks/`, and turn ids in
+  plugin storage. A lock left behind by a crashed process must be removed after confirming its owner has stopped.
 - Project-local hooks only load for trusted projects, and Codex prompts once to trust `.codex/hooks.json`. That file's
   contents are hashed for the trust record, so editing it needs re-approval; editing `scripts/stop-check.ts` alone does
   not.

@@ -2,26 +2,24 @@
  * OpenCode plugin that gives this repo the Stop hook its Codex and Copilot setups install.
  *
  * OpenCode has no `Stop` hook, so the plugin watches `session.execution.succeeded`, which the server streams when a
- * session finishes running a prompt. Every one of those runs `scripts/stop-check.ts` in a child process with the same
- * stdin payload and stdout response the Codex and Copilot hook files use, so the checks, the hand-back budget, and the
- * repair advice stay in that one script.
+ * session finishes running a prompt. Executions with a completed model step run `scripts/stop-check.ts` in a child
+ * process with the same stdin payload and stdout response the Codex and Copilot hook files use.
  *
  * A `{"decision":"block","reason":"..."}` answer becomes a queued prompt for the same session, which is how OpenCode
  * keeps an agent working instead of letting the turn end. A `systemMessage` — a spent budget with failures still
  * standing, or steps that could not run — becomes a non-resuming synthetic message.
  *
  * `scripts/stop-check.ts` counts hand-backs per turn id, and OpenCode turns carry none, so the plugin derives one from
- * the transcript: the id of the user message that started the turn. Prompts the plugin queues carry that id in message
+ * prompt delivery: the id of the user message that started the turn. Prompts the plugin queues carry that id in message
  * metadata, which OpenCode stores without showing it to the model, so a hand-back reports the turn that caused it and a
- * real user prompt always opens a fresh budget. Prompt delivery, context, and compaction hooks preserve that id before
- * compaction removes the user message from the model context.
+ * real user prompt always opens a fresh budget. Prompt delivery records preserve that id across compaction.
  *
  * @module sl-stop-check
  */
 
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, rmdir, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -53,9 +51,6 @@ interface TurnMark {
 interface PromptMetadata {
   slStopCheck?: TurnMark;
 }
-
-/** One session transcript entry, as `ctx.session.context` returns it. */
-type TranscriptEntry = Awaited<ReturnType<Plugin.Context['session']['context']>>[number];
 
 /** Interpreters able to run a TypeScript file, in the order the Codex and Copilot hook commands try them. */
 const RUNTIMES = ['bun', 'node'];
@@ -155,7 +150,6 @@ const runStopCheck = async (request: HookRequest): Promise<HookVerdict> => {
 const responseID = (eventID: string, kind: string) =>
   `msg_${createHash('sha256').update(`${eventID}\0${kind}`).digest('hex').slice(0, 32)}`;
 
-const turnKey = (sessionID: string) => `sl-stop-check/turn/${sessionID}`;
 const promptKey = (sessionID: string, messageID: string) => `sl-stop-check/prompt/${sessionID}/${messageID}`;
 const deliveryPrefix = (sessionID: string) => `sl-stop-check/delivery/${sessionID}/`;
 
@@ -168,9 +162,7 @@ export const rememberDelivered = async (
   const key = promptKey(sessionID, messageID);
   const turnId = await ctx.storage.get(key);
 
-  if (turnId !== undefined) {
-    await ctx.storage.set(`${deliveryPrefix(sessionID)}${String(sequence).padStart(16, '0')}`, turnId);
-  }
+  await ctx.storage.set(`${deliveryPrefix(sessionID)}${String(sequence).padStart(16, '0')}`, turnId ?? '');
 };
 
 const deliveredTurn = async (ctx: Plugin.Context, sessionID: string, sequence: number): Promise<string> => {
@@ -220,22 +212,71 @@ const claimEvent = async (sessionID: string, eventID: string, cwd: string): Prom
   }
 };
 
-/** The turn id a transcript owes the shared script: a queued hand-back keeps its origin, a real prompt starts its own. */
-const turnID = (messages: readonly TranscriptEntry[]): string => {
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index];
+/** Serialize the shared counter across instances, failing closed if a crashed owner left a lock behind. */
+const withSessionLock = async <T>(sessionID: string, cwd: string, work: () => Promise<T>): Promise<T> => {
+  let root: string;
 
-    if (message?.type !== 'user') {
-      continue;
-    }
-
-    // SAFETY: message metadata is JSON written by this plugin or a client, and an unreadable shape leaves the marker unset.
-    const metadata = message.metadata as PromptMetadata | undefined;
-
-    return metadata?.slStopCheck?.origin ?? message.id;
+  try {
+    root = path.resolve(
+      execFileSync('git', ['rev-parse', '--show-toplevel'], {
+        cwd,
+        encoding: 'utf8',
+        timeout: 5000,
+        stdio: ['ignore', 'pipe', 'ignore']
+      }).trim()
+    );
+  } catch {
+    root = path.resolve(path.dirname(scriptPath), '..');
   }
 
-  return '';
+  const home = process.env.CODEX_HOME ?? path.join(os.homedir(), '.codex');
+  const directory = path.join(home, 'cache', 'sl-stop-check', 'opencode-locks');
+  const id = createHash('sha256').update(`${sessionID}\0${root}`).digest('hex');
+  const lock = path.join(directory, id);
+  const deadline = Date.now() + HOOK_TIMEOUT_MS;
+  await mkdir(directory, { recursive: true, mode: 0o700 });
+
+  while (true) {
+    try {
+      await mkdir(lock, { mode: 0o700 });
+      break;
+    } catch (cause) {
+      // SAFETY: EEXIST means another process holds the atomic directory lock.
+      if ((cause as NodeJS.ErrnoException).code !== 'EEXIST') {
+        throw cause;
+      }
+
+      if (Date.now() >= deadline) {
+        throw new Error(`timed out waiting for stop-check lock ${lock}; remove it if its owner has stopped`, { cause });
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+
+  try {
+    return await work();
+  } finally {
+    await rmdir(lock);
+  }
+};
+
+export const completedAgentTurn = (stepped: Set<string>, sessionID: string, type: string): boolean => {
+  if (type === 'session.step.ended') {
+    stepped.add(sessionID);
+
+    return false;
+  }
+
+  if (type === 'session.execution.started') {
+    stepped.delete(sessionID);
+
+    return false;
+  }
+
+  const hadStep = stepped.delete(sessionID);
+
+  return type === 'session.execution.succeeded' && hadStep;
 };
 
 /** Runs the checks for one finished execution and hands the failures back, the way the Codex hook blocks a turn. */
@@ -243,8 +284,8 @@ export const checkSession = async (
   ctx: Plugin.Context,
   sessionID: string,
   eventID: string,
-  run = runStopCheck,
-  sequence = Number.MAX_SAFE_INTEGER
+  run: typeof runStopCheck,
+  sequence: number
 ): Promise<void> => {
   const session = await ctx.session.get({ sessionID });
 
@@ -254,10 +295,7 @@ export const checkSession = async (
     return;
   }
 
-  const messages = await ctx.session.context({ sessionID });
-  // SAFETY: this plugin stores only a turn ID string at this key.
-  const savedTurn = (await ctx.storage.get(turnKey(sessionID))) as string | undefined;
-  const turnId = turnID(messages) || (await deliveredTurn(ctx, sessionID, sequence)) || savedTurn || '';
+  const turnId = await deliveredTurn(ctx, sessionID, sequence);
 
   if (!turnId) {
     return;
@@ -269,13 +307,15 @@ export const checkSession = async (
     return;
   }
 
-  const verdict = await run({
-    cwd: session.location.directory,
-    hook_event_name: 'Stop',
-    session_id: sessionID,
-    stop_hook_active: false,
-    turn_id: turnId
-  });
+  const verdict = await withSessionLock(sessionID, session.location.directory, () =>
+    run({
+      cwd: session.location.directory,
+      hook_event_name: 'Stop',
+      session_id: sessionID,
+      stop_hook_active: false,
+      turn_id: turnId
+    })
+  );
 
   if (verdict.decision === 'block' && verdict.reason) {
     await ctx.session.prompt({
@@ -305,22 +345,6 @@ export default Plugin.define({
   async setup(ctx) {
     const controller = new AbortController();
 
-    const saveTurn = async ({ sessionID }: { sessionID: string }) => {
-      try {
-        const messages = await ctx.session.context({ sessionID });
-        const turnId = turnID(messages);
-
-        if (turnId) {
-          await ctx.storage.set(turnKey(sessionID), turnId);
-        }
-      } catch (cause) {
-        console.error(`sl stop check could not save turn for ${sessionID}: ${getErrorMessage(cause)}`);
-      }
-    };
-
-    const context = await ctx.session.hook('context', saveTurn);
-    const compaction = await ctx.session.hook('compaction', saveTurn);
-
     const prompt = await ctx.session.hook('prompt', async ({ sessionID, messageID, metadata }) => {
       try {
         // SAFETY: prompt metadata is JSON written by this plugin or a client.
@@ -333,9 +357,18 @@ export default Plugin.define({
     });
 
     void (async () => {
+      const stepped = new Set<string>();
+
       for await (const event of ctx.event.subscribe({
         signal: controller.signal,
-        types: ['session.inbox.delivered', 'session.execution.succeeded']
+        types: [
+          'session.inbox.delivered',
+          'session.execution.started',
+          'session.step.ended',
+          'session.execution.succeeded',
+          'session.execution.failed',
+          'session.execution.interrupted'
+        ]
       })) {
         const { sessionID } = event.data;
 
@@ -346,7 +379,10 @@ export default Plugin.define({
           continue;
         }
 
-        // Awaiting inside the loop serialises finished executions, so two runs of the checks never overlap.
+        if (!completedAgentTurn(stepped, sessionID, event.type) || event.type !== 'session.execution.succeeded') {
+          continue;
+        }
+
         await checkSession(ctx, sessionID, String(event.id), runStopCheck, event.durable.seq).catch(
           (cause: unknown) => {
             console.error(`sl stop check failed for ${sessionID}: ${getErrorMessage(cause)}`);
@@ -357,8 +393,6 @@ export default Plugin.define({
 
     return async () => {
       controller.abort();
-      await context.dispose();
-      await compaction.dispose();
       await prompt.dispose();
     };
   }
