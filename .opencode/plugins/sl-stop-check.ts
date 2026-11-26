@@ -157,15 +157,44 @@ const responseID = (eventID: string, kind: string) =>
 
 const turnKey = (sessionID: string) => `sl-stop-check/turn/${sessionID}`;
 const promptKey = (sessionID: string, messageID: string) => `sl-stop-check/prompt/${sessionID}/${messageID}`;
+const deliveryPrefix = (sessionID: string) => `sl-stop-check/delivery/${sessionID}/`;
 
-export const rememberDelivered = async (ctx: Plugin.Context, sessionID: string, messageID: string): Promise<void> => {
+export const rememberDelivered = async (
+  ctx: Plugin.Context,
+  sessionID: string,
+  messageID: string,
+  sequence: number
+): Promise<void> => {
   const key = promptKey(sessionID, messageID);
   const turnId = await ctx.storage.get(key);
 
   if (turnId !== undefined) {
-    await ctx.storage.set(turnKey(sessionID), turnId);
-    await ctx.storage.remove(key);
+    await ctx.storage.set(`${deliveryPrefix(sessionID)}${String(sequence).padStart(16, '0')}`, turnId);
   }
+};
+
+const deliveredTurn = async (ctx: Plugin.Context, sessionID: string, sequence: number): Promise<string> => {
+  const prefix = deliveryPrefix(sessionID);
+  let after: string | undefined;
+  let latest = -1;
+  let turnId = '';
+
+  do {
+    const page = await ctx.storage.scan({ prefix, after });
+
+    page.entries.forEach((entry) => {
+      const current = Number(entry.key.slice(prefix.length));
+
+      if (current <= sequence && current > latest) {
+        latest = current;
+        // SAFETY: this plugin stores only a turn ID string at delivery keys.
+        turnId = entry.value as string;
+      }
+    });
+    after = page.next;
+  } while (after);
+
+  return turnId;
 };
 
 /** Claim an event across plugin instances before it can consume a hand-back allowance. Claims survive errors and restarts. */
@@ -214,7 +243,8 @@ export const checkSession = async (
   ctx: Plugin.Context,
   sessionID: string,
   eventID: string,
-  run = runStopCheck
+  run = runStopCheck,
+  sequence = Number.MAX_SAFE_INTEGER
 ): Promise<void> => {
   const session = await ctx.session.get({ sessionID });
 
@@ -227,7 +257,7 @@ export const checkSession = async (
   const messages = await ctx.session.context({ sessionID });
   // SAFETY: this plugin stores only a turn ID string at this key.
   const savedTurn = (await ctx.storage.get(turnKey(sessionID))) as string | undefined;
-  const turnId = turnID(messages) || savedTurn || '';
+  const turnId = turnID(messages) || (await deliveredTurn(ctx, sessionID, sequence)) || savedTurn || '';
 
   if (!turnId) {
     return;
@@ -310,16 +340,18 @@ export default Plugin.define({
         const { sessionID } = event.data;
 
         if (event.type === 'session.inbox.delivered') {
-          await rememberDelivered(ctx, sessionID, event.data.inboxID).catch((cause: unknown) => {
+          await rememberDelivered(ctx, sessionID, event.data.inboxID, event.durable.seq).catch((cause: unknown) => {
             console.error(`sl stop check could not save delivered turn for ${sessionID}: ${getErrorMessage(cause)}`);
           });
           continue;
         }
 
         // Awaiting inside the loop serialises finished executions, so two runs of the checks never overlap.
-        await checkSession(ctx, sessionID, String(event.id)).catch((cause: unknown) => {
-          console.error(`sl stop check failed for ${sessionID}: ${getErrorMessage(cause)}`);
-        });
+        await checkSession(ctx, sessionID, String(event.id), runStopCheck, event.durable.seq).catch(
+          (cause: unknown) => {
+            console.error(`sl stop check failed for ${sessionID}: ${getErrorMessage(cause)}`);
+          }
+        );
       }
     })();
 

@@ -44,9 +44,9 @@ const fixture = () => {
       set: async (key: string, value: string) => {
         saved.set(key, value);
       },
-      remove: async (key: string) => {
-        saved.delete(key);
-      }
+      scan: async ({ prefix }: { prefix: string }) => ({
+        entries: [...saved.entries()].flatMap(([key, value]) => (key.startsWith(prefix) ? [{ key, value }] : []))
+      })
     },
     event: { subscribe: async function* () {} },
     session: {
@@ -118,7 +118,7 @@ test('tracks delivered prompts even when precomputed compaction skips model hook
   const sessionID = 'precomputed';
   await hooks.get('prompt')?.({ sessionID, messageID: 'first' });
   await hooks.get('prompt')?.({ sessionID, messageID: 'queued' });
-  await rememberDelivered(ctx, sessionID, 'first');
+  await rememberDelivered(ctx, sessionID, 'first', 10);
   setMessages([{ type: 'compaction', id: 'summary' }]);
 
   const turns: string[] = [];
@@ -129,9 +129,10 @@ test('tracks delivered prompts even when precomputed compaction skips model hook
     return {};
   };
 
-  await checkSession(ctx, sessionID, 'one', run);
-  await rememberDelivered(ctx, sessionID, 'queued');
-  await checkSession(ctx, sessionID, 'two', run);
+  await rememberDelivered(ctx, sessionID, 'queued', 20);
+  await rememberDelivered(ctx, sessionID, 'first', 10);
+  await checkSession(ctx, sessionID, 'one', run, 15);
+  await checkSession(ctx, sessionID, 'two', run, 25);
   expect(turns).toEqual(['first', 'queued']);
   await cleanup?.();
 });
