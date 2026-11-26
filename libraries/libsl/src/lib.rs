@@ -8,14 +8,17 @@
 //! # Train types
 //!
 //! Three train variants are available:
-//! - [`add_d51`] – the classic D51 steam locomotive
-//! - [`add_c51`] – the C51 steam locomotive
-//! - [`add_logo`] – a small logo train
+//! - [`create_d51`] – the classic D51 steam locomotive
+//! - [`create_c51`] – the C51 steam locomotive
+//! - [`create_logo`] – a small logo train
+//!
+//! Choose a factory once, then call [`Train::render`] for each frame. Call
+//! [`Train::reset`] before replaying the same train.
 //!
 //! # Example
 //!
-//! ```ignore
-//! use libsl::{add_d51, RenderTarget, ScreenSize, Smoke, TrainOptions};
+//! ```
+//! use libsl::{create_d51, RenderTarget, ScreenSize, TrainOptions};
 //!
 //! struct Terminal;
 //! impl RenderTarget for Terminal {
@@ -27,14 +30,10 @@
 //! }
 //!
 //! let mut term = Terminal;
-//! add_d51(
-//!     0,
-//!     &["hello", "world"],
-//!     ScreenSize::new(80, 24),
-//!     &mut term,
-//!     &TrainOptions::default(),
-//!     &mut Smoke::new(),
-//! ).unwrap();
+//! let mut train = create_d51(TrainOptions::default());
+//! for x in (0..80).rev() {
+//!     train.render(x, &["hello", "world"], ScreenSize::new(80, 24), &mut term).unwrap();
+//! }
 //! ```
 
 extern crate alloc;
@@ -114,7 +113,56 @@ pub enum RenderError<TargetError> {
     Target(TargetError),
 }
 
-pub use add_smoke::Smoke;
-pub use c51::add_c51;
-pub use d51::add_d51;
-pub use logo::add_logo;
+pub use c51::create_c51;
+pub use d51::create_d51;
+pub use logo::create_logo;
+
+use add_smoke::Smoke;
+use add_train::RenderContext;
+
+type DrawTrain<T, U> =
+    fn(i32, &[T], RenderContext<'_, U>) -> Result<(), RenderError<<U as RenderTarget>::Error>>;
+
+/// One animated train. Its style, options and smoke belong to it across frames.
+pub struct Train<T, U: RenderTarget> {
+    draw: DrawTrain<T, U>,
+    options: TrainOptions,
+    smoke: Smoke<U>,
+}
+
+impl<T, U: RenderTarget> Train<T, U> {
+    fn new(options: TrainOptions, draw: DrawTrain<T, U>) -> Self {
+        Self {
+            draw,
+            options,
+            smoke: Smoke::new(options.smoke),
+        }
+    }
+
+    /// Draws one frame using the current labels and screen size. Returns
+    /// [`RenderError::Offscreen`] when the train has left the display, or
+    /// [`RenderError::Target`] if drawing fails.
+    pub fn render(
+        &mut self,
+        x: i32,
+        names: &[T],
+        screen: ScreenSize,
+        target: &mut U,
+    ) -> Result<(), RenderError<U::Error>> {
+        (self.draw)(
+            x,
+            names,
+            RenderContext {
+                target,
+                screen,
+                options: &self.options,
+                smoke: &mut self.smoke,
+            },
+        )
+    }
+
+    /// Starts a fresh pass with the same style and options.
+    pub fn reset(&mut self) {
+        self.smoke.reset();
+    }
+}

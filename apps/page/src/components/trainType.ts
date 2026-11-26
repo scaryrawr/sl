@@ -1,4 +1,6 @@
-type TrainTypeValue = 'c51' | 'd51' | 'logo';
+import type { Train } from '../websl';
+
+type TrainTypeValue = ConstructorParameters<typeof Train>[0];
 
 const TrainType = {
   C51: 'c51',

@@ -1,8 +1,6 @@
 use crate::{
-    add_train::{
-        add_train, car_label_width, RenderContext, TrainFrames, TrainOffsets, WindowOffsets,
-    },
-    RenderError, RenderTarget, ScreenSize, Smoke, TrainOptions,
+    add_train::{add_train, car_label_width, TrainFrames, TrainOffsets, WindowOffsets},
+    RenderTarget, Train, TrainOptions,
 };
 
 /// Rows in every sprite of this train: engine frames, coal car, and carriage all stand this
@@ -39,28 +37,8 @@ const CAR_WINDOW_ROW: i32 = 1;
 /// `Help!` line both land on the bay instead of beside it.
 const CAR_WINDOW_COLUMNS: [i32; CAR_WINDOWS] = [4, 9, 14, 19];
 
-/// Adds a D51 train to the display.
-///
-/// # Arguments
-///
-/// * `x` - The x-coordinate where the train should be added.
-/// * `names` - A slice of strings representing the names to be displayed.
-/// * `screen` - The drawable area available to the train.
-/// * `target` - The destination where train text will be drawn.
-/// * `options` - Options for customizing the train.
-/// * `smoke` - Particle state for this train's smoke animation.
-///
-/// # Returns
-///
-/// * `Result<(), RenderError<_>>` - Returns `Ok(())` if successful.
-pub fn add_d51<T: AsRef<str>, U: RenderTarget>(
-    x: i32,
-    names: &[T],
-    screen: ScreenSize,
-    target: &mut U,
-    options: &TrainOptions,
-    smoke: &mut Smoke,
-) -> Result<(), RenderError<U::Error>> {
+/// Creates a D51 steam locomotive with its own animation state.
+pub fn create_d51<T: AsRef<str>, U: RenderTarget>(options: TrainOptions) -> Train<T, U> {
     const ENGINE: [[&str; HEIGHT]; ANIMATIONS] = [
         [
             "      ====        ________                ___________ ",
@@ -189,18 +167,9 @@ pub fn add_d51<T: AsRef<str>, U: RenderTarget>(
         car_text_width: car_label_width(&CAR),
     };
 
-    add_train(
-        x,
-        &FRAMES,
-        OFFSETS,
-        names,
-        RenderContext {
-            target,
-            screen,
-            options,
-            smoke,
-        },
-    )
+    Train::new(options, |x, names, context| {
+        add_train(x, &FRAMES, OFFSETS, names, context)
+    })
 }
 
 #[cfg(test)]
@@ -210,6 +179,7 @@ mod tests {
     use super::*;
     use crate::std::string::String;
     use crate::std::vec::Vec;
+    use crate::{RenderError, ScreenSize};
 
     struct NoopTarget;
 
@@ -222,6 +192,7 @@ mod tests {
     }
 
     const SCREEN: ScreenSize = ScreenSize::new(200, 24);
+    const NO_CARS: &[&str] = &[];
 
     struct RecordingTarget {
         draws: Vec<(i32, i32, String)>,
@@ -239,11 +210,10 @@ mod tests {
     fn run_frames<const N: usize>(
         xs: [i32; N],
         target: &mut RecordingTarget,
-        options: &TrainOptions,
-        smoke: &mut Smoke,
+        train: &mut Train<&str, RecordingTarget>,
     ) {
         for x in xs {
-            let _ = add_d51(x, &[] as &[&str], SCREEN, target, options, smoke);
+            train.render(x, NO_CARS, SCREEN, target).unwrap();
         }
     }
 
@@ -283,17 +253,10 @@ mod tests {
 
     #[test]
     fn returns_offscreen_when_train_has_passed_the_left_edge() {
-        let mut target = NoopTarget;
+        let mut train = create_d51(TrainOptions::default());
 
         assert_eq!(
-            add_d51(
-                -400,
-                &[] as &[&str],
-                SCREEN,
-                &mut target,
-                &TrainOptions::default(),
-                &mut Smoke::new()
-            ),
+            train.render(-400, NO_CARS, SCREEN, &mut NoopTarget),
             Err(RenderError::Offscreen)
         );
     }
@@ -303,7 +266,7 @@ mod tests {
         let options = TrainOptions::default();
 
         let mut target = RecordingTarget { draws: Vec::new() };
-        run_frames([181], &mut target, &options, &mut Smoke::new());
+        run_frames([181], &mut target, &mut create_d51(options));
         let first = smoke_draws(&target);
         assert!(
             first.iter().any(|draw| is_puff(&draw.2)),
@@ -313,25 +276,19 @@ mod tests {
         // Keep the first puff's rightward drift on screen. After its lifetime,
         // the final frame must match a run that never emitted that first puff.
         let screen = ScreenSize::new(400, 24);
-        let mut smoke = Smoke::new();
+        let mut train = create_d51(options);
         let mut target = RecordingTarget { draws: Vec::new() };
-        let mut control_smoke = Smoke::new();
+        let mut control_train = create_d51(options);
         let mut control = RecordingTarget { draws: Vec::new() };
         for emission in 0..18 {
             let x = 181 - emission * 4;
             target.draws.clear();
             control.draws.clear();
-            add_d51(x, &[] as &[&str], screen, &mut target, &options, &mut smoke).unwrap();
+            train.render(x, NO_CARS, screen, &mut target).unwrap();
             if emission > 0 {
-                add_d51(
-                    x,
-                    &[] as &[&str],
-                    screen,
-                    &mut control,
-                    &options,
-                    &mut control_smoke,
-                )
-                .unwrap();
+                control_train
+                    .render(x, NO_CARS, screen, &mut control)
+                    .unwrap();
             }
         }
         let late = smoke_draws(&target);
@@ -353,86 +310,48 @@ mod tests {
         let options = TrainOptions::default();
 
         let mut solo = RecordingTarget { draws: Vec::new() };
-        run_frames([181, 177, 173], &mut solo, &options, &mut Smoke::new());
+        run_frames([181, 177, 173], &mut solo, &mut create_d51(options));
         let expected = smoke_draws(&solo);
         assert!(
             expected.iter().any(|draw| is_puff(&draw.2)),
             "baseline frames should emit a smoke puff, got {expected:?}"
         );
 
-        let mut b_smoke = Smoke::new();
+        let mut a = create_d51(options);
+        let mut b = create_d51(options);
         let mut mixed = RecordingTarget { draws: Vec::new() };
         let mut b_target = RecordingTarget { draws: Vec::new() };
-        let xs_a = [181, 177, 173];
-        let xs_b = [169, 165, 161];
-        let mut a_smoke = Smoke::new();
-        for i in 0..xs_a.len() {
-            let _ = add_d51(
-                xs_a[i],
-                &[] as &[&str],
-                SCREEN,
-                &mut mixed,
-                &options,
-                &mut a_smoke,
-            );
-            let _ = add_d51(
-                xs_b[i],
-                &[] as &[&str],
-                SCREEN,
-                &mut b_target,
-                &options,
-                &mut b_smoke,
-            );
+        for (xa, xb) in [(181, 169), (177, 165), (173, 161)] {
+            a.render(xa, NO_CARS, SCREEN, &mut mixed).unwrap();
+            b.render(xb, NO_CARS, SCREEN, &mut b_target).unwrap();
         }
 
         assert_eq!(smoke_draws(&mixed), expected);
     }
 
     #[test]
-    fn trains_sharing_one_smoke_instance_interfere() {
-        let options = TrainOptions::default();
+    fn disabling_smoke_still_draws_the_locomotive() {
+        let mut train = create_d51(TrainOptions {
+            smoke: false,
+            ..TrainOptions::default()
+        });
+        let mut target = RecordingTarget { draws: Vec::new() };
+        run_frames([61, 57, 53], &mut target, &mut train);
 
-        let mut solo = RecordingTarget { draws: Vec::new() };
-        run_frames([181, 177, 173], &mut solo, &options, &mut Smoke::new());
-        let expected = smoke_draws(&solo);
-
-        let mut shared = Smoke::new();
-        let mut both = RecordingTarget { draws: Vec::new() };
-        let mut b_target = RecordingTarget { draws: Vec::new() };
-        for (xa, xb) in [(181, 169), (177, 165), (173, 161)] {
-            let _ = add_d51(xa, &[] as &[&str], SCREEN, &mut both, &options, &mut shared);
-            let _ = add_d51(
-                xb,
-                &[] as &[&str],
-                SCREEN,
-                &mut b_target,
-                &options,
-                &mut shared,
-            );
-        }
-
-        assert_ne!(smoke_draws(&both), expected);
+        assert!(target.draws.iter().any(|draw| draw.2.contains("_D _|")));
+        assert!(smoke_draws(&target).is_empty());
     }
 
     #[test]
-    fn one_smoke_instance_replays_the_same_frames_identically() {
-        let options = TrainOptions::default();
+    fn resetting_a_train_replays_the_same_frames_identically() {
+        let mut train = create_d51(TrainOptions::default());
 
         let mut first = RecordingTarget { draws: Vec::new() };
-        run_frames(
-            [181, 177, 173, 169],
-            &mut first,
-            &options,
-            &mut Smoke::new(),
-        );
+        run_frames([181, 177, 173, 169], &mut first, &mut train);
 
+        train.reset();
         let mut second = RecordingTarget { draws: Vec::new() };
-        run_frames(
-            [181, 177, 173, 169],
-            &mut second,
-            &options,
-            &mut Smoke::new(),
-        );
+        run_frames([181, 177, 173, 169], &mut second, &mut train);
 
         assert_eq!(first.draws, second.draws);
         assert!(

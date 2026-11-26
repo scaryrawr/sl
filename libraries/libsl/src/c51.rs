@@ -1,8 +1,6 @@
-use crate::{RenderError, RenderTarget, ScreenSize, Smoke, TrainOptions};
+use crate::{RenderTarget, Train, TrainOptions};
 
-use super::add_train::{
-    add_train, car_label_width, RenderContext, TrainFrames, TrainOffsets, WindowOffsets,
-};
+use super::add_train::{add_train, car_label_width, TrainFrames, TrainOffsets, WindowOffsets};
 
 /// Rows in every sprite of this train: engine frames, coal car, and carriage all stand this
 /// tall, and it is the `HEIGHT` the shared renderer is instantiated with.
@@ -38,28 +36,8 @@ const CAR_WINDOW_ROW: i32 = 2;
 /// `Help!` line both land on the bay instead of beside it.
 const CAR_WINDOW_COLUMNS: [i32; CAR_WINDOWS] = [4, 9, 14, 19];
 
-/// Adds a C51 train to the display.
-///
-/// # Arguments
-///
-/// * `x` - The x-coordinate where the train should be added.
-/// * `names` - A slice of strings representing the names to be displayed.
-/// * `screen` - The drawable area available to the train.
-/// * `target` - The destination where train text will be drawn.
-/// * `options` - Options for customizing the train.
-/// * `smoke` - Particle state for this train's smoke animation.
-///
-/// # Returns
-///
-/// * `Result<(), RenderError<_>>` - Returns `Ok(())` if successful.
-pub fn add_c51<T: AsRef<str>, U: RenderTarget>(
-    x: i32,
-    names: &[T],
-    screen: ScreenSize,
-    target: &mut U,
-    options: &TrainOptions,
-    smoke: &mut Smoke,
-) -> Result<(), RenderError<U::Error>> {
+/// Creates a C51 steam locomotive with its own animation state.
+pub fn create_c51<T: AsRef<str>, U: RenderTarget>(options: TrainOptions) -> Train<T, U> {
     const ENGINE: [[&str; HEIGHT]; ANIMATIONS] = [
         [
             "        ___                                            ",
@@ -196,16 +174,7 @@ pub fn add_c51<T: AsRef<str>, U: RenderTarget>(
         car_text_width: car_label_width(&CAR),
     };
 
-    add_train(
-        x,
-        &FRAMES,
-        OFFSETS,
-        names,
-        RenderContext {
-            target,
-            screen,
-            options,
-            smoke,
-        },
-    )
+    Train::new(options, |x, names, context| {
+        add_train(x, &FRAMES, OFFSETS, names, context)
+    })
 }
