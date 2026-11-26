@@ -19,17 +19,17 @@ Always run from the repository root. Keep evidence under `.agents/skills/profile
 Choose the smallest workload that contains the suspected cost, then repeat on the user-facing surface that contains the
 whole path.
 
-| Surface              | What it exercises                                                                                           | Primary metric                                                                   | Guard                                            |
-| -------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------ |
-| `libsl`              | one renderer call through `add_d51`, `add_c51`, or `add_logo` into a deterministic in-memory `RenderTarget` | render calls/second or CPU time per fixed number of frames                       | same emitted draw operations and complete output |
-| CLI                  | optimized `target/release/sl` in a fixed 80x24 PTY                                                          | CPU time per complete traversal; output correctness                              | invoke `verify-sl` for the matching scenario     |
-| WASM/native boundary | `websl::add_*`, JavaScript array conversion, and callback crossing                                          | browser callback cost and allocation/GC behavior                                 | same frames and labels                           |
-| Web demo             | production-built `/sl/embed.html` under normal browser time                                                 | animation callback p50/p95, frame interval p50/p95, and long-task count/duration | `verify-sl` plus no page errors                  |
+| Surface              | What it exercises                                                                                   | Primary metric                                                                   | Guard                                            |
+| -------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `libsl`              | one `Train::render` call on a D51, C51, or logo train into a deterministic in-memory `RenderTarget` | render calls/second or CPU time per fixed number of frames                       | same emitted draw operations and complete output |
+| CLI                  | optimized `target/release/sl` in a fixed 80x24 PTY                                                  | CPU time per complete traversal; output correctness                              | invoke `verify-sl` for the matching scenario     |
+| WASM/native boundary | `websl::Train::new` converts labels once; `Train::render` crosses the display callback boundary     | browser callback cost and allocation/GC behavior                                 | same frames and labels                           |
+| Web demo             | production-built `/sl/embed.html` under normal browser time                                         | animation callback p50/p95, frame interval p50/p95, and long-task count/duration | `verify-sl` plus no page errors                  |
 
 Use `--files` for a deterministic empty-car CLI workload. Use the two-car fixture in
 `.agents/skills/verify-sl/fixtures/cars.txt` when passenger-car formatting or bridge cost is part of the hypothesis. For
 the core renderer, hold train type, option flags, screen size, `x`, and car count constant. Do not benchmark smoke
-across unrelated initial states: `Smoke` is stateful and must advance through the same sequence on both sides.
+across unrelated initial states: reset each `Train` and advance it through the same sequence on both sides.
 
 ## Start with a measurement card
 
@@ -132,7 +132,7 @@ that harness proves frames but intentionally removes timing.
 
 Use Chromium Performance/trace tooling when a wide callback needs finer attribution. Distinguish:
 
-1. Rust/WASM work inside `add_d51`, `add_c51`, or `add_logo`.
+1. Rust/WASM work inside `Train::render` for the selected train style.
 2. JavaScript conversion and `Display` callback crossings.
 3. `Array.from(row.textContent)`, `textContent` replacement, layout, and paint.
 4. The deliberate 60 ms `setTimeout` plus `requestAnimationFrame` pacing.

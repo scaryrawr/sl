@@ -4,7 +4,7 @@
 //! shape to a single character and then disappearing. Two visual styles alternate
 //! between smoke puffs `()` and `@`-based puffs.
 //!
-//! All particle state lives in a caller-owned [`Smoke`] instance, so simultaneous
+//! All particle state lives in a train-owned [`Smoke`] instance, so simultaneous
 //! trains (for example, multiple wasm renderings on one page) never share puffs.
 
 use alloc::vec::Vec;
@@ -69,21 +69,45 @@ struct SmokeParticle {
     kind: usize,
 }
 
-/// Per-train smoke particle state.
-///
-/// Keep one instance per animated train and reuse it across frames.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct Smoke {
+type DrawSmoke<T> = fn(
+    i32,
+    i32,
+    ScreenSize,
+    &mut T,
+    &mut Vec<SmokeParticle>,
+) -> Result<(), <T as RenderTarget>::Error>;
+
+/// The smoke callback and particle state for one train.
+pub struct Smoke<T: RenderTarget> {
+    draw: DrawSmoke<T>,
     /// Live particles, oldest first. Grows on demand and drains as puffs expire.
     particles: Vec<SmokeParticle>,
 }
 
-impl Smoke {
-    /// Creates smoke state with no live particles.
-    pub fn new() -> Self {
+impl<T: RenderTarget> Smoke<T> {
+    pub fn new(enabled: bool) -> Self {
         Self {
+            draw: if enabled {
+                add_smoke
+            } else {
+                |_, _, _, _, _| Ok(())
+            },
             particles: Vec::new(),
         }
+    }
+
+    pub fn draw(
+        &mut self,
+        y: i32,
+        x: i32,
+        screen: ScreenSize,
+        target: &mut T,
+    ) -> Result<(), T::Error> {
+        (self.draw)(y, x, screen, target, &mut self.particles)
+    }
+
+    pub fn reset(&mut self) {
+        self.particles.clear();
     }
 }
 
@@ -102,21 +126,21 @@ impl Smoke {
 /// * `x` – Column of the smoke funnel.
 /// * `screen` – Dimensions of the drawable area.
 /// * `target` – The render destination.
-/// * `smoke` – Particle state owned by the rendered train.
+/// * `particles` – Live particles owned by the rendered train.
 ///
 /// # Returns
 ///
 /// `Ok(())` on success, or the render target's error if drawing fails.
-pub fn add_smoke<T: RenderTarget>(
+fn add_smoke<T: RenderTarget>(
     y: i32,
     x: i32,
     screen: ScreenSize,
     target: &mut T,
-    smoke: &mut Smoke,
+    particles: &mut Vec<SmokeParticle>,
 ) -> Result<(), T::Error> {
     if x % EMISSION_INTERVAL == 0 {
-        let mut survivors = Vec::with_capacity(smoke.particles.len() + 1);
-        for &particle in &smoke.particles {
+        let mut survivors = Vec::with_capacity(particles.len() + 1);
+        for &particle in particles.iter() {
             mvaddstr(
                 particle.y,
                 particle.x,
@@ -159,7 +183,7 @@ pub fn add_smoke<T: RenderTarget>(
             });
             mvaddstr(y, x, SMOKE[kind][0], screen, target)?;
         }
-        smoke.particles = survivors;
+        *particles = survivors;
     }
 
     Ok(())
@@ -228,14 +252,9 @@ mod tests {
             (88, 84, "(@@@"),
         ] {
             let mut target = RecordingTarget { draws: Vec::new() };
-            add_smoke(
-                10,
-                x,
-                ScreenSize::new(columns, 24),
-                &mut target,
-                &mut Smoke::new(),
-            )
-            .unwrap();
+            Smoke::new(true)
+                .draw(10, x, ScreenSize::new(columns, 24), &mut target)
+                .unwrap();
             assert_eq!(
                 target.draws,
                 [(10, x, String::from(expected))],
@@ -248,17 +267,17 @@ mod tests {
     fn pre_entry_emissions_do_not_add_visible_puffs() {
         for columns in [86, 88] {
             let screen = ScreenSize::new(columns, 24);
-            let mut smoke = Smoke::new();
-            let mut control_smoke = Smoke::new();
+            let mut smoke = Smoke::new(true);
+            let mut control_smoke = Smoke::new(true);
             let mut target = RecordingTarget { draws: Vec::new() };
             let mut control = RecordingTarget { draws: Vec::new() };
 
             for x in [96, 92, 88, 84, 80, 76] {
                 target.draws.clear();
                 control.draws.clear();
-                add_smoke(10, x, screen, &mut target, &mut smoke).unwrap();
+                smoke.draw(10, x, screen, &mut target).unwrap();
                 if x <= columns {
-                    add_smoke(10, x, screen, &mut control, &mut control_smoke).unwrap();
+                    control_smoke.draw(10, x, screen, &mut control).unwrap();
                     assert_eq!(
                         target.draws, control.draws,
                         "pre-entry smoke changed the frame at column {x} on a {columns}-column screen"
@@ -277,7 +296,7 @@ mod tests {
     #[test]
     fn puffs_finish_their_lifecycle_after_the_funnel_exits_left() {
         let screen = ScreenSize::new(80, 24);
-        let mut smoke = Smoke::new();
+        let mut smoke = Smoke::new(true);
         let mut target = RecordingTarget { draws: Vec::new() };
 
         let mut puffs_per_emission = Vec::new();
@@ -285,7 +304,7 @@ mod tests {
         let mut x = 16;
         while x >= -96 {
             target.draws.clear();
-            add_smoke(10, x, screen, &mut target, &mut smoke).expect("draw");
+            smoke.draw(10, x, screen, &mut target).expect("draw");
             puffs_per_emission.push(target.draws.iter().filter(|d| is_puff(&d.2)).count());
             if x < 0 {
                 offscreen_draws.extend(target.draws.iter().cloned());
@@ -318,14 +337,14 @@ mod tests {
     #[test]
     fn offscreen_emission_drifts_into_view_from_empty_state() {
         let screen = ScreenSize::new(80, 24);
-        let mut smoke = Smoke::new();
+        let mut smoke = Smoke::new(true);
         let mut target = RecordingTarget { draws: Vec::new() };
         let mut visible_puffs = Vec::new();
 
         for emission in 0..=16 {
             let x = -4 - emission * 4;
             target.draws.clear();
-            add_smoke(10, x, screen, &mut target, &mut smoke).expect("draw");
+            smoke.draw(10, x, screen, &mut target).expect("draw");
             visible_puffs.extend(
                 target
                     .draws
@@ -344,11 +363,11 @@ mod tests {
     #[test]
     fn no_panic_when_funnel_column_goes_negative() {
         let screen = ScreenSize::new(80, 24);
-        let mut smoke = Smoke::new();
+        let mut smoke = Smoke::new(true);
         let mut target = RecordingTarget { draws: Vec::new() };
         let mut x = 4;
         while x >= -400 {
-            add_smoke(10, x, screen, &mut target, &mut smoke).expect("draw");
+            smoke.draw(10, x, screen, &mut target).expect("draw");
             x -= 4;
         }
     }

@@ -14,7 +14,7 @@ use crossterm::terminal::{Clear, ClearType};
 use crossterm::{cursor, terminal, ExecutableCommand, QueueableCommand};
 use filedescriptor::{Error, FileDescriptor};
 use libsl::{
-    add_c51, add_d51, add_logo, RenderError, RenderTarget, ScreenSize, Smoke, TrainOptions,
+    create_c51, create_d51, create_logo, RenderError, RenderTarget, ScreenSize, TrainOptions,
 };
 use std::fs;
 use std::io::{stdin, stdout, BufRead, BufReader, IsTerminal, Stdin, Stdout, Write};
@@ -34,11 +34,11 @@ const START_OFFSCREEN_BY: i32 = 1;
 
 /// Bridges the real terminal (`stdout`) to the [`RenderTarget`] trait so the train
 /// can be drawn using crossterm cursor positioning and byte writes.
-struct TerminalRenderer<'a> {
-    stdout: &'a mut Stdout,
+struct TerminalRenderer {
+    stdout: Stdout,
 }
 
-impl RenderTarget for TerminalRenderer<'_> {
+impl RenderTarget for TerminalRenderer {
     type Error = Error;
 
     fn draw_str(&mut self, line: i32, column: i32, value: &str) -> Result<(), Self::Error> {
@@ -63,18 +63,23 @@ fn main() -> Result<(), Error> {
 
     terminal::enable_raw_mode()?;
 
-    let mut stdout = stdout();
-    stdout.execute(cursor::Hide)?;
+    let mut renderer = TerminalRenderer { stdout: stdout() };
+    renderer.stdout.execute(cursor::Hide)?;
 
-    stdout.queue(Clear(ClearType::All))?;
+    renderer.stdout.queue(Clear(ClearType::All))?;
     let mut names: Vec<String> = vec![];
 
     let size = terminal::size()?;
     let mut screen = ScreenSize::new(size.0 as i32, size.1 as i32);
-    let options = TrainOptions::new(args.accident, args.fly, true);
+    let create_train = if args.logo {
+        create_logo
+    } else if args.c51 {
+        create_c51
+    } else {
+        create_d51
+    };
+    let mut train = create_train(TrainOptions::new(args.accident, args.fly, true));
     let mut render_error = None;
-
-    let mut smoke = Smoke::new();
     let mut x = screen.columns - START_OFFSCREEN_BY;
 
     loop {
@@ -82,18 +87,9 @@ fn main() -> Result<(), Error> {
             names.push(name);
         }
 
-        stdout.queue(terminal::BeginSynchronizedUpdate)?;
-        let mut renderer = TerminalRenderer {
-            stdout: &mut stdout,
-        };
-        let result = if args.logo {
-            add_logo(x, &names, screen, &mut renderer, &options, &mut smoke)
-        } else if args.c51 {
-            add_c51(x, &names, screen, &mut renderer, &options, &mut smoke)
-        } else {
-            add_d51(x, &names, screen, &mut renderer, &options, &mut smoke)
-        };
-        stdout.queue(terminal::EndSynchronizedUpdate)?;
+        renderer.stdout.queue(terminal::BeginSynchronizedUpdate)?;
+        let result = train.render(x, &names, screen, &mut renderer);
+        renderer.stdout.queue(terminal::EndSynchronizedUpdate)?;
 
         match result {
             Ok(()) => {}
@@ -104,7 +100,7 @@ fn main() -> Result<(), Error> {
             }
         }
 
-        stdout.flush()?;
+        renderer.stdout.flush()?;
         x -= 1;
 
         if crossterm::event::poll(FRAME_DELAY)? {
@@ -115,7 +111,7 @@ fn main() -> Result<(), Error> {
                     ..
                 }) => break,
                 Event::Resize(cols, lines) => {
-                    stdout.queue(Clear(ClearType::All))?;
+                    renderer.stdout.queue(Clear(ClearType::All))?;
                     screen = ScreenSize::new(cols as i32, lines as i32);
                 }
                 _ => {}
@@ -123,8 +119,11 @@ fn main() -> Result<(), Error> {
         }
     }
 
-    stdout.queue(Clear(ClearType::All))?.queue(cursor::Show)?;
-    stdout.flush()?;
+    renderer
+        .stdout
+        .queue(Clear(ClearType::All))?
+        .queue(cursor::Show)?;
+    renderer.stdout.flush()?;
     terminal::disable_raw_mode()?;
 
     if let Some(error) = render_error {

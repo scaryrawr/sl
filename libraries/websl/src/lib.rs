@@ -1,8 +1,7 @@
 mod utils;
 
-use js_sys::{Array, Function};
-use std::cell::RefCell;
-use std::rc::Rc;
+use js_sys::Function;
+use libsl::{create_c51, create_d51, create_logo, RenderError, TrainOptions};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -52,60 +51,57 @@ impl libsl::RenderTarget for Display {
 }
 
 #[wasm_bindgen]
-/// A struct representing the options for the train animation.
-pub struct Options {
-    accident: bool,
-    fly: bool,
-    smoke: bool,
+pub enum TrainStyle {
+    D51 = "d51",
+    C51 = "c51",
+    Logo = "logo",
 }
 
 #[wasm_bindgen]
-impl Options {
+/// An animated train with its own renderer and passenger labels.
+pub struct Train {
+    inner: libsl::Train<String, Display>,
+    names: Vec<String>,
+}
+
+#[wasm_bindgen]
+impl Train {
     #[wasm_bindgen(constructor)]
-    /// Creates a new Options.
-    ///
-    /// # Arguments
-    ///
-    /// * `accident` - Whether to show an accident.
-    /// * `fly` - Whether the train should fly.
-    /// * `smoke` - Whether to show smoke.
-    pub fn new(accident: bool, fly: bool, smoke: bool) -> Options {
-        Options {
-            accident,
-            fly,
-            smoke,
+    /// Selects the renderer and snapshots the car labels for this animation.
+    pub fn new(
+        style: TrainStyle,
+        names: Vec<String>,
+        accident: bool,
+        fly: bool,
+        smoke: bool,
+    ) -> Result<Train, JsError> {
+        let create_train = match style {
+            TrainStyle::D51 => create_d51,
+            TrainStyle::C51 => create_c51,
+            TrainStyle::Logo => create_logo,
+            _ => return Err(JsError::new("Unknown train style")),
+        };
+        Ok(Self {
+            inner: create_train(TrainOptions::new(accident, fly, smoke)),
+            names,
+        })
+    }
+
+    /// Returns false when offscreen; display errors propagate to JavaScript.
+    pub fn render(&mut self, x: i32, display: &mut Display) -> Result<bool, JsValue> {
+        match self
+            .inner
+            .render(x, &self.names, display.screen_size(), display)
+        {
+            Ok(()) => Ok(true),
+            Err(RenderError::Offscreen) => Ok(false),
+            Err(RenderError::Target(error)) => Err(error),
         }
     }
 
-    fn train_options(&self) -> libsl::TrainOptions {
-        libsl::TrainOptions::new(self.accident, self.fly, self.smoke)
-    }
-}
-
-#[wasm_bindgen]
-/// Per-train smoke particle state.
-///
-/// Create one `Smoke` per animated train and pass the same instance to every
-/// frame of that train's render calls. Trains on the same page that each keep
-/// their own `Smoke` never share particles.
-pub struct Smoke {
-    inner: libsl::Smoke,
-}
-
-#[wasm_bindgen]
-impl Smoke {
-    #[wasm_bindgen(constructor)]
-    /// Creates smoke state with no live particles.
-    pub fn new() -> Smoke {
-        Smoke {
-            inner: libsl::Smoke::new(),
-        }
-    }
-}
-
-impl Default for Smoke {
-    fn default() -> Self {
-        Self::new()
+    /// Starts a fresh pass without rebuilding the train or its labels.
+    pub fn reset(&mut self) {
+        self.inner.reset();
     }
 }
 
@@ -113,158 +109,4 @@ impl Default for Smoke {
 /// Sets the panic hook for better error messages in the console.
 pub fn set_panic_hook() {
     utils::set_panic_hook();
-}
-
-#[wasm_bindgen]
-/// Adds a D51 train to the display.
-///
-/// # Arguments
-///
-/// * `x` - The x-coordinate of the train.
-/// * `names` - An array of names to display on the train cars. The parsed
-///   labels are cached by array identity and not re-read on later calls, so
-///   do not mutate the array in place between calls — pass a fresh array when
-///   the labels change.
-/// * `display` - The display where the train will be rendered.
-/// * `options` - The options for the train animation.
-/// * `smoke` - This train's smoke state, required even when smoke is disabled.
-///
-/// # Returns
-///
-/// `true` if the train was added successfully, `false` if it moved offscreen.
-/// Render-target failures are thrown as JavaScript exceptions.
-pub fn add_d51(
-    x: i32,
-    names: &Array,
-    display: &mut Display,
-    options: &Options,
-    smoke: &mut Smoke,
-) -> bool {
-    let names = names_from_array(names);
-    let screen = display.screen_size();
-    let options = options.train_options();
-
-    render_result(libsl::add_d51(
-        x,
-        names.as_slice(),
-        screen,
-        display,
-        &options,
-        &mut smoke.inner,
-    ))
-}
-
-#[wasm_bindgen]
-/// Adds a logo train to the display.
-///
-/// # Arguments
-///
-/// * `x` - The x-coordinate of the train.
-/// * `names` - An array of names to display on the train cars. The parsed
-///   labels are cached by array identity and not re-read on later calls, so
-///   do not mutate the array in place between calls — pass a fresh array when
-///   the labels change.
-/// * `display` - The display where the train will be rendered.
-/// * `options` - The options for the train animation.
-/// * `smoke` - This train's smoke state, required even when smoke is disabled.
-///
-/// # Returns
-///
-/// `true` if the train was added successfully, `false` if it moved offscreen.
-/// Render-target failures are thrown as JavaScript exceptions.
-pub fn add_logo(
-    x: i32,
-    names: &Array,
-    display: &mut Display,
-    options: &Options,
-    smoke: &mut Smoke,
-) -> bool {
-    let names = names_from_array(names);
-    let screen = display.screen_size();
-    let options = options.train_options();
-
-    render_result(libsl::add_logo(
-        x,
-        names.as_slice(),
-        screen,
-        display,
-        &options,
-        &mut smoke.inner,
-    ))
-}
-
-#[wasm_bindgen]
-/// Adds a C51 train to the display.
-///
-/// # Arguments
-///
-/// * `x` - The x-coordinate of the train.
-/// * `names` - An array of names to display on the train cars. The parsed
-///   labels are cached by array identity and not re-read on later calls, so
-///   do not mutate the array in place between calls — pass a fresh array when
-///   the labels change.
-/// * `display` - The display where the train will be rendered.
-/// * `options` - The options for the train animation.
-/// * `smoke` - This train's smoke state, required even when smoke is disabled.
-///
-/// # Returns
-///
-/// `true` if the train was added successfully, `false` if it moved offscreen.
-/// Render-target failures are thrown as JavaScript exceptions.
-pub fn add_c51(
-    x: i32,
-    names: &Array,
-    display: &mut Display,
-    options: &Options,
-    smoke: &mut Smoke,
-) -> bool {
-    let names = names_from_array(names);
-    let screen = display.screen_size();
-    let options = options.train_options();
-
-    render_result(libsl::add_c51(
-        x,
-        names.as_slice(),
-        screen,
-        display,
-        &options,
-        &mut smoke.inner,
-    ))
-}
-
-// Cache of the parsed car labels for the most recently seen `names` array.
-//
-// The animation loop passes the same array reference every frame, so the parsed
-// strings are reused instead of re-allocating a `Vec<String>` per call.
-//
-// Identity is compared with `Object.is` semantics (the `PartialEq` derived for
-// `Array`): callers must not mutate the array in place between frames — pass a
-// fresh array when the labels change.
-thread_local! {
-    static NAMES_CACHE: RefCell<(Option<Array>, Rc<Vec<String>>)> =
-        RefCell::new((None, Rc::new(Vec::new())));
-}
-
-fn names_from_array(names: &Array) -> Rc<Vec<String>> {
-    NAMES_CACHE.with(|cache| {
-        let mut cache = cache.borrow_mut();
-        let same = cache
-            .0
-            .as_ref()
-            .map(|cached| cached == names)
-            .unwrap_or(false);
-        if !same {
-            cache.1 = Rc::new(names.iter().map(|x| x.as_string().unwrap()).collect());
-            cache.0 = Some(names.clone());
-        }
-        Rc::clone(&cache.1)
-    })
-}
-
-fn render_result(result: Result<(), libsl::RenderError<JsValue>>) -> bool {
-    match result {
-        Ok(()) => true,
-        Err(libsl::RenderError::Offscreen) => false,
-        Err(libsl::RenderError::Target(error)) => wasm_bindgen::throw_val(error),
-    }
 }

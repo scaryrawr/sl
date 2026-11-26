@@ -7,7 +7,6 @@
 use crate::{RenderError, RenderTarget, ScreenSize, Smoke, TrainOptions};
 
 use super::add_man::add_man;
-use super::add_smoke::add_smoke;
 use super::mvaddstr::mvaddstr;
 use super::print_car::{print_car, LABEL_MARKER};
 use core::str;
@@ -97,8 +96,8 @@ pub struct RenderContext<'a, U: RenderTarget> {
     pub screen: ScreenSize,
     /// Animation flags (accident, fly, smoke).
     pub options: &'a TrainOptions,
-    /// Particle state owned by this train (one instance per animation).
-    pub smoke: &'a mut Smoke,
+    /// Smoke renderer and particle state owned by this train.
+    pub smoke: &'a mut Smoke<U>,
 }
 
 /// Render a complete train (engine + coal car + passenger cars) at position `x`.
@@ -263,11 +262,9 @@ pub fn add_train<
         }
     }
 
-    if options.smoke {
-        add_smoke(y - 1, x + offsets.funnel, screen, target, smoke).map_err(RenderError::Target)?;
-    }
-
-    Ok(())
+    smoke
+        .draw(y - 1, x + offsets.funnel, screen, target)
+        .map_err(RenderError::Target)
 }
 
 #[cfg(test)]

@@ -143,7 +143,7 @@ const useSlAnimation = (props: {
     let animationFrameId: number;
     let timeoutId: number | undefined;
     let disposed = false;
-    let releaseSmoke: (() => void) | undefined;
+    let releaseTrain: (() => void) | undefined;
     let releaseDisplay: (() => void) | undefined;
 
     // Check for reduced motion preference - show static fallback if preferred
@@ -244,20 +244,14 @@ const useSlAnimation = (props: {
 
         if (!terminal || terminal.children.length === 0) return;
 
-        const options = new sl.Options(accident, fly, smoke);
-        let trainSmoke = new sl.Smoke();
+        const train = new sl.Train(trainType, messages, accident, fly, smoke);
 
-        releaseSmoke = () => trainSmoke.free();
+        releaseTrain = () => train.free();
 
-        const resetSmoke = () => {
-          trainSmoke.free();
-          trainSmoke = new sl.Smoke();
-        };
-
-        const trains: Record<TrainTypeValue, typeof sl.add_c51> = {
-          [TrainType.C51]: sl.add_c51,
-          [TrainType.D51]: sl.add_d51,
-          [TrainType.LOGO]: sl.add_logo
+        const restart = (cols: number) => {
+          clear();
+          xRef.current = cols;
+          train.reset();
         };
 
         if (xRef.current === null) {
@@ -340,19 +334,15 @@ const useSlAnimation = (props: {
           dirtyRowsRef.current.clear();
 
           if ((xRef.current ?? 0) > cols) {
-            clear();
-            xRef.current = cols;
-            resetSmoke();
+            restart(cols);
           }
 
           const nextX = (xRef.current ?? 0) - 1;
 
           xRef.current = nextX;
 
-          if (!trains[trainType](nextX, messages, displayInstance, options, trainSmoke)) {
-            clear();
-            xRef.current = cols;
-            resetSmoke();
+          if (!train.render(nextX, displayInstance)) {
+            restart(cols);
           }
 
           // Flush the rows touched this frame (one textContent write per row).
@@ -395,7 +385,7 @@ const useSlAnimation = (props: {
       disposed = true;
       cancelAnimationFrame(animationFrameId);
       clearTimeout(timeoutId);
-      releaseSmoke?.();
+      releaseTrain?.();
       releaseDisplay?.();
       clear();
     };

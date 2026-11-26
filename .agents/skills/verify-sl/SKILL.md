@@ -103,8 +103,8 @@ train-type select, messages textarea, checkboxes.
 records A alone, then reloads and records A and B advancing together; A's complete frame sequence must match exactly.
 Separate iframes cannot prove this because they have separate WASM instances. `two-trains.tsx` changes only Preact's
 effect scheduling so setup does not enter the controlled animation queue. `embed-logo-loop` drives the real no-passenger
-logo embed through a restart and compares the first 24 frames of both cycles. Defect-proven: sharing one Smoke makes the
-isolation comparison fail; omitting the restart reset makes the logo-cycle comparison fail.
+logo embed through a restart and compares the first 24 frames of both cycles. Sharing particle state makes the isolation
+comparison fail; omitting `Train.reset()` on restart makes the logo-cycle comparison fail.
 
 ## Evidence
 
