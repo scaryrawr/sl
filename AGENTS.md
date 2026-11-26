@@ -38,11 +38,12 @@ Monorepo for the `sl` terminal train. Rust workspace plus a Bun workspace for th
 - OpenCode has no Stop hook, so `.opencode/plugins/sl-stop-check.ts` plays the same part: it watches
   `session.execution.succeeded`, which the server streams when a session finishes a prompt (`session.idle` exists in the
   API schema but never reaches a plugin), runs that script in a child process with the same stdin payload, and turns a
-  `block` verdict into a queued prompt for the same session. A `systemMessage` becomes a synthetic message instead.
+  `block` verdict into a queued prompt for the same session. A `systemMessage` becomes a non-resuming synthetic message.
 - OpenCode turns carry no id, so the plugin reports the id of the user message that started the turn, and marks its own
   queued prompts in message metadata (which the model never sees) so a hand-back keeps reporting that turn id and a real
-  prompt opens a fresh budget. Message ids derive from the event id, so OpenCode returns the original item instead of
-  adding a second hand-back when an event is redelivered or two plugin instances serve one server.
+  prompt opens a fresh budget. Prompt delivery, context, and compaction preserve the turn id in plugin storage before
+  compaction removes the user message. Atomic per-event claims prevent redelivered events or multiple plugin instances
+  from charging the budget twice; the claims survive errors and restarts.
 - Editing the plugin does not take effect on its own: local plugin files are watched, but the running instance reloads
   only when its location reloads, so use `/reload` or `opencode api post /api/location/reload` after a change.
   `.opencode/plugins/**/*.ts` is in `tsconfig.json` and typed by the pinned `@opencode/plugin` devDependency, so
@@ -60,10 +61,10 @@ Monorepo for the `sl` terminal train. Rust workspace plus a Bun workspace for th
   diagnostics back to itself instead of ending the turn: Codex and Copilot keep the turn running, and the OpenCode
   plugin queues the reason as a prompt. A turn is handed back at most twice, then only warned. Each excerpt is capped at
   2400 characters and the whole hand-back prompt at 6000.
-- Nothing is cached: the suite costs ~0.8s on a warm tree and ~5s from a cold cargo target, cheaper than tracking
-  whether the working tree changed, so there is no fingerprint that could go stale and skip validation. The only state
-  is the hand-back counter at `~/.codex/cache/sl-stop-check/<sha256(sessionId + repo root)>.json`, keyed to the current
-  turn id, so each agent's session — Codex, Copilot, or an OpenCode session id — keeps its own counter.
+- Check results are not cached: the suite costs ~0.8s on a warm tree and ~5s from a cold cargo target, cheaper than
+  tracking whether the working tree changed. Hand-back counters live at
+  `~/.codex/cache/sl-stop-check/<sha256(sessionId + repo root)>.json`, keyed to the current turn id. OpenCode also keeps
+  per-event claims under `~/.codex/cache/sl-stop-check/opencode-events/` and turn ids in plugin storage.
 - Project-local hooks only load for trusted projects, and Codex prompts once to trust `.codex/hooks.json`. That file's
   contents are hashed for the trust record, so editing it needs re-approval; editing `scripts/stop-check.ts` alone does
   not.

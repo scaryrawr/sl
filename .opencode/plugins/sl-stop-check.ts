@@ -8,18 +8,21 @@
  *
  * A `{"decision":"block","reason":"..."}` answer becomes a queued prompt for the same session, which is how OpenCode
  * keeps an agent working instead of letting the turn end. A `systemMessage` — a spent budget with failures still
- * standing, or steps that could not run — becomes a synthetic message, so the user sees it without another turn.
+ * standing, or steps that could not run — becomes a non-resuming synthetic message.
  *
  * `scripts/stop-check.ts` counts hand-backs per turn id, and OpenCode turns carry none, so the plugin derives one from
  * the transcript: the id of the user message that started the turn. Prompts the plugin queues carry that id in message
  * metadata, which OpenCode stores without showing it to the model, so a hand-back reports the turn that caused it and a
- * real user prompt always opens a fresh budget.
+ * real user prompt always opens a fresh budget. Prompt delivery, context, and compaction hooks preserve that id before
+ * compaction removes the user message from the model context.
  *
  * @module sl-stop-check
  */
 
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { mkdir, writeFile } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -149,8 +152,44 @@ const runStopCheck = async (request: HookRequest): Promise<HookVerdict> => {
  * OpenCode returns the original item when a prompt or synthetic reuses an id, so deriving it from the event makes a
  * redelivered event, or a second plugin instance in the same server, leave one message instead of two.
  */
-const messageID = (eventID: string, kind: string) =>
+const responseID = (eventID: string, kind: string) =>
   `msg_${createHash('sha256').update(`${eventID}\0${kind}`).digest('hex').slice(0, 32)}`;
+
+const turnKey = (sessionID: string) => `sl-stop-check/turn/${sessionID}`;
+const promptKey = (sessionID: string, messageID: string) => `sl-stop-check/prompt/${sessionID}/${messageID}`;
+
+export const rememberDelivered = async (ctx: Plugin.Context, sessionID: string, messageID: string): Promise<void> => {
+  const key = promptKey(sessionID, messageID);
+  const turnId = await ctx.storage.get(key);
+
+  if (turnId !== undefined) {
+    await ctx.storage.set(turnKey(sessionID), turnId);
+    await ctx.storage.remove(key);
+  }
+};
+
+/** Claim an event across plugin instances before it can consume a hand-back allowance. Claims survive errors and restarts. */
+const claimEvent = async (sessionID: string, eventID: string, cwd: string): Promise<string | null> => {
+  const home = process.env.CODEX_HOME ?? path.join(os.homedir(), '.codex');
+  const directory = path.join(home, 'cache', 'sl-stop-check', 'opencode-events');
+  const id = createHash('sha256').update(`${cwd}\0${sessionID}\0${eventID}`).digest('hex');
+  const file = path.join(directory, id);
+
+  await mkdir(directory, { recursive: true, mode: 0o700 });
+
+  try {
+    await writeFile(file, '', { flag: 'wx', mode: 0o600 });
+
+    return file;
+  } catch (cause) {
+    // SAFETY: filesystem errors carry an errno code, including EEXIST when another instance claimed the event.
+    if ((cause as NodeJS.ErrnoException).code === 'EEXIST') {
+      return null;
+    }
+
+    throw cause;
+  }
+};
 
 /** The turn id a transcript owes the shared script: a queued hand-back keeps its origin, a real prompt starts its own. */
 const turnID = (messages: readonly TranscriptEntry[]): string => {
@@ -171,7 +210,12 @@ const turnID = (messages: readonly TranscriptEntry[]): string => {
 };
 
 /** Runs the checks for one finished execution and hands the failures back, the way the Codex hook blocks a turn. */
-const checkSession = async (ctx: Plugin.Context, sessionID: string, eventID: string): Promise<void> => {
+export const checkSession = async (
+  ctx: Plugin.Context,
+  sessionID: string,
+  eventID: string,
+  run = runStopCheck
+): Promise<void> => {
   const session = await ctx.session.get({ sessionID });
 
   // A child session is a subagent task whose parent turn is checked when the parent finishes, an archived session has no
@@ -181,13 +225,21 @@ const checkSession = async (ctx: Plugin.Context, sessionID: string, eventID: str
   }
 
   const messages = await ctx.session.context({ sessionID });
-  const turnId = turnID(messages);
+  // SAFETY: this plugin stores only a turn ID string at this key.
+  const savedTurn = (await ctx.storage.get(turnKey(sessionID))) as string | undefined;
+  const turnId = turnID(messages) || savedTurn || '';
 
   if (!turnId) {
     return;
   }
 
-  const verdict = await runStopCheck({
+  const claim = await claimEvent(sessionID, eventID, session.location.directory);
+
+  if (!claim) {
+    return;
+  }
+
+  const verdict = await run({
     cwd: session.location.directory,
     hook_event_name: 'Stop',
     session_id: sessionID,
@@ -198,7 +250,7 @@ const checkSession = async (ctx: Plugin.Context, sessionID: string, eventID: str
   if (verdict.decision === 'block' && verdict.reason) {
     await ctx.session.prompt({
       delivery: 'queue',
-      id: messageID(eventID, 'handback'),
+      id: responseID(eventID, 'handback'),
       metadata: { slStopCheck: { origin: turnId } },
       sessionID,
       text: verdict.reason
@@ -209,7 +261,9 @@ const checkSession = async (ctx: Plugin.Context, sessionID: string, eventID: str
 
   if (verdict.systemMessage) {
     await ctx.session.synthetic({
-      id: messageID(eventID, 'note'),
+      description: verdict.systemMessage,
+      id: responseID(eventID, 'note'),
+      resume: false,
       sessionID,
       text: verdict.systemMessage
     });
@@ -218,15 +272,49 @@ const checkSession = async (ctx: Plugin.Context, sessionID: string, eventID: str
 
 export default Plugin.define({
   id: 'sl.stop-check',
-  setup(ctx) {
+  async setup(ctx) {
     const controller = new AbortController();
+
+    const saveTurn = async ({ sessionID }: { sessionID: string }) => {
+      try {
+        const messages = await ctx.session.context({ sessionID });
+        const turnId = turnID(messages);
+
+        if (turnId) {
+          await ctx.storage.set(turnKey(sessionID), turnId);
+        }
+      } catch (cause) {
+        console.error(`sl stop check could not save turn for ${sessionID}: ${getErrorMessage(cause)}`);
+      }
+    };
+
+    const context = await ctx.session.hook('context', saveTurn);
+    const compaction = await ctx.session.hook('compaction', saveTurn);
+
+    const prompt = await ctx.session.hook('prompt', async ({ sessionID, messageID, metadata }) => {
+      try {
+        // SAFETY: prompt metadata is JSON written by this plugin or a client.
+        const mark = metadata as PromptMetadata | undefined;
+
+        await ctx.storage.set(promptKey(sessionID, messageID), mark?.slStopCheck?.origin ?? messageID);
+      } catch (cause) {
+        console.error(`sl stop check could not save prompt for ${sessionID}: ${getErrorMessage(cause)}`);
+      }
+    });
 
     void (async () => {
       for await (const event of ctx.event.subscribe({
         signal: controller.signal,
-        types: ['session.execution.succeeded']
+        types: ['session.inbox.delivered', 'session.execution.succeeded']
       })) {
         const { sessionID } = event.data;
+
+        if (event.type === 'session.inbox.delivered') {
+          await rememberDelivered(ctx, sessionID, event.data.inboxID).catch((cause: unknown) => {
+            console.error(`sl stop check could not save delivered turn for ${sessionID}: ${getErrorMessage(cause)}`);
+          });
+          continue;
+        }
 
         // Awaiting inside the loop serialises finished executions, so two runs of the checks never overlap.
         await checkSession(ctx, sessionID, String(event.id)).catch((cause: unknown) => {
@@ -235,6 +323,11 @@ export default Plugin.define({
       }
     })();
 
-    return () => controller.abort();
+    return async () => {
+      controller.abort();
+      await context.dispose();
+      await compaction.dispose();
+      await prompt.dispose();
+    };
   }
 });
