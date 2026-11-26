@@ -5,7 +5,12 @@ import path from 'node:path';
 
 import { Plugin } from '@opencode/plugin';
 
-import plugin, { checkSession, completedAgentTurn, rememberDelivered } from '../.opencode/plugins/sl-stop-check';
+import plugin, {
+  checkSession,
+  completedAgentTurn,
+  rememberDelivered,
+  rememberEnqueued
+} from '../.opencode/plugins/sl-stop-check';
 
 let home = '';
 const originalHome = process.env.CODEX_HOME;
@@ -93,6 +98,7 @@ test('preserves the original turn across compaction and uses a new user turn', a
     messageID: 'handback',
     metadata: { slStopCheck: { origin: 'original' } }
   });
+  await rememberEnqueued(ctx, 'compacted', 'handback', 'user');
   await rememberDelivered(ctx, 'compacted', 'handback', 10);
   setMessages([{ type: 'user', id: 'handback', metadata: { slStopCheck: { origin: 'original' } } }]);
   setMessages([{ type: 'compaction', id: 'summary' }]);
@@ -108,6 +114,7 @@ test('preserves the original turn across compaction and uses a new user turn', a
   await checkSession(ctx, 'compacted', 'first', run, 15);
   setMessages([{ type: 'user', id: 'new-turn' }]);
   await hooks.get('prompt')?.({ sessionID: 'compacted', messageID: 'new-turn' });
+  await rememberEnqueued(ctx, 'compacted', 'new-turn', 'user');
   await rememberDelivered(ctx, 'compacted', 'new-turn', 20);
   await checkSession(ctx, 'compacted', 'second', run, 25);
   setMessages([{ type: 'compaction', id: 'next-summary' }]);
@@ -123,6 +130,8 @@ test('tracks delivered prompts even when precomputed compaction skips model hook
   const sessionID = 'precomputed';
   await hooks.get('prompt')?.({ sessionID, messageID: 'first' });
   await hooks.get('prompt')?.({ sessionID, messageID: 'queued' });
+  await rememberEnqueued(ctx, sessionID, 'first', 'user');
+  await rememberEnqueued(ctx, sessionID, 'queued', 'user');
   await rememberDelivered(ctx, sessionID, 'first', 10);
   setMessages([{ type: 'user', id: 'queued' }]);
 
@@ -139,9 +148,50 @@ test('tracks delivered prompts even when precomputed compaction skips model hook
   await checkSession(ctx, sessionID, 'one', run, 15);
   await checkSession(ctx, sessionID, 'two', run, 25);
   expect(turns).toEqual(['first', 'queued']);
+  await rememberEnqueued(ctx, sessionID, 'unknown', 'user');
   await rememberDelivered(ctx, sessionID, 'unknown', 30);
   await checkSession(ctx, sessionID, 'three', run, 35);
   expect(turns).toEqual(['first', 'queued']);
+  await cleanup?.();
+});
+
+test('preserves turn attribution for synthetic inbox deliveries', async () => {
+  const { ctx, hooks } = fixture();
+  const cleanup = await plugin.setup(ctx);
+  await hooks.get('prompt')?.({ sessionID: 'synthetic', messageID: 'turn' });
+  await rememberEnqueued(ctx, 'synthetic', 'turn', 'user');
+  await rememberDelivered(ctx, 'synthetic', 'turn', 10);
+  await rememberEnqueued(ctx, 'synthetic', 'report', 'synthetic');
+  await rememberDelivered(ctx, 'synthetic', 'report', 20);
+  const turns: string[] = [];
+
+  await checkSession(
+    ctx,
+    'synthetic',
+    'event',
+    async (request) => {
+      turns.push(request.turn_id);
+
+      return {};
+    },
+    25
+  );
+  expect(turns).toEqual(['turn']);
+
+  await rememberEnqueued(ctx, 'synthetic', 'unknown-user', 'user');
+  await rememberDelivered(ctx, 'synthetic', 'unknown-user', 30);
+  await checkSession(
+    ctx,
+    'synthetic',
+    'next-event',
+    async (request) => {
+      turns.push(request.turn_id);
+
+      return {};
+    },
+    35
+  );
+  expect(turns).toEqual(['turn']);
   await cleanup?.();
 });
 
@@ -152,6 +202,8 @@ test('claims duplicate events before checks, including staggered deliveries', as
   other.setMessages([{ type: 'user', id: 'turn' }]);
   await ctx.storage.set('sl-stop-check/prompt/duplicate/turn', 'turn');
   await other.ctx.storage.set('sl-stop-check/prompt/duplicate/turn', 'turn');
+  await rememberEnqueued(ctx, 'duplicate', 'turn', 'user');
+  await rememberEnqueued(other.ctx, 'duplicate', 'turn', 'user');
   await rememberDelivered(ctx, 'duplicate', 'turn', 1);
   await rememberDelivered(other.ctx, 'duplicate', 'turn', 1);
   let checks = 0;
@@ -182,6 +234,7 @@ test('does not re-charge an event after the check fails', async () => {
   const { ctx, setMessages } = fixture();
   setMessages([{ type: 'user', id: 'turn' }]);
   await ctx.storage.set('sl-stop-check/prompt/failure/turn', 'turn');
+  await rememberEnqueued(ctx, 'failure', 'turn', 'user');
   await rememberDelivered(ctx, 'failure', 'turn', 1);
   let checks = 0;
 
@@ -199,6 +252,7 @@ test('does not resume the agent for informational notes', async () => {
   const { ctx, notes, setMessages } = fixture();
   setMessages([{ type: 'user', id: 'turn' }]);
   await ctx.storage.set('sl-stop-check/prompt/note/turn', 'turn');
+  await rememberEnqueued(ctx, 'note', 'turn', 'user');
   await rememberDelivered(ctx, 'note', 'turn', 1);
   await checkSession(ctx, 'note', 'event', async () => ({ systemMessage: 'still failing' }), 2);
   expect(notes).toHaveLength(1);
@@ -225,6 +279,7 @@ test('serializes distinct events from separate instances for the same session', 
 
   for (const { ctx } of [first, second]) {
     await ctx.storage.set('sl-stop-check/prompt/lock/turn', 'turn');
+    await rememberEnqueued(ctx, 'lock', 'turn', 'user');
     await rememberDelivered(ctx, 'lock', 'turn', 1);
   }
 

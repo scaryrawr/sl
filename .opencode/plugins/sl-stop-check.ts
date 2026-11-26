@@ -152,6 +152,16 @@ const responseID = (eventID: string, kind: string) =>
 
 const promptKey = (sessionID: string, messageID: string) => `sl-stop-check/prompt/${sessionID}/${messageID}`;
 const deliveryPrefix = (sessionID: string) => `sl-stop-check/delivery/${sessionID}/`;
+const inboxItemKey = (sessionID: string, messageID: string) => `sl-stop-check/inbox/${sessionID}/${messageID}`;
+
+export const rememberEnqueued = async (
+  ctx: Plugin.Context,
+  sessionID: string,
+  messageID: string,
+  kind: string
+): Promise<void> => {
+  await ctx.storage.set(inboxItemKey(sessionID, messageID), kind);
+};
 
 export const rememberDelivered = async (
   ctx: Plugin.Context,
@@ -159,8 +169,14 @@ export const rememberDelivered = async (
   messageID: string,
   sequence: number
 ): Promise<void> => {
-  const key = promptKey(sessionID, messageID);
-  const turnId = await ctx.storage.get(key);
+  const kind = await ctx.storage.get(inboxItemKey(sessionID, messageID));
+
+  const turnId =
+    kind === 'user'
+      ? ((await ctx.storage.get(promptKey(sessionID, messageID))) ?? '')
+      : kind === 'synthetic' || kind === 'compaction' || kind === 'move'
+        ? await deliveredTurn(ctx, sessionID, sequence - 1)
+        : '';
 
   await ctx.storage.set(`${deliveryPrefix(sessionID)}${String(sequence).padStart(16, '0')}`, turnId ?? '');
 };
@@ -362,6 +378,7 @@ export default Plugin.define({
       for await (const event of ctx.event.subscribe({
         signal: controller.signal,
         types: [
+          'session.inbox.enqueued',
           'session.inbox.delivered',
           'session.execution.started',
           'session.step.ended',
@@ -371,6 +388,13 @@ export default Plugin.define({
         ]
       })) {
         const { sessionID } = event.data;
+
+        if (event.type === 'session.inbox.enqueued') {
+          await rememberEnqueued(ctx, sessionID, event.data.inboxID, event.data.item.type).catch((cause: unknown) => {
+            console.error(`sl stop check could not save inbox item for ${sessionID}: ${getErrorMessage(cause)}`);
+          });
+          continue;
+        }
 
         if (event.type === 'session.inbox.delivered') {
           await rememberDelivered(ctx, sessionID, event.data.inboxID, event.durable.seq).catch((cause: unknown) => {
