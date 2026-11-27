@@ -10,7 +10,9 @@
  * Codex and Copilot run this file directly from their hook files. OpenCode has no `Stop` hook, so
  * `.opencode/plugins/sl-stop-check.ts` watches finished executions and calls this same script with a payload of its own:
  * its session id, and the id of the user message that started the turn as the turn id, so the per-turn budget below
- * counts hand-backs for one OpenCode turn the way it counts them for a Codex one.
+ * counts hand-backs for one OpenCode turn the way it counts them for a Codex one. Pi likewise has no `Stop` hook,
+ * so `.pi/extensions/sl-stop-check.ts` runs this script at its `agent_before_settle` boundary with the id of the
+ * last user message on the session branch as the turn id.
  *
  * Every diagnostic counts as a failure, errors and warnings alike, except cargo advisories that carry no source
  * location. The checks run every time the hook fires: the repo's suite costs under a second on a warm tree, so

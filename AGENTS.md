@@ -38,6 +38,14 @@ Monorepo for the `sl` terminal train. Rust workspace plus a Bun workspace for th
 - OpenCode has no Stop hook, so `.opencode/plugins/sl-stop-check.ts` watches successful executions with a completed
   model step, excluding control-only runs, and runs that script with the same stdin payload. A `block` verdict becomes a
   queued prompt for the same session; a `systemMessage` becomes a non-resuming synthetic message.
+- Pi likewise has no Stop protocol, so `.pi/extensions/sl-stop-check.ts` runs the same script at Pi's
+  `agent_before_settle` boundary. A `block` verdict becomes a `custom_message` hand-back plus `continue: true`; a
+  `systemMessage` becomes a notification that resumes nothing. Pi turns carry no id, so the extension derives one from
+  the entry id of the last user message on the session branch, and its injected hand-backs are custom messages rather
+  than user messages, so they never reset that budget. Pi binds one session to one process, so the shared counter needs
+  no cross-instance lock. Project-local `.pi/extensions` load only after the project is trusted, and `/reload` reloads
+  them after an edit. `.pi/extensions/**/*.ts` is in `tsconfig.json` and typed by the pinned
+  `@earendil-works/pi-coding-agent` devDependency, like the OpenCode plugin.
 - OpenCode turns carry no id, so the plugin reports the id of the user message that started the turn, and marks its own
   queued prompts in message metadata (which the model never sees) so a hand-back keeps reporting that turn id and a real
   prompt opens a fresh budget. Sequence-bounded prompt delivery records preserve the turn id across compaction, and
@@ -50,8 +58,8 @@ Monorepo for the `sl` terminal train. Rust workspace plus a Bun workspace for th
 - A failing formatter step names the repair command (`bun fmt` or `cargo fmt --all`) in the hand-back, so the agent
   rewrites the files instead of hand-editing them.
 - Step budgets sum to 720s under a 780s shared deadline, inside the 900s `timeout` declared in `.codex/hooks.json` and
-  the 900s the plugin gives its child process, so no agent kills the hook mid-run; steps left over after the deadline
-  are reported as skipped, not failed.
+  the 900s the OpenCode plugin and the Pi extension give their child processes, so no agent kills the hook mid-run;
+  steps left over after the deadline are reported as skipped, not failed.
 - Every diagnostic counts, errors and warnings alike, so `bun run lint` has to stay warning-free. The skill scripts'
   `window.__slQueue`, `__slPump` and `__slPerformance` globals are allowlisted in `.oxlintrc.json` rather than tolerated
   through a baseline file, and cargo advisories with no `-->` location concern the manifest instead of code, so they
