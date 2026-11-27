@@ -213,6 +213,9 @@ const runUnder = (
 /** Runs the shared checks under the first interpreter that exists here. */
 export const runStopCheck = async (request: HookRequest, signal: AbortSignal | undefined): Promise<HookVerdict> => {
   for (const runtime of RUNTIMES) {
+    // Abort listeners do not replay earlier cancellations. Check before each spawn, including the fallback.
+    signal?.throwIfAborted();
+
     const verdict = await runUnder(runtime, request, signal);
 
     if (verdict !== null) {

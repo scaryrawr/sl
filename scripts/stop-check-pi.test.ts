@@ -15,6 +15,7 @@ import {
   type HookVerdict,
   killTree,
   lastUserTurnId,
+  runStopCheck,
   settleTurn
 } from '../.pi/extensions/sl-stop-check';
 
@@ -282,6 +283,22 @@ test('derives the turn id from the last user message on the branch', () => {
   expect(lastUserTurnId([userEntry('turn-1'), handbackEntry('handback-1')])).toBe('turn-1');
   expect(lastUserTurnId([userEntry('turn-1'), handbackEntry('handback-1'), userEntry('turn-2')])).toBe('turn-2');
   expect(lastUserTurnId([])).toBe('');
+});
+
+test('the runner rejects an already-aborted check before attempting to spawn', async () => {
+  // A file cannot be the working directory. Attempting a spawn here would fail with an OS error instead.
+  const request: HookRequest = {
+    cwd: process.execPath,
+    defer_budget: true,
+    hook_event_name: 'Stop',
+    session_id: 'pre-aborted',
+    stop_hook_active: false,
+    turn_id: 'turn-1'
+  };
+
+  const reason = new Error('cancelled before spawn');
+
+  await expect(runStopCheck(request, AbortSignal.abort(reason))).rejects.toBe(reason);
 });
 
 const alive = (pid: number) => {
