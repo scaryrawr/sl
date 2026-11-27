@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { spawn } from 'node:child_process';
 
 import type {
   AgentBeforeSettleEvent,
@@ -8,9 +9,11 @@ import type {
 } from '@earendil-works/pi-coding-agent';
 
 import {
+  type ChargeHandBack,
   checkRun,
   type HookRequest,
   type HookVerdict,
+  killTree,
   lastUserTurnId,
   settleTurn
 } from '../.pi/extensions/sl-stop-check';
@@ -119,8 +122,30 @@ const recorder = (verdict: HookVerdict) => {
   return { requests, run, signals };
 };
 
+const chargeRecorder = () => {
+  const charges: [string, string, string][] = [];
+
+  const charge: ChargeHandBack = async (sessionId, cwd, turnId) => {
+    charges.push([sessionId, cwd, turnId]);
+  };
+
+  return { charge, charges };
+};
+
+/** A charge that fails the test if settlement reaches it, proving nothing was delivered. */
+const forbiddenCharge: ChargeHandBack = async () => {
+  throw new Error('settlement charged a hand-back it did not deliver');
+};
+
 const brokenRun = async () => {
   throw new Error('bun scripts/stop-check.ts exited 1');
+};
+
+// A signal-driven rejection, like the one an interrupt in flight produces.
+const abortedRun = async (_request: HookRequest, signal: AbortSignal | undefined) => {
+  signal?.throwIfAborted();
+
+  return { decision: 'block', reason: 'fix' };
 };
 
 test('checks at agent_end with the live run signal and hands the stored verdict back at settlement', async () => {
@@ -129,6 +154,7 @@ test('checks at agent_end with the live run signal and hands the stored verdict 
   });
 
   const { requests, run, signals } = recorder({ decision: 'block', reason: 'fix clippy' });
+  const { charge, charges } = chargeRecorder();
 
   await checkRun(endEvent(), ctx, run);
 
@@ -137,10 +163,12 @@ test('checks at agent_end with the live run signal and hands the stored verdict 
   expect(requests[0]?.session_id).toBe('hand-back');
   expect(requests[0]?.cwd).toBe('/repo');
   expect(requests[0]?.hook_event_name).toBe('Stop');
+  expect(requests[0]?.defer_budget).toBe(true);
   expect(signals[0]).toBe(signal);
   expect(statuses).toEqual(['Checking sl clippy, lint, and types', undefined]);
+  expect(charges).toHaveLength(0);
 
-  const result = await settleTurn(settle(), ctx);
+  const result = await settleTurn(settle(), ctx, charge);
 
   expect(result?.continue).toBe(true);
   expect(result?.entries?.at(-1)).toMatchObject({
@@ -148,24 +176,28 @@ test('checks at agent_end with the live run signal and hands the stored verdict 
     customType: 'sl-stop-check',
     type: 'custom_message'
   });
+  expect(charges).toEqual([['hand-back', '/repo', 'turn-1']]);
 });
 
-test('a settlement consumes its verdict once, so a repeat boundary cannot double-charge the turn', async () => {
+test('a settlement consumes its verdict once, charging the budget once', async () => {
   const { ctx } = context([userEntry('turn-1')], { sessionId: 'consume-once' });
+  const { charge, charges } = chargeRecorder();
   await checkRun(endEvent(), ctx, recorder({ decision: 'block', reason: 'fix clippy' }).run);
 
-  expect((await settleTurn(settle(), ctx))?.continue).toBe(true);
-  expect(await settleTurn(settle(), ctx)).toBeUndefined();
+  expect((await settleTurn(settle(), ctx, charge))?.continue).toBe(true);
+  expect(await settleTurn(settle(), ctx, charge)).toBeUndefined();
+  expect(charges).toHaveLength(1);
 });
 
-test('a real prompt or queued follow-up opens a fresh turn id and stale verdicts never apply', async () => {
+test('a stale verdict never spends the budget of a turn opened by a queued follow-up', async () => {
   const { ctx } = context([userEntry('turn-1')], { sessionId: 'fresh-turn' });
   await checkRun(endEvent(), ctx, recorder({ decision: 'block', reason: 'fix clippy' }).run);
 
-  // The branch grew a new user message (a queued follow-up) after the check ran: its own run re-checks later.
+  // The branch grew a new user message (a queued follow-up) after the check ran: its own run re-checks later,
+  // and the dropped verdict must not have charged anything.
   const { ctx: nextCtx } = context([userEntry('turn-1'), userEntry('turn-2')], { sessionId: 'fresh-turn' });
 
-  expect(await settleTurn(settle(), nextCtx)).toBeUndefined();
+  expect(await settleTurn(settle(), nextCtx, forbiddenCharge)).toBeUndefined();
 
   const { requests, run } = recorder({});
   await checkRun(endEvent(), nextCtx, run);
@@ -181,7 +213,7 @@ test('does not resume the agent for informational notes', async () => {
     recorder({ systemMessage: 'sl stop check skipped steps: cargo is not installed' }).run
   );
 
-  const result = await settleTurn(settle(), ctx);
+  const result = await settleTurn(settle(), ctx, forbiddenCharge);
 
   expect(result).toBeUndefined();
   expect(notes).toEqual(['sl stop check skipped steps: cargo is not installed']);
@@ -192,18 +224,11 @@ test('reports a broken check at settlement without blocking the turn', async () 
 
   await checkRun(endEvent(), ctx, brokenRun);
 
-  const result = await settleTurn(settle(), ctx);
+  const result = await settleTurn(settle(), ctx, forbiddenCharge);
 
   expect(result).toBeUndefined();
   expect(notes).toEqual(['sl stop check could not run: bun scripts/stop-check.ts exited 1']);
 });
-
-// A signal-driven rejection, like the one an interrupt in flight produces.
-const abortedRun = async (_request: HookRequest, signal: AbortSignal | undefined) => {
-  signal?.throwIfAborted();
-
-  return { decision: 'block', reason: 'fix' };
-};
 
 test('an interrupt during the agent_end check stores nothing, because the aborted run skips settlement', async () => {
   const { ctx } = context([userEntry('turn-1')], { aborted: true, sessionId: 'interrupted' });
@@ -212,8 +237,8 @@ test('an interrupt during the agent_end check stores nothing, because the aborte
   // rejection stores no verdict, so no settlement can hand work back after the interrupt.
   await checkRun(endEvent(), ctx, abortedRun);
 
-  expect(await settleTurn(settle('aborted'), ctx)).toBeUndefined();
-  expect(await settleTurn(settle(), ctx)).toBeUndefined();
+  expect(await settleTurn(settle('aborted'), ctx, forbiddenCharge)).toBeUndefined();
+  expect(await settleTurn(settle(), ctx, forbiddenCharge)).toBeUndefined();
 });
 
 test('skips checks for runs whose final message aborted or errored', async () => {
@@ -224,20 +249,23 @@ test('skips checks for runs whose final message aborted or errored', async () =>
     await checkRun(endEvent(stopReason), ctx, run);
 
     expect(requests).toHaveLength(0);
-    expect(await settleTurn(settle(), ctx)).toBeUndefined();
+    expect(await settleTurn(settle(), ctx, forbiddenCharge)).toBeUndefined();
   }
 });
 
-test('skips settlement boundaries for aborted and errored outcomes', async () => {
+test('skips settlement boundaries for aborted and errored outcomes, charging nothing', async () => {
   const { ctx } = context([userEntry('turn-1')], { sessionId: 'skip-outcome' });
+  const { charge, charges } = chargeRecorder();
   await checkRun(endEvent(), ctx, recorder({ decision: 'block', reason: 'fix clippy' }).run);
 
-  expect(await settleTurn(settle('aborted'), ctx)).toBeUndefined();
-  expect(await settleTurn(settle('error'), ctx)).toBeUndefined();
+  expect(await settleTurn(settle('aborted'), ctx, charge)).toBeUndefined();
+  expect(await settleTurn(settle('error'), ctx, charge)).toBeUndefined();
+  expect(charges).toHaveLength(0);
 
   // The verdict survives outcome-skipped boundaries: the same turn's completed settlement still applies it,
-  // and any run that follows re-checks at its own agent_end.
-  expect((await settleTurn(settle(), ctx))?.continue).toBe(true);
+  // charging once, and any run that follows re-checks at its own agent_end.
+  expect((await settleTurn(settle(), ctx, charge))?.continue).toBe(true);
+  expect(charges).toEqual([['skip-outcome', '/repo', 'turn-1']]);
 });
 
 test('skips runs with no user message to charge', async () => {
@@ -247,7 +275,7 @@ test('skips runs with no user message to charge', async () => {
   await checkRun(endEvent(), ctx, run);
 
   expect(requests).toHaveLength(0);
-  expect(await settleTurn(settle(), ctx)).toBeUndefined();
+  expect(await settleTurn(settle(), ctx, forbiddenCharge)).toBeUndefined();
 });
 
 test('derives the turn id from the last user message on the branch', () => {
@@ -255,3 +283,53 @@ test('derives the turn id from the last user message on the branch', () => {
   expect(lastUserTurnId([userEntry('turn-1'), handbackEntry('handback-1'), userEntry('turn-2')])).toBe('turn-2');
   expect(lastUserTurnId([])).toBe('');
 });
+
+const alive = (pid: number) => {
+  try {
+    process.kill(pid, 0);
+
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+test('killTree terminates the interpreter and its in-flight descendants', async () => {
+  expect(process.platform === 'win32' || process.platform === 'darwin' || process.platform === 'linux').toBe(true);
+
+  if (process.platform === 'win32') {
+    return;
+  }
+
+  // The child starts a grandchild (`sleep`) and waits on it, standing in for cargo in a spawnSync step.
+  const child = spawn('sh', ['-c', 'sleep 120 & echo $!; wait'], { detached: true });
+  let stdout = '';
+
+  child.stdout?.setEncoding('utf8');
+  child.stdout?.on('data', (chunk: string) => {
+    stdout += chunk;
+  });
+
+  const closed = new Promise<void>((resolve) => {
+    child.on('close', () => resolve());
+  });
+
+  while (!stdout.trim()) {
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+
+  const grandchild = Number(stdout.trim());
+
+  expect(alive(grandchild)).toBe(true);
+
+  killTree(child, 'SIGTERM');
+  await closed;
+
+  const deadline = Date.now() + 2000;
+
+  while (alive(grandchild) && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+
+  expect(alive(grandchild)).toBe(false);
+}, 15000);

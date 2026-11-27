@@ -13,7 +13,9 @@
  * counts hand-backs for one OpenCode turn the way it counts them for a Codex one. Pi likewise has no `Stop` hook,
  * so `.pi/extensions/sl-stop-check.ts` runs this script at its `agent_end` event — where Pi's run signal is live and
  * Esc cancels the subprocess — and applies the verdict at the `agent_before_settle` boundary, using the id of the
- * last user message on the session branch as the turn id.
+ * last user message on the session branch as the turn id. Pi's settlement can also drop a verdict before delivering
+ * it, so its payload sets `defer_budget` and the extension calls the exported `chargeHandBack` only when settlement
+ * emits the hand-back.
  *
  * Every diagnostic counts as a failure, errors and warnings alike, except cargo advisories that carry no source
  * location. The checks run every time the hook fires: the repo's suite costs under a second on a warm tree, so
@@ -40,6 +42,12 @@ interface StopEventWire {
   turn_id?: string;
   cwd?: string;
   stop_hook_active?: boolean;
+  /**
+   * Pi evaluates the verdict at `agent_end` but its settlement may never deliver it, because another run can start
+   * first and overwrite the stored verdict. It sets this flag so the budget charge moves out of the evaluation:
+   * `chargeHandBack` counts the hand-back only when settlement actually emits the blocking continuation.
+   */
+  defer_budget?: boolean;
 }
 
 /** Validated Stop hook payload for one turn. */
@@ -49,6 +57,7 @@ interface StopEvent {
   turnId: string;
   cwd: string;
   stopHookActive: boolean;
+  deferBudget: boolean;
 }
 
 /** One validation step and how long it may run. */
@@ -198,7 +207,8 @@ const parseEvent = (payload: string): StopEvent => {
     sessionId: wire.session_id,
     turnId: wire.turn_id ?? 'copilot',
     cwd: wire.cwd,
-    stopHookActive: wire.stop_hook_active === true
+    stopHookActive: wire.stop_hook_active === true,
+    deferBudget: wire.defer_budget === true
   };
 };
 
@@ -500,7 +510,10 @@ const handleEvent = async (event: StopEvent) => {
     };
   }
 
-  if (turnFile !== null) {
+  // Callers that deliver their verdict immediately (Codex, Copilot, OpenCode) charge here. Pi defers the charge
+  // to `chargeHandBack`, which runs only when its settlement applies the hand-back, so a verdict overwritten by a
+  // later run cannot spend the turn's budget.
+  if (turnFile !== null && !event.deferBudget) {
     await writeJson(turnFile, { turn_id: event.turnId, blocks: blocks + 1 });
   }
 
@@ -521,6 +534,19 @@ const handleEvent = async (event: StopEvent) => {
     decision: 'block',
     reason
   };
+};
+
+/**
+ * Charges one delivered hand-back to the turn's budget, for callers that evaluate the verdict before they know
+ * they will deliver it. A new turn id restarts the count, matching how the deferred path in `handleEvent` works.
+ */
+export const chargeHandBack = async (sessionId: string, eventCwd: string, turnId: string) => {
+  const root = repoRoot(path.resolve(eventCwd));
+  const turnFile = path.join(stateRoot(), `${digest(`${sessionId}\0${root}`)}.json`);
+  const state = decodeTurnState(await readJson<TurnStateWire>(turnFile));
+  const blocks = state !== null && state.turnId === turnId ? state.blocks : 0;
+
+  await writeJson(turnFile, { turn_id: turnId, blocks: blocks + 1 });
 };
 
 if (pathToFileURL(process.argv[1] ?? '').href === import.meta.url) {

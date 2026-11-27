@@ -14,10 +14,15 @@
  * nothing. An aborted run skips settlement entirely, and an errored one skips the check, because Pi continues those
  * runs through its own retry paths.
  *
- * `scripts/stop-check.ts` counts hand-backs per turn id, and Pi events carry none, so the extension derives one:
- * the entry id of the last user message on the session branch. Hand-back prompts this extension injects are custom
- * messages, not user messages, so a hand-back reports the turn that caused it and a real user prompt — or a queued
- * follow-up — always opens a fresh budget.
+ * Two lifecycles separate here on purpose. Processes: the interpreter spawns detached, so cancellation signals
+ * reach the whole process group and an in-flight cargo, rustc, or tsgolint from the script's `spawnSync` steps
+ * cannot survive an interrupt holding build locks. Budget: `scripts/stop-check.ts` counts hand-backs per turn id,
+ * and Pi events carry none, so the extension derives one — the entry id of the last user message on the session
+ * branch — while the payload defers the budget charge, and settlement calls `chargeHandBack` only when it actually
+ * emits the hand-back. Pi can start another run before settlement and overwrite the stored verdict, so an
+ * evaluation nobody delivered never spends the turn's allowance. Hand-back prompts this extension injects are
+ * custom messages, not user messages, so a hand-back reports the turn that caused it and a real user prompt — or a
+ * queued follow-up — always opens a fresh budget.
  *
  * Pi binds one session to one process, so no cross-instance claim or lock is needed: the per-session counter file
  * `scripts/stop-check.ts` keeps has exactly one writer. Editing this file needs `/reload`, which reloads
@@ -27,6 +32,7 @@
  */
 
 import { spawn } from 'node:child_process';
+import type { ChildProcess } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -39,6 +45,8 @@ import type {
   SessionEntry
 } from '@earendil-works/pi-coding-agent';
 
+import { chargeHandBack } from '../../scripts/stop-check';
+
 /** Stop hook payload in the shape `scripts/stop-check.ts` decodes from stdin. */
 export interface HookRequest {
   hook_event_name: string;
@@ -46,7 +54,12 @@ export interface HookRequest {
   turn_id: string;
   cwd: string;
   stop_hook_active: boolean;
+  /** The verdict is only delivered at settlement, which may drop it, so the budget charge is deferred. */
+  defer_budget: boolean;
 }
+
+/** Charges one delivered hand-back to the turn's budget in the shared counter file. */
+export type ChargeHandBack = (sessionId: string, cwd: string, turnId: string) => Promise<void>;
 
 /** Verdict `scripts/stop-check.ts` prints on stdout: a hand-back, a note, or nothing. */
 export interface HookVerdict {
@@ -85,10 +98,38 @@ const getErrorMessage = (cause: unknown) => {
 };
 
 /**
+ * Terminates the check interpreter and everything it launched. `scripts/stop-check.ts` runs its steps through
+ * `spawnSync`, so killing only the interpreter would leave cargo, rustc, or tsgolint running with build locks held.
+ * On POSIX the interpreter is a process-group leader (spawned detached) and the whole group gets the signal; on
+ * Windows `taskkill /T` walks the tree.
+ */
+export const killTree = (child: ChildProcess, signal: NodeJS.Signals) => {
+  if (child.pid === undefined) {
+    child.kill(signal);
+
+    return;
+  }
+
+  if (process.platform === 'win32') {
+    spawn('taskkill', ['/T', '/F', '/PID', String(child.pid)], { stdio: 'ignore' });
+
+    return;
+  }
+
+  try {
+    process.kill(-child.pid, signal);
+  } catch {
+    // ESRCH: the group is already gone; the child's close event reports the outcome.
+    child.kill(signal);
+  }
+};
+
+/**
  * Runs `scripts/stop-check.ts` once under `runtime` with `request` on stdin.
  *
  * Resolves `null` when `runtime` is not installed here so the caller can try the next one, and rejects when it is
  * installed and the run failed or was cancelled, because a broken check deserves a message rather than a silent pass.
+ * Cancellation and timeout terminate the whole process tree, not just the interpreter.
  */
 const runUnder = (
   runtime: string,
@@ -96,8 +137,10 @@ const runUnder = (
   signal: AbortSignal | undefined
 ): Promise<HookVerdict | null> =>
   new Promise((resolve, reject) => {
-    const child = spawn(runtime, [scriptPath], { cwd: request.cwd, signal });
-    const timer = setTimeout(() => child.kill('SIGKILL'), HOOK_TIMEOUT_MS);
+    // Detached on POSIX so the interpreter leads its own process group and killTree can signal the whole tree.
+    const child = spawn(runtime, [scriptPath], { cwd: request.cwd, detached: process.platform !== 'win32' });
+    const timer = setTimeout(() => killTree(child, 'SIGKILL'), HOOK_TIMEOUT_MS);
+    let abortEscalation: ReturnType<typeof setTimeout> | undefined;
     let stdout = '';
     let stderr = '';
 
@@ -111,6 +154,15 @@ const runUnder = (
       stderr += chunk;
     });
 
+    const onAbort = () => {
+      killTree(child, 'SIGTERM');
+
+      // Interpreters and tools that stall on SIGTERM get SIGKILL to the tree shortly after.
+      abortEscalation = setTimeout(() => killTree(child, 'SIGKILL'), 5000);
+    };
+
+    signal?.addEventListener('abort', onAbort, { once: true });
+
     // An abort between spawn and first write surfaces here as EPIPE, and an unhandled stdin error would fault
     // the whole Pi process. The child's exit reports the real outcome.
     child.stdin?.on('error', () => {});
@@ -119,6 +171,8 @@ const runUnder = (
 
     child.on('error', (cause: Error) => {
       clearTimeout(timer);
+      clearTimeout(abortEscalation);
+      signal?.removeEventListener('abort', onAbort);
 
       // SAFETY: spawn surfaces OS failures as ErrnoException, whose code carries ENOENT for a missing interpreter.
       const code = (cause as NodeJS.ErrnoException).code ?? '';
@@ -134,6 +188,8 @@ const runUnder = (
 
     child.on('close', (code) => {
       clearTimeout(timer);
+      clearTimeout(abortEscalation);
+      signal?.removeEventListener('abort', onAbort);
 
       if (signal?.aborted) {
         reject(new Error('sl stop check was cancelled'));
@@ -214,6 +270,7 @@ export const checkRun = async (
 
   const request: HookRequest = {
     cwd: ctx.sessionManager.getCwd(),
+    defer_budget: true,
     hook_event_name: 'Stop',
     session_id: sessionId,
     stop_hook_active: false,
@@ -245,12 +302,14 @@ export const checkRun = async (
 };
 
 /**
- * Applies the stored verdict at the settlement boundary: a hand-back requests one more provider request, a note
- * resumes nothing. This handler never spawns, so no subprocess can outlive an interrupt during settlement.
+ * Applies the stored verdict at the settlement boundary: a hand-back charges the budget through `charge` and
+ * requests one more provider request, a note resumes nothing. This handler never spawns, so no subprocess can
+ * outlive an interrupt during settlement, and a verdict the settlement drops never spends the turn's budget.
  */
 export const settleTurn = async (
   event: AgentBeforeSettleEvent,
-  ctx: ExtensionContext
+  ctx: ExtensionContext,
+  charge: ChargeHandBack
 ): Promise<BoundaryResult | undefined> => {
   // Aborted and errored runs are not turns worth checking; Pi reports them through its own paths.
   if (event.outcome !== 'completed') {
@@ -275,6 +334,10 @@ export const settleTurn = async (
   const { verdict } = stored;
 
   if (verdict.decision === 'block' && verdict.reason) {
+    // Budget accounting is charged here, at delivery, not when the verdict was evaluated: Pi can start another
+    // run before settlement and overwrite this verdict, and an evaluation nobody delivered must not spend the turn.
+    await charge(sessionId, ctx.sessionManager.getCwd(), turnId);
+
     return {
       continue: true,
       entries: [
@@ -305,7 +368,7 @@ export default function (pi: ExtensionAPI) {
     await checkRun(event, ctx, runStopCheck);
   });
 
-  pi.on('agent_before_settle', async (event, ctx) => settleTurn(event, ctx));
+  pi.on('agent_before_settle', async (event, ctx) => settleTurn(event, ctx, chargeHandBack));
 
   pi.on('session_shutdown', async (_event, ctx) => {
     storedVerdicts.delete(ctx.sessionManager.getSessionId());
