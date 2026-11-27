@@ -9,5 +9,5 @@
     "strict": true,
     "types": ["bun"]
   },
-  "include": [".opencode/plugins/**/*.ts", "scripts/**/*.ts"]
+  "include": [".opencode/plugins/**/*.ts", ".pi/extensions/**/*.ts", "scripts/**/*.ts"]
 }
