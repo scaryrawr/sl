@@ -1,5 +1,8 @@
 import { expect, test } from 'bun:test';
-import { spawn } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 
 import type {
   AgentBeforeSettleEvent,
@@ -13,9 +16,9 @@ import {
   checkRun,
   type HookRequest,
   type HookVerdict,
-  killTree,
   lastUserTurnId,
   runStopCheck,
+  runUnder,
   settleTurn
 } from '../.pi/extensions/sl-stop-check';
 
@@ -301,52 +304,69 @@ test('the runner rejects an already-aborted check before attempting to spawn', a
   await expect(runStopCheck(request, AbortSignal.abort(reason))).rejects.toBe(reason);
 });
 
-const alive = (pid: number) => {
-  try {
-    process.kill(pid, 0);
+const running = (pid: number) => {
+  // An unreaped zombie may still have a PID but cannot hold a build lock.
+  const { stdout } = spawnSync('ps', ['-o', 'stat=', '-p', String(pid)], { encoding: 'utf8' });
+  const state = stdout.trim();
 
-    return true;
-  } catch {
-    return false;
-  }
+  return state !== '' && !state.startsWith('Z');
 };
 
-test('killTree terminates the interpreter and its in-flight descendants', async () => {
-  expect(process.platform === 'win32' || process.platform === 'darwin' || process.platform === 'linux').toBe(true);
+test.skipIf(process.platform === 'win32')(
+  'cancelling the runner kills a descendant that ignores SIGTERM',
+  async () => {
+    const cwd = await mkdtemp(path.join(os.tmpdir(), 'sl-stop-check-tree-'));
+    const script = path.join(cwd, 'check.sh');
+    const pidPath = path.join(cwd, 'descendant.pid');
+    const controller = new AbortController();
+    let descendant = 0;
 
-  if (process.platform === 'win32') {
-    return;
-  }
+    try {
+      // Redirect the descendant's stdio so the interpreter can close without waiting for it.
+      await writeFile(
+        script,
+        `sh -c 'trap "" TERM; echo "$$" > descendant.tmp; mv descendant.tmp descendant.pid; exec sleep 120' </dev/null >/dev/null 2>&1 &\nwait\n`
+      );
 
-  // The child starts a grandchild (`sleep`) and waits on it, standing in for cargo in a spawnSync step.
-  const child = spawn('sh', ['-c', 'sleep 120 & echo $!; wait'], { detached: true });
-  let stdout = '';
+      const request: HookRequest = {
+        cwd,
+        defer_budget: true,
+        hook_event_name: 'Stop',
+        session_id: 'cancel-tree',
+        stop_hook_active: false,
+        turn_id: 'turn-1'
+      };
 
-  child.stdout?.setEncoding('utf8');
-  child.stdout?.on('data', (chunk: string) => {
-    stdout += chunk;
-  });
+      const result = runUnder('sh', request, controller.signal, script).catch((error: Error) => error);
+      const readyDeadline = Date.now() + 2000;
 
-  const closed = new Promise<void>((resolve) => {
-    child.on('close', () => resolve());
-  });
+      while (!(await Bun.file(pidPath).exists()) && Date.now() < readyDeadline) {
+        await Bun.sleep(25);
+      }
 
-  while (!stdout.trim()) {
-    await new Promise((resolve) => setTimeout(resolve, 25));
-  }
+      descendant = Number((await readFile(pidPath, 'utf8')).trim());
+      expect(descendant).toBeGreaterThan(1);
+      expect(running(descendant)).toBe(true);
 
-  const grandchild = Number(stdout.trim());
+      controller.abort();
+      expect(await result).toEqual(new Error('sl stop check was cancelled'));
 
-  expect(alive(grandchild)).toBe(true);
+      const exitDeadline = Date.now() + 2000;
 
-  killTree(child, 'SIGTERM');
-  await closed;
+      while (running(descendant) && Date.now() < exitDeadline) {
+        await Bun.sleep(25);
+      }
 
-  const deadline = Date.now() + 2000;
+      expect(running(descendant)).toBe(false);
+    } finally {
+      controller.abort();
 
-  while (alive(grandchild) && Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, 25));
-  }
+      if (descendant > 1 && running(descendant)) {
+        process.kill(descendant, 'SIGKILL');
+      }
 
-  expect(alive(grandchild)).toBe(false);
-}, 15000);
+      await rm(cwd, { recursive: true, force: true });
+    }
+  },
+  10000
+);

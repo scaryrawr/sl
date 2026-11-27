@@ -103,9 +103,9 @@ const getErrorMessage = (cause: unknown) => {
  * On POSIX the interpreter is a process-group leader (spawned detached) and the whole group gets the signal; on
  * Windows `taskkill /T` walks the tree.
  */
-export const killTree = (child: ChildProcess, signal: NodeJS.Signals) => {
+const killTree = (child: ChildProcess) => {
   if (child.pid === undefined) {
-    child.kill(signal);
+    child.kill('SIGKILL');
 
     return;
   }
@@ -117,10 +117,10 @@ export const killTree = (child: ChildProcess, signal: NodeJS.Signals) => {
   }
 
   try {
-    process.kill(-child.pid, signal);
+    process.kill(-child.pid, 'SIGKILL');
   } catch {
     // ESRCH: the group is already gone; the child's close event reports the outcome.
-    child.kill(signal);
+    child.kill('SIGKILL');
   }
 };
 
@@ -131,16 +131,18 @@ export const killTree = (child: ChildProcess, signal: NodeJS.Signals) => {
  * installed and the run failed or was cancelled, because a broken check deserves a message rather than a silent pass.
  * Cancellation and timeout terminate the whole process tree, not just the interpreter.
  */
-const runUnder = (
+export const runUnder = (
   runtime: string,
   request: HookRequest,
-  signal: AbortSignal | undefined
+  signal: AbortSignal | undefined,
+  checkScript = scriptPath
 ): Promise<HookVerdict | null> =>
   new Promise((resolve, reject) => {
     // Detached on POSIX so the interpreter leads its own process group and killTree can signal the whole tree.
-    const child = spawn(runtime, [scriptPath], { cwd: request.cwd, detached: process.platform !== 'win32' });
-    const timer = setTimeout(() => killTree(child, 'SIGKILL'), HOOK_TIMEOUT_MS);
-    let abortEscalation: ReturnType<typeof setTimeout> | undefined;
+    const child = spawn(runtime, [checkScript], { cwd: request.cwd, detached: process.platform !== 'win32' });
+    // Kill the group immediately: the interpreter can close its pipes before a descendant that ignores SIGTERM exits.
+    const onAbort = () => killTree(child);
+    const timer = setTimeout(onAbort, HOOK_TIMEOUT_MS);
     let stdout = '';
     let stderr = '';
 
@@ -154,13 +156,6 @@ const runUnder = (
       stderr += chunk;
     });
 
-    const onAbort = () => {
-      killTree(child, 'SIGTERM');
-
-      // Interpreters and tools that stall on SIGTERM get SIGKILL to the tree shortly after.
-      abortEscalation = setTimeout(() => killTree(child, 'SIGKILL'), 5000);
-    };
-
     signal?.addEventListener('abort', onAbort, { once: true });
 
     // An abort between spawn and first write surfaces here as EPIPE, and an unhandled stdin error would fault
@@ -171,7 +166,6 @@ const runUnder = (
 
     child.on('error', (cause: Error) => {
       clearTimeout(timer);
-      clearTimeout(abortEscalation);
       signal?.removeEventListener('abort', onAbort);
 
       // SAFETY: spawn surfaces OS failures as ErrnoException, whose code carries ENOENT for a missing interpreter.
@@ -183,12 +177,11 @@ const runUnder = (
         return;
       }
 
-      reject(new Error(`${runtime} could not run ${scriptPath}: ${getErrorMessage(cause)}`));
+      reject(new Error(`${runtime} could not run ${checkScript}: ${getErrorMessage(cause)}`));
     });
 
     child.on('close', (code) => {
       clearTimeout(timer);
-      clearTimeout(abortEscalation);
       signal?.removeEventListener('abort', onAbort);
 
       if (signal?.aborted) {
@@ -203,7 +196,7 @@ const runUnder = (
       } catch (cause) {
         reject(
           new Error(
-            `${runtime} ${scriptPath} exited ${code ?? 'on a signal'}: ${stderr.trim() || getErrorMessage(cause)}`
+            `${runtime} ${checkScript} exited ${code ?? 'on a signal'}: ${stderr.trim() || getErrorMessage(cause)}`
           )
         );
       }
