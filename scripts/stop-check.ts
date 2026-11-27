@@ -11,7 +11,8 @@
  * `.opencode/plugins/sl-stop-check.ts` watches finished executions and calls this same script with a payload of its own:
  * its session id, and the id of the user message that started the turn as the turn id, so the per-turn budget below
  * counts hand-backs for one OpenCode turn the way it counts them for a Codex one. Pi likewise has no `Stop` hook,
- * so `.pi/extensions/sl-stop-check.ts` runs this script at its `agent_before_settle` boundary with the id of the
+ * so `.pi/extensions/sl-stop-check.ts` runs this script at its `agent_end` event — where Pi's run signal is live and
+ * Esc cancels the subprocess — and applies the verdict at the `agent_before_settle` boundary, using the id of the
  * last user message on the session branch as the turn id.
  *
  * Every diagnostic counts as a failure, errors and warnings alike, except cargo advisories that carry no source

@@ -38,14 +38,16 @@ Monorepo for the `sl` terminal train. Rust workspace plus a Bun workspace for th
 - OpenCode has no Stop hook, so `.opencode/plugins/sl-stop-check.ts` watches successful executions with a completed
   model step, excluding control-only runs, and runs that script with the same stdin payload. A `block` verdict becomes a
   queued prompt for the same session; a `systemMessage` becomes a non-resuming synthetic message.
-- Pi likewise has no Stop protocol, so `.pi/extensions/sl-stop-check.ts` runs the same script at Pi's
-  `agent_before_settle` boundary. A `block` verdict becomes a `custom_message` hand-back plus `continue: true`; a
-  `systemMessage` becomes a notification that resumes nothing. Pi turns carry no id, so the extension derives one from
-  the entry id of the last user message on the session branch, and its injected hand-backs are custom messages rather
-  than user messages, so they never reset that budget. Pi binds one session to one process, so the shared counter needs
-  no cross-instance lock. Project-local `.pi/extensions` load only after the project is trusted, and `/reload` reloads
-  them after an edit. `.pi/extensions/**/*.ts` is in `tsconfig.json` and typed by the pinned
-  `@earendil-works/pi-coding-agent` devDependency, like the OpenCode plugin.
+- Pi likewise has no Stop protocol, so `.pi/extensions/sl-stop-check.ts` runs the same script from the shared suite. The
+  checks run at Pi's `agent_end` event, where the run's abort signal is live and `app.interrupt` (Esc) kills the
+  subprocess, and the verdict is applied at the `agent_before_settle` boundary, which spawns nothing itself. A `block`
+  verdict becomes a `custom_message` hand-back plus `continue: true`; a `systemMessage` becomes a notification that
+  resumes nothing; aborted and errored runs skip the check and settlement through Pi's own paths. Pi events carry no
+  turn id, so the extension derives one from the entry id of the last user message on the session branch, and its
+  injected hand-backs are custom messages rather than user messages, so they never reset that budget. Pi binds one
+  session to one process, so the shared counter needs no cross-instance lock. Project-local `.pi/extensions` load only
+  after the project is trusted, and `/reload` reloads them after an edit. `.pi/extensions/**/*.ts` is in `tsconfig.json`
+  and typed by the pinned `@earendil-works/pi-coding-agent` devDependency, like the OpenCode plugin.
 - OpenCode turns carry no id, so the plugin reports the id of the user message that started the turn, and marks its own
   queued prompts in message metadata (which the model never sees) so a hand-back keeps reporting that turn id and a real
   prompt opens a fresh budget. Sequence-bounded prompt delivery records preserve the turn id across compaction, and

@@ -1,20 +1,23 @@
 /**
  * Pi extension that gives this repo the Stop hook its Codex and Copilot setups install.
  *
- * Pi has no Stop hook protocol, but `agent_before_settle` is the equivalent actionable boundary: it runs after a
- * finished run, before the turn ends, and may append entries and request one more provider request. Each time it
- * fires, this extension runs `scripts/stop-check.ts` in a child process with the same stdin payload and stdout
- * response the Codex and Copilot hook files use.
+ * Pi has no Stop hook protocol, and its settlement boundary cannot host the checks: `ctx.signal` is bound to the
+ * active agent run, and the run is finished before settlement, so a subprocess started there cannot be cancelled —
+ * pressing Esc would leave it running until it finishes or times out. Instead the checks run at `agent_end`, where
+ * the run is still active and its signal is live, so the same `app.interrupt` (Esc) path that aborts a running turn
+ * terminates the subprocess. `agent_before_settle`, the actionable boundary that may append entries and request one
+ * more provider request, then consumes that verdict without spawning anything itself.
  *
  * A `{"decision":"block","reason":"..."}` answer becomes a `custom_message` entry carrying the failures plus
  * `continue: true`, which is how Pi keeps the agent working instead of letting the turn end. A `systemMessage` — a
  * spent budget with failures still standing, or steps that could not run — becomes a notification that resumes
- * nothing.
+ * nothing. An aborted run skips settlement entirely, and an errored one skips the check, because Pi continues those
+ * runs through its own retry paths.
  *
- * `scripts/stop-check.ts` counts hand-backs per turn id, and Pi settle events carry none, so the extension derives
- * one: the entry id of the last user message on the session branch. Hand-back prompts this extension injects are
- * custom messages, not user messages, so a hand-back reports the turn that caused it and a real user prompt — or a
- * queued follow-up — always opens a fresh budget.
+ * `scripts/stop-check.ts` counts hand-backs per turn id, and Pi events carry none, so the extension derives one:
+ * the entry id of the last user message on the session branch. Hand-back prompts this extension injects are custom
+ * messages, not user messages, so a hand-back reports the turn that caused it and a real user prompt — or a queued
+ * follow-up — always opens a fresh budget.
  *
  * Pi binds one session to one process, so no cross-instance claim or lock is needed: the per-session counter file
  * `scripts/stop-check.ts` keeps has exactly one writer. Editing this file needs `/reload`, which reloads
@@ -29,6 +32,7 @@ import { fileURLToPath } from 'node:url';
 
 import type {
   AgentBeforeSettleEvent,
+  AgentEndEvent,
   BoundaryResult,
   ExtensionAPI,
   ExtensionContext,
@@ -51,6 +55,12 @@ export interface HookVerdict {
   systemMessage?: string;
 }
 
+/** A computed verdict, held between `agent_end` and the settlement boundary that consumes it. */
+export interface StoredVerdict {
+  turnId: string;
+  verdict: HookVerdict;
+}
+
 /** Interpreters able to run a TypeScript file, in the order the Codex and Copilot hook commands try them. */
 const RUNTIMES = ['bun', 'node'];
 
@@ -62,6 +72,9 @@ const HOOK_TIMEOUT_MS = 900000;
  * agent, so all four setups share the same steps, budgets, and hand-back wording.
  */
 const scriptPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'scripts', 'stop-check.ts');
+
+/** Verdicts computed at `agent_end`, keyed by session id. Pi binds one session to one process, so nothing else writes. */
+const storedVerdicts = new Map<string, StoredVerdict>();
 
 const getErrorMessage = (cause: unknown) => {
   if (cause instanceof Error) {
@@ -142,7 +155,7 @@ const runUnder = (
   });
 
 /** Runs the shared checks under the first interpreter that exists here. */
-const runStopCheck = async (request: HookRequest, signal: AbortSignal | undefined): Promise<HookVerdict> => {
+export const runStopCheck = async (request: HookRequest, signal: AbortSignal | undefined): Promise<HookVerdict> => {
   for (const runtime of RUNTIMES) {
     const verdict = await runUnder(runtime, request, signal);
 
@@ -171,31 +184,38 @@ export const lastUserTurnId = (entries: SessionEntry[]) => {
 };
 
 /**
- * Runs the checks for one settled run and turns the verdict into a boundary result.
+ * Runs the checks for one finished low-level run and stores the verdict for the settlement boundary.
  *
- * `run` is injected so the tests can stand in for `scripts/stop-check.ts` without paying for a real clippy pass.
+ * This is the event where Pi's run signal is still live, so the subprocess honors the same Esc interrupt that
+ * aborts a running turn. `run` is injected so tests can stand in for `scripts/stop-check.ts` without paying for a
+ * real clippy pass.
  */
-export const checkTurn = async (
-  event: AgentBeforeSettleEvent,
+export const checkRun = async (
+  event: AgentEndEvent,
   ctx: ExtensionContext,
   run: (request: HookRequest, signal: AbortSignal | undefined) => Promise<HookVerdict>
-): Promise<BoundaryResult | undefined> => {
-  // Aborted and errored runs are not turns worth checking; Pi reports them through its own paths.
-  if (event.outcome !== 'completed') {
-    return undefined;
+) => {
+  const sessionId = ctx.sessionManager.getSessionId();
+  const last = event.messages.at(-1);
+
+  // Aborted runs skip settlement entirely, and errored ones continue through Pi's retry paths: neither owes a check.
+  if (last?.role === 'assistant' && (last.stopReason === 'aborted' || last.stopReason === 'error')) {
+    storedVerdicts.delete(sessionId);
+
+    return;
   }
 
   const turnId = lastUserTurnId(ctx.sessionManager.getBranch());
 
   // A run started without any user message (a bare custom-message trigger on a fresh session) has no turn to charge.
   if (!turnId) {
-    return undefined;
+    return;
   }
 
   const request: HookRequest = {
     cwd: ctx.sessionManager.getCwd(),
     hook_event_name: 'Stop',
-    session_id: ctx.sessionManager.getSessionId(),
+    session_id: sessionId,
     stop_hook_active: false,
     turn_id: turnId
   };
@@ -206,40 +226,74 @@ export const checkTurn = async (
 
   try {
     const verdict = await run(request, ctx.signal);
-
-    if (verdict.decision === 'block' && verdict.reason) {
-      return {
-        continue: true,
-        entries: [
-          ...event.entries,
-          {
-            content: verdict.reason,
-            customType: 'sl-stop-check',
-            display: true,
-            type: 'custom_message'
-          }
-        ]
-      };
-    }
-
-    if (verdict.systemMessage) {
-      if (ctx.hasUI) {
-        ctx.ui.notify(verdict.systemMessage, 'warning');
-      } else {
-        console.error(verdict.systemMessage);
-      }
-    }
+    storedVerdicts.set(sessionId, { turnId, verdict });
   } catch (cause: unknown) {
-    const message = `sl stop check could not run: ${getErrorMessage(cause)}`;
+    const message = getErrorMessage(cause);
 
-    if (ctx.hasUI) {
-      ctx.ui.notify(message, 'warning');
-    } else {
-      console.error(message);
+    if (ctx.signal?.aborted) {
+      // The user interrupted; Pi skips settlement for the aborted run, so nothing is stored.
+      return;
     }
+
+    // A broken check is reported at settlement as a note, never as a hand-back, so a missing tool cannot block a turn.
+    storedVerdicts.set(sessionId, { turnId, verdict: { systemMessage: `sl stop check could not run: ${message}` } });
   } finally {
     if (ctx.hasUI) {
       ctx.ui.setStatus('sl-stop-check', undefined);
+    }
+  }
+};
+
+/**
+ * Applies the stored verdict at the settlement boundary: a hand-back requests one more provider request, a note
+ * resumes nothing. This handler never spawns, so no subprocess can outlive an interrupt during settlement.
+ */
+export const settleTurn = async (
+  event: AgentBeforeSettleEvent,
+  ctx: ExtensionContext
+): Promise<BoundaryResult | undefined> => {
+  // Aborted and errored runs are not turns worth checking; Pi reports them through its own paths.
+  if (event.outcome !== 'completed') {
+    return undefined;
+  }
+
+  const turnId = lastUserTurnId(ctx.sessionManager.getBranch());
+
+  if (!turnId) {
+    return undefined;
+  }
+
+  const sessionId = ctx.sessionManager.getSessionId();
+  const stored = storedVerdicts.get(sessionId);
+
+  if (!stored || stored.turnId !== turnId) {
+    return undefined;
+  }
+
+  storedVerdicts.delete(sessionId);
+
+  const { verdict } = stored;
+
+  if (verdict.decision === 'block' && verdict.reason) {
+    return {
+      continue: true,
+      entries: [
+        ...event.entries,
+        {
+          content: verdict.reason,
+          customType: 'sl-stop-check',
+          display: true,
+          type: 'custom_message'
+        }
+      ]
+    };
+  }
+
+  if (verdict.systemMessage) {
+    if (ctx.hasUI) {
+      ctx.ui.notify(verdict.systemMessage, 'warning');
+    } else {
+      console.error(verdict.systemMessage);
     }
   }
 
@@ -247,5 +301,13 @@ export const checkTurn = async (
 };
 
 export default function (pi: ExtensionAPI) {
-  pi.on('agent_before_settle', async (event, ctx) => checkTurn(event, ctx, runStopCheck));
+  pi.on('agent_end', async (event, ctx) => {
+    await checkRun(event, ctx, runStopCheck);
+  });
+
+  pi.on('agent_before_settle', async (event, ctx) => settleTurn(event, ctx));
+
+  pi.on('session_shutdown', async (_event, ctx) => {
+    storedVerdicts.delete(ctx.sessionManager.getSessionId());
+  });
 }
